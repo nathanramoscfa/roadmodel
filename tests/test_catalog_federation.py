@@ -697,7 +697,10 @@ def test_anthropic_name_map_covers_every_anthropic_model_in_the_selector() -> No
     skipped), so the gap has to be caught here.
     """
     mod = _load("extract_anthropic_catalog")
-    mapped = set(mod.NAME_TO_ID.values())
+    # The hand map, or the committed snapshot: a model the discovery lane adds
+    # is priced from Anthropic's page by name (update/discovery.py carried_ids).
+    snapshot = json.loads((UPDATE_DIR / "catalog-anthropic.json").read_text())
+    mapped = set(mod.NAME_TO_ID.values()) | set(snapshot.get("slug_to_id", {}).values())
     catalog = json.loads((REPO_ROOT / "docs" / "catalog.json").read_text())
     anthropic_methods = {
         m["id"] for m in catalog["access_methods"] if m.get("provider") == "anthropic"
@@ -961,6 +964,7 @@ def test_google_extractor_reads_the_markdown_copy() -> None:
     from bs4 import BeautifulSoup
 
     mod = _load("extract_google_catalog")
+    mod._catalog_ids = lambda: set()  # the fixture's day: Carbon not yet carried
     md = GOOGLE_MD.read_text()
     assert mod.is_markdown(md) and not mod.is_markdown(GOOGLE_HTML.read_text())
     soup = BeautifulSoup(mod.markdown_to_html(md), "html.parser")
@@ -1509,3 +1513,42 @@ def test_google_extractor_flags_text_models_the_catalog_lacks() -> None:
         assert mod._slug(name) not in known
     assert not mod._MODEL_HEADING_RE.match("Gemini Developer API pricing")
     assert mod._NON_TEXT_RE.search("Gemini 3.5 Transcribe")
+
+
+def test_readers_price_a_carried_model_by_name() -> None:
+    """A model the discovery lane added is in no reader's hand map; the cron's
+    readers map it by name from the catalog (update/discovery.py carried_ids),
+    so its provider's page keeps pricing it (Gemini 4 Carbon's 2026-12-01
+    price, Fable 5.2's) instead of flagging it again."""
+    from bs4 import BeautifulSoup
+
+    google = _load("extract_google_catalog")
+    google._catalog_ids = lambda: set()
+    soup = BeautifulSoup(google.markdown_to_html(GOOGLE_MD.read_text()), "html.parser")
+    carried = {"gemini-4-carbon": "gemini-4-carbon"}
+    models = {m["id"]: m for m in google.parse_pricing(soup, date(2026, 11, 11), carried)}
+    assert models["gemini-4-carbon"]["output_price_per_1m"] == 10.0
+    assert models["gemini-4-carbon"]["price_schedule"][0]["output_price_per_1m"] == 20.0
+    assert "gemini-4-carbon" not in {
+        m["id"] for m in google.parse_pricing(soup, date(2026, 11, 11))
+    }
+
+    anthropic = _load("extract_anthropic_catalog")
+    md = ANTHROPIC_MD.read_text().replace("| Claude Opus 4.7     |", "| Claude Fable 9.9    |", 1)
+    assert "Claude Fable 9.9" in anthropic.discover_unmapped(md)
+    carried = {"claude-fable-9-9": "claude-fable-9.9", "fable-9-9": "claude-fable-9.9"}
+    assert "Claude Fable 9.9" not in anthropic.discover_unmapped(md, carried)
+    priced = {m["id"]: m for m in anthropic.parse_pricing_table(md, carried)}
+    assert priced["claude-fable-9.9"]["input_price_per_1m"] == 5.0
+
+
+def test_carried_ids_key_every_spelling(tmp_path: Path) -> None:
+    sys.path.insert(0, str(UPDATE_DIR))
+    discovery = importlib.import_module("discovery")  # not reloaded: other modules hold its classes
+    path = tmp_path / "catalog.json"
+    path.write_text(json.dumps({"models": [{"id": "claude-fable-5.2", "name": "Fable 5.2"}]}))
+    carried = discovery.carried_ids(path)
+    for name in ("Claude Fable 5.2", "Fable 5.2", "claude-fable-5.2"):
+        assert discovery.carried_id(name, carried) == "claude-fable-5.2"
+    assert discovery.carried_id("Claude Mythos 5.2", carried) is None
+    assert discovery.carried_ids(tmp_path / "missing.json") == {}

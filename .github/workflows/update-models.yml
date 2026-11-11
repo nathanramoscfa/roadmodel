@@ -388,9 +388,11 @@ jobs:
         run: |
           set -euo pipefail
           nl=$'\n'  # joins sections: $( ) strips the trailing newlines of what it captures
-          # Keep what the typed boundary admits and hold the rest (new models,
-          # access-list entries, decline lines, provider snapshots) for the
-          # review PR below. Until 2026-10 one decline line refused the whole
+          # Keep what the boundary admits and hold the rest for the review PR
+          # below. Since 2026-11 it admits models added and retired by rule,
+          # their access-list entries, rule decline lines and provider
+          # snapshots (update/lifecycle_rules.py), so only the curation pass's
+          # own text can wait. Until 2026-10 one decline line refused the whole
           # run, prices and letters included (update/split_identity.py, #1120).
           base="$RUNNER_TEMP/refresh-base"
           rm -rf "$base" "$RUNNER_TEMP/refresh-hold"
@@ -463,9 +465,9 @@ jobs:
           echo "The validated refresh merger will evaluate $PR_URL."
 
       - name: Hold the rest for review (draft PR)
-        # A new model, an access-list entry, a decline line or a provider
-        # snapshot cannot merge itself: it waits in one rolling draft PR,
-        # rebuilt from each run, for a maintainer to admit.
+        # What the boundary refuses (the curation pass's own prose or decline
+        # reasons) waits in one rolling draft PR, rebuilt from each run. A model
+        # added or retired by rule does not: it merges with the refresh.
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}

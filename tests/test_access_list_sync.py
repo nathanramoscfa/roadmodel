@@ -15,6 +15,7 @@ missing from two methods' lists):
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -238,8 +239,13 @@ def test_the_extractor_fails_open_and_reads_a_local_file(
 def test_the_exception_map_names_catalogued_models_only() -> None:
     exceptions = orx.load_exceptions()
     assert exceptions, "update/openrouter-model-map.json is empty or unreadable"
+    # A retired model keeps its element in the selector and leaves catalog.json;
+    # its exception may stay (retirements merge by rule, without a code edit).
     catalogued = {
-        m["id"] for m in json.loads((REPO_ROOT / "docs" / "catalog.json").read_text())["models"]
+        m.group(1)
+        for m in re.finditer(
+            r'<model id="([^"]+)"', (REPO_ROOT / "docs" / "model-selector.txt").read_text()
+        )
     }
     assert set(exceptions.values()) <= catalogued
     assert all("/" in k and ":" not in k for k in exceptions)
@@ -312,7 +318,12 @@ def test_the_catalog_cron_refreshes_the_context_windows() -> None:
     assert "extract_openrouter_models.py --context-windows docs/context-windows.json" in wf
     assert "docs/context-windows.json" in wf.split("git add", 1)[1].split("\n", 1)[0]
     committed = json.loads((REPO_ROOT / "docs" / "context-windows.json").read_text())["models"]
+    # Every id a selector model, retired ones included: a retirement in the
+    # same run leaves its window until the next fetch drops it.
     catalogued = {
-        m["id"] for m in json.loads((REPO_ROOT / "docs" / "catalog.json").read_text())["models"]
+        m.group(1)
+        for m in re.finditer(
+            r'<model id="([^"]+)"', (REPO_ROOT / "docs" / "model-selector.txt").read_text()
+        )
     }
     assert committed and set(committed) <= catalogued
