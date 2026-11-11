@@ -1,7 +1,7 @@
 {
   "schema_version": "5",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-11-10T20:15:37Z",
+  "generated_at_utc": "2026-11-11T19:02:03Z",
   "source_doc_sha256": {
     "model-selector.txt": "8425da971630807676ba29dfd9eed4cbccf42773d0a08f5d337f193d5ab46917",
     "model-tier-cost-scale.md": "dad707e59d0f3e75cf699d81368ba66783cc2a6a0bf625c430e8f884ef844a1c"
@@ -1546,6 +1546,12 @@
           "low",
           "high"
         ],
+        "gemini-3.1-flash-lite": [
+          "minimal",
+          "low",
+          "medium",
+          "high"
+        ],
         "gemini-3.1-pro": [
           "low",
           "medium",
@@ -1571,6 +1577,7 @@
       "default_effort_by_model": {
         "gemini-3-flash": "high",
         "gemini-3-pro": "high",
+        "gemini-3.1-flash-lite": "minimal",
         "gemini-3.1-pro": "high",
         "gemini-3.5-flash-lite": "minimal",
         "gemini-3.8-flash": "medium",

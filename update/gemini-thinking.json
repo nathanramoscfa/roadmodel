@@ -40,6 +40,12 @@
       "medium",
       "high"
     ],
+    "Gemini 3.1 Flash-Lite": [
+      "minimal",
+      "low",
+      "medium",
+      "high"
+    ],
     "Gemini 3.1 Flash-Lite Image": [
       "minimal",
       "high"
@@ -83,6 +89,7 @@
     "Gemini 3.6 Flash": "medium",
     "Gemini 3.5 Flash-Lite": "minimal",
     "Gemini 3.1 Pro": "high",
+    "Gemini 3.1 Flash-Lite": "minimal",
     "Gemini 3.1 Flash-Lite Image": "minimal",
     "Gemini 3 Flash": "high",
     "Gemini 3 Pro": "high",
@@ -92,6 +99,7 @@
     "Gemini Robotics Er 2": "high"
   },
   "unexpected_models": [
+    "Gemini 3.1 Flash-Lite",
     "Gemini 3.1 Flash-Lite Image",
     "Gemini 3.5 Flash-Lite",
     "Gemini 3.6 Flash",
@@ -101,5 +109,5 @@
     "Gemini Robotics Er 2"
   ],
   "unexpected_levels": [],
-  "section_sha256": "f6812074a38b7492f4cf770e5a7f740c158fc51316804996c1e24eabecac355f"
+  "section_sha256": "b2040dbe1446603f5b94666587c0332f6b95e658cf54ba1ac617ea177a9c6467"
 }
