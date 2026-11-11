@@ -16,6 +16,7 @@ import inspect
 import json
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +37,7 @@ REAL_XAI_CATALOG = UPDATE_DIR / "catalog-xai.json"
 XAI_MD = REPO_ROOT / "tests" / "fixtures" / "xai-models-sample.md"
 REAL_GOOGLE_CATALOG = UPDATE_DIR / "catalog-google.json"
 GOOGLE_HTML = REPO_ROOT / "tests" / "fixtures" / "google-pricing-sample.html"
+GOOGLE_MD = REPO_ROOT / "tests" / "fixtures" / "google-pricing-sample-2026-11-11.md"
 REAL_ZAI_CATALOG = UPDATE_DIR / "catalog-zai.json"
 ZAI_MD = REPO_ROOT / "tests" / "fixtures" / "zai-pricing-sample.md"
 REAL_GROQ_CATALOG = UPDATE_DIR / "catalog-groq.json"
@@ -942,6 +944,56 @@ def test_google_extractor_section_walk_and_disambiguation() -> None:
     # model — that field stays a clean rename/drift detector.
     assert snap["missing_mapped_models"] == []
     assert snap["overlay_mode"] == "price-only"
+
+
+def test_google_extractor_reads_the_markdown_copy() -> None:
+    """Since 2026-11 the HTML page has no <table>s, and the reader failed with
+    "no mapped Gemini models" while the refresh stayed green. The Markdown copy
+    (Markdoc tabs and tables) must give the same section walk."""
+    from bs4 import BeautifulSoup
+
+    mod = _load("extract_google_catalog")
+    md = GOOGLE_MD.read_text()
+    assert mod.is_markdown(md) and not mod.is_markdown(GOOGLE_HTML.read_text())
+    soup = BeautifulSoup(mod.markdown_to_html(md), "html.parser")
+    models = {m["id"]: m for m in mod.parse_pricing(soup, date(2026, 11, 11))}
+    assert set(models) == {"gemini-4-argon", "gemini-3.1-pro", "gemini-3-flash", "gemini-2.5-flash"}
+    # Standard, not the Batch tab below it; the dated price and its schedule.
+    assert models["gemini-4-argon"]["output_price_per_1m"] == 10.0
+    assert models["gemini-4-argon"]["price_schedule"] == [
+        {"from": "2026-12-01", "input_price_per_1m": 4.0, "output_price_per_1m": 20.0}
+    ]
+    # Pro's <=200K headline price, from a cell that also quotes the >200K one.
+    assert models["gemini-3.1-pro"]["input_price_per_1m"] == 2.0
+    assert models["gemini-3.1-pro"]["output_price_per_1m"] == 12.0
+    assert models["gemini-3-flash"]["output_price_per_1m"] == 3.0
+    # 2.5 Flash, not the Flash-Lite near-miss below it.
+    assert models["gemini-2.5-flash"]["input_price_per_1m"] == 0.3
+
+    snap = mod.build_snapshot(md, source_url="file://sample")
+    # The new models are flagged with their own prices; non-text and
+    # already-carried sections are not.
+    assert "Gemini 4 Carbon" in snap["unexpected_slugs"]
+    assert "Gemini 3.5 Transcribe" not in snap["unexpected_slugs"]
+    carbon = next(d for d in snap["discovered"] if d["slug"] == "Gemini 4 Carbon")
+    assert carbon["input_price_per_1m"] in (2.0, 4.0)
+    assert snap["missing_mapped_models"] == []
+
+
+def test_google_markdown_cells_lose_their_markup() -> None:
+    mod = _load("extract_google_catalog")
+    md = (
+        '## Gemini 9 Test  {% id="gemini-9-test" %}\n'
+        '{% tab title="Standard" %}\n{% table %}\n* Feature\n* Free Tier\n* Paid Tier\n---\n'
+        "* Input price{% sup %}*{% /sup %}\n* Not available\n* $1.00 through May 1, 2026.\n"
+        "  $2.00 starting May 2, 2026.\n---\n* Used to improve our products\n* [Yes](/t)\n"
+        "* *Same as Standard*\n{% /table %}\n{% /tab %}\n"
+    )
+    html = mod.markdown_to_html(md)
+    assert "<h2>Gemini 9 Test</h2>" in html and "<h4>Standard</h4>" in html
+    assert "<td>Input price</td>" in html
+    assert "<td>$1.00 through May 1, 2026. $2.00 starting May 2, 2026.</td>" in html
+    assert "<td>Yes</td><td>Same as Standard</td>" in html
 
 
 def test_google_extractor_raises_on_restructure() -> None:

@@ -146,26 +146,28 @@ jobs:
         # today's flags and prices: any model update/dispose_discoveries.py
         # declines later in this run was shown to the pass first, priced.
         # Fail-open per provider — a fetch/parse failure keeps the committed
-        # snapshot rather than breaking the catalog refresh (a real source
-        # restructure surfaces later as a G4 mismatch / a stale snapshot, not a
-        # hard cron failure here).
+        # snapshot rather than breaking the catalog refresh — but never quiet:
+        # each failed reader is recorded here and reported in an issue by the
+        # last step of this run.
+        id: readers
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         run: |
           set -uo pipefail
-          # ::warning:: not a bare echo. Fail-open is deliberate — one provider's
-          # fetch blip must not break the whole refresh — but a SILENT fail-open
-          # is how update/extract_anthropic_catalog.py stayed broken for weeks
-          # after Anthropic restyled a table header: the snapshot froze, G4 had
-          # nothing current to reconcile against, and claude-sonnet-5 kept the
-          # aggregator mirror's $3/$15 while Anthropic charged $2/$10. A warning
-          # surfaces in the run summary and in the job annotations.
-          python update/extract_anthropic_catalog.py || echo "::warning::anthropic catalog refresh FAILED; keeping the committed (now stale) snapshot — its prices are no longer verified"
-          python update/extract_openai_catalog.py || echo "::warning::openai catalog refresh FAILED; keeping the committed (now stale) snapshot — its prices are no longer verified"
-          python update/extract_google_catalog.py || echo "::warning::google catalog refresh FAILED; keeping the committed (now stale) snapshot — its prices are no longer verified"
-          python update/extract_xai_catalog.py || echo "::warning::xai catalog refresh FAILED; keeping the committed (now stale) snapshot — its prices are no longer verified"
-          python update/extract_deepseek_catalog.py || echo "::warning::deepseek catalog refresh FAILED; keeping the committed (now stale) snapshot — its prices are no longer verified"
-          # z.ai (Zhipu / GLM): real extractor parsing the Mintlify .md pricing source.
-          python update/extract_zai_catalog.py || echo "::warning::zai catalog refresh FAILED; keeping the committed (now stale) snapshot — its prices are no longer verified"
+          # A warning alone was not enough. update/extract_anthropic_catalog.py
+          # stayed broken for weeks after Anthropic restyled a table header
+          # (claude-sonnet-5 kept the aggregator mirror's $3/$15 while Anthropic
+          # charged $2/$10), and the Google reader failed from 2026-11-10 when
+          # the pricing page dropped its HTML tables: the run stayed green, and
+          # Gemini 4 Carbon was never discovered. So each failure is also listed
+          # for the "Report failing price readers" step.
+          # z.ai (Zhipu / GLM) parses the Mintlify .md pricing source.
+          : > "$RUNNER_TEMP/reader-failures.txt"
+          for provider in anthropic openai google xai deepseek zai; do
+            if ! python "update/extract_${provider}_catalog.py"; then
+              echo "::error::${provider} price reader FAILED; keeping the committed (now stale) snapshot — its prices are no longer verified"
+              echo "${provider}" >> "$RUNNER_TEMP/reader-failures.txt"
+            fi
+          done
           # Mistral has no machine-readable price source, so this is a DRIFT-CHECK
           # (model-name presence), not a price refresh; it never rewrites the
           # manually-maintained snapshot. Fail-open: a drift (exit 4) is logged.
@@ -478,4 +480,48 @@ jobs:
             echo "Promoted source-hash for next-run comparison."
           else
             echo "No staged hash to promote (check_sources.py did not run)."
+          fi
+
+      - name: Report failing price readers
+        # One issue per broken reader, filed the first run it fails and closed
+        # the first run it reads again. The run that files a new issue fails, so
+        # the break shows in cron health too; later runs stay green while the
+        # issue is open. Last on purpose: the source-hash promotion above must
+        # not wait on it.
+        if: always() && steps.readers.outcome != 'skipped'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -uo pipefail
+          failures="$RUNNER_TEMP/reader-failures.txt"
+          [ -f "${failures}" ] || exit 0
+          gh label create catalog-reader-failure --color D93F0B \
+            --description "A provider's price reader failed; its prices are no longer verified" 2>/dev/null || true
+          # REST issues API + EXACT title (tests/test_cron_issue_dedup.py).
+          open_issues="$(gh issue list --state open --limit 200 --json number,title || echo '[]')"
+          filed=false
+          for provider in anthropic openai google xai deepseek zai; do
+            title="chore(catalog): the ${provider} price reader is failing"
+            number="$(printf '%s' "${open_issues}" | jq -r --arg t "${title}" '.[] | select(.title == $t) | .number' | head -1)"
+            if grep -Fqx "${provider}" "${failures}"; then
+              if [ -n "${number}" ]; then
+                echo "Issue #${number} already open for the ${provider} reader."
+                continue
+              fi
+              if gh issue create \
+                --title "${title}" \
+                --label catalog-reader-failure \
+                --body "\`update/extract_${provider}_catalog.py\` failed in [this run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}). The refresh keeps the committed \`update/catalog-${provider}.json\`, so ${provider}'s prices are no longer verified and a model it launches is not discovered. The usual cause is a restyled pricing page. This issue closes itself on the first run the reader works again."; then
+                filed=true
+              else
+                echo "issue create failed for the ${provider} reader"
+              fi
+            elif [ -n "${number}" ]; then
+              gh issue close "${number}" --comment "The ${provider} price reader works again ([run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}))." \
+                || echo "could not close #${number}"
+            fi
+          done
+          if [ "${filed}" = true ]; then
+            echo "::error::a price reader started failing; see the catalog-reader-failure issue"
+            exit 1
           fi
