@@ -2,13 +2,16 @@
 Gemini API pricing docs.
 
 Phase 4.6 T3 — the Google analog of the other provider-direct catalog sources.
-``ai.google.dev/gemini-api/docs/pricing`` is server-rendered HTML (the same host
-the Gemini *dial* tracker parses with bs4) and is laid out as **per-model
-sections**: a model heading (e.g. ``Gemini 3.5 Flash``) above per-tier
-sub-sections (``Standard`` / ``Batch`` / ``Flex`` / ``Priority``), each a small
-table with ``Input price`` / ``Output price`` rows in a ``Free Tier`` /
-``Paid Tier`` column pair. This parser walks those sections and reads the
-**Standard / Paid-Tier** input & output price for each selector model.
+The page is laid out as **per-model sections**: a model heading (e.g. ``Gemini
+3.5 Flash``) above per-tier sub-sections (``Standard`` / ``Batch`` / ``Flex`` /
+``Priority``), each a small table with ``Input price`` / ``Output price`` rows in
+a ``Free Tier`` / ``Paid Tier`` column pair. This parser walks those sections and
+reads the **Standard / Paid-Tier** input & output price for each selector model.
+
+Since 2026-11 the HTML page renders without ``<table>`` elements, so the
+parser reads Google's Markdown copy (``pricing.md.txt``, Markdoc tabs and
+tables) and turns it into the same headings and tables first; plain HTML
+still parses as before (the Gemini thinking tracker made the same move, #1423).
 
 Makes **Google's own page authoritative** for Gemini prices (enforced by the G4
 price-provenance check). Pricing facts only (``overlay_mode: price-only``); tier
@@ -35,6 +38,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import html as html_lib
 import json
 import re
 import sys
@@ -50,7 +54,7 @@ UPDATE_DIR = Path(__file__).resolve().parent
 DEFAULT_OUTPUT = UPDATE_DIR / "catalog-google.json"
 CACHE_SNAPSHOT_PATH = UPDATE_DIR / ".cache" / "catalog-google.json"
 
-DOCS_URL = "https://ai.google.dev/gemini-api/docs/pricing"
+DOCS_URL = "https://ai.google.dev/gemini-api/docs/pricing.md.txt"
 PROVIDER = "google"
 JURISDICTION = "us"
 
@@ -106,6 +110,71 @@ def verify_anchors(html: str) -> None:
     missing = [a for a in REQUIRED_ANCHORS if a not in html]
     if missing:
         raise ExtractError(f"expected pricing anchors missing (restructure?): {missing}")
+
+
+# Google's Markdown copy (Markdoc): `## Gemini 4 Carbon  {% id="…" %}` model
+# headings, `{% tab title="Standard" %}` tier tabs, and `{% table %}` blocks
+# whose rows are `* cell` items split by `---` (a cell's later lines continue it).
+_MD_HEADING_RE = re.compile(r"^(#{1,4})\s+(.+?)\s*$")
+_MD_TAB_RE = re.compile(r'\{%\s*tab\s+title="([^"]+)"\s*%\}')
+_MD_SUP_RE = re.compile(r"\{%\s*sup\s*%\}.*?\{%\s*/sup\s*%\}")
+_MD_TAG_RE = re.compile(r"\{%.*?%\}")
+_MD_LINK_RE = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+_MD_EMPHASIS_RE = re.compile(r"\*+([^*]+)\*+")
+
+
+def _md_text(text: str) -> str:
+    text = _MD_SUP_RE.sub("", text)
+    text = _MD_TAG_RE.sub("", text)
+    text = _MD_LINK_RE.sub(r"\1", text)
+    return " ".join(_MD_EMPHASIS_RE.sub(r"\1", text).split())
+
+
+def is_markdown(text: str) -> bool:
+    return "{% table" in text
+
+
+def markdown_to_html(text: str) -> str:
+    """The Markdown copy as the headings and tables the HTML page used to
+    carry: a model heading at its own level, each tier tab as an ``h4``, and
+    each Markdoc table as a ``<table>``, so the section walk is unchanged."""
+    out: list[str] = []
+    rows: list[list[str]] | None = None
+    cells: list[str] = []
+
+    def end_row() -> None:
+        if rows is not None and cells:
+            rows.append([_md_text(c) for c in cells])
+        cells.clear()
+
+    for raw in text.splitlines():
+        line = raw.strip()
+        if rows is None:
+            heading = _MD_HEADING_RE.match(raw)
+            tab = _MD_TAB_RE.search(line)
+            if heading:
+                level = len(heading.group(1))
+                out.append(f"<h{level}>{html_lib.escape(_md_text(heading.group(2)))}</h{level}>")
+            elif tab:
+                out.append(f"<h4>{html_lib.escape(tab.group(1))}</h4>")
+            elif line.startswith("{% table"):
+                rows = []
+            continue
+        if line.startswith("{% /table"):
+            end_row()
+            body = "".join(
+                "<tr>" + "".join(f"<td>{html_lib.escape(c)}</td>" for c in row) + "</tr>"
+                for row in rows
+            )
+            out.append(f"<table>{body}</table>")
+            rows = None
+        elif line == "---":
+            end_row()
+        elif line.startswith("* "):
+            cells.append(line[2:])
+        elif line and cells:
+            cells[-1] += " " + line
+    return "\n".join(out)
 
 
 def _row_cells(row: Tag) -> list[str]:
@@ -322,7 +391,7 @@ def canonical_facts(models: list[dict[str, object]]) -> str:
 
 def build_snapshot(html: str, *, source_url: str) -> dict[str, object]:
     verify_anchors(html)
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(markdown_to_html(html) if is_markdown(html) else html, "html.parser")
     models = parse_pricing(soup)
     unexpected = discover_unmapped(soup)
     if unexpected:
@@ -376,12 +445,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Extract Gemini model + pricing facts from the Gemini API pricing docs."
     )
-    parser.add_argument("--url", default=DOCS_URL, help="pricing HTML endpoint to fetch")
+    parser.add_argument(
+        "--url", default=DOCS_URL, help="pricing page to fetch (Markdown copy or HTML)"
+    )
     parser.add_argument(
         "--input",
         type=Path,
         default=None,
-        help="read HTML from a local file instead of fetching (for tests)",
+        help="read the page from a local file instead of fetching (for tests)",
     )
     parser.add_argument(
         "--output",
