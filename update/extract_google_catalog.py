@@ -50,6 +50,9 @@ import requests
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from discovery import carried_id, carried_ids  # noqa: E402
+
 UPDATE_DIR = Path(__file__).resolve().parent
 DEFAULT_OUTPUT = UPDATE_DIR / "catalog-google.json"
 CACHE_SNAPSHOT_PATH = UPDATE_DIR / ".cache" / "catalog-google.json"
@@ -75,7 +78,6 @@ NAME_TO_ID = {
     "Gemini 3 Flash": "gemini-3-flash",
     "Gemini 2.5 Flash": "gemini-2.5-flash",
 }
-ID_TO_NAME = {v: k for k, v in NAME_TO_ID.items()}
 
 REQUIRED_ANCHORS = (
     "Gemini 3.1 Pro",
@@ -225,12 +227,6 @@ def _section_of(table: Tag, names: Collection[str]) -> str | None:
     return None
 
 
-def _model_id_for(table: Tag) -> str | None:
-    """The selector id of the model whose section this table is in, or None."""
-    name = _section_of(table, NAME_TO_ID)
-    return NAME_TO_ID[name] if name is not None else None
-
-
 def _standard_tables(soup: BeautifulSoup) -> Iterator[tuple[Tag, list[list[str]]]]:
     """Each Standard-tier price table (one with Input and Output price rows),
     with its rows' cell texts, in page order."""
@@ -308,6 +304,23 @@ def _slug(name: str) -> str:
     return re.sub(r"[^a-z0-9.]+", "-", name.strip().lower()).strip("-")
 
 
+def name_map(soup: BeautifulSoup, carried: dict[str, str] | None = None) -> dict[str, str]:
+    """Model heading -> catalog id: the hand map, and with ``carried``
+    (update/discovery.py ``carried_ids``) every text model the catalog
+    carries, so a model the discovery lane added is priced from this page."""
+    names = dict(NAME_TO_ID)
+    for heading in soup.find_all("h2") if carried else []:
+        if not isinstance(heading, Tag):
+            continue
+        name = _PREVIEW_RE.sub("", heading.get_text(" ", strip=True)).strip()
+        if name in names or name in DECLINED or not _MODEL_HEADING_RE.match(name):
+            continue
+        mid = None if _NON_TEXT_RE.search(name) else carried_id(name, carried or {})
+        if mid is not None and mid not in names.values():
+            names[name] = mid
+    return names
+
+
 def discover_unmapped(soup: BeautifulSoup) -> list[str]:
     """Gemini TEXT models the pricing page prices that the catalog neither maps
     (``NAME_TO_ID``) nor declines. This is the discovery lane Cursor cannot
@@ -351,20 +364,25 @@ def discovered_prices(soup: BeautifulSoup, names: list[str]) -> list[dict[str, o
     return out
 
 
-def parse_pricing(soup: BeautifulSoup, today: date | None = None) -> list[dict[str, object]]:
+def parse_pricing(
+    soup: BeautifulSoup, today: date | None = None, carried: dict[str, str] | None = None
+) -> list[dict[str, object]]:
     """Each mapped model's Standard Paid Tier price in effect ``today``, with
     a ``price_schedule`` when the page announces a later price."""
+    names = name_map(soup, carried)
+    by_id = {mid: name for name, mid in names.items()}
     models: list[dict[str, object]] = []
     seen: set[str] = set()
     for table, rows in _standard_tables(soup):
-        mid = _model_id_for(table)
+        section = _section_of(table, names)
+        mid = names[section] if section is not None else None
         if mid is None or mid in seen:
             continue
         in_price, out_price, schedule = _paid_prices(rows, today)
         if in_price is None or out_price is None:
             raise ExtractError(f"could not parse Standard input/output price for {mid!r}")
         seen.add(mid)
-        name = ID_TO_NAME[mid]
+        name = by_id[mid]
         models.append(
             {
                 "id": mid,
@@ -389,10 +407,12 @@ def canonical_facts(models: list[dict[str, object]]) -> str:
     )
 
 
-def build_snapshot(html: str, *, source_url: str) -> dict[str, object]:
+def build_snapshot(
+    html: str, *, source_url: str, carried: dict[str, str] | None = None
+) -> dict[str, object]:
     verify_anchors(html)
     soup = BeautifulSoup(markdown_to_html(html) if is_markdown(html) else html, "html.parser")
-    models = parse_pricing(soup)
+    models = parse_pricing(soup, carried=carried)
     unexpected = discover_unmapped(soup)
     if unexpected:
         print(
@@ -469,7 +489,7 @@ def main() -> int:
         return 3
 
     try:
-        snapshot = build_snapshot(html, source_url=args.url)
+        snapshot = build_snapshot(html, source_url=args.url, carried=carried_ids())
     except ExtractError as exc:
         print(f"extract_google_catalog: extraction failed: {exc}", file=sys.stderr)
         return 4

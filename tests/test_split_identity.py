@@ -44,6 +44,7 @@ GOOGLE = "update/catalog-google.json"
 PATHS = [ai.SELECTOR, ai.MARKDOWN, ai.COST, ai.CATALOG, GOOGLE]
 NOVA = dd.Flag("google", "Gemini 9 Nova", 2.0, 10.0, "provider page", "us")
 DECLINE = "- google/Gemini 9 Test — a test decline (declined 2026-10-19)\n"
+RULE_DECLINE = f"- google/Gemini 9 Test — {dd.NO_PRICE} (declined 2026-10-19)\n"
 
 
 def _tree(root: Path) -> None:
@@ -106,27 +107,55 @@ def test_a_typed_refresh_ships_as_it_is(work: dict[str, Path]) -> None:
     assert not any(work["hold"].iterdir())
 
 
-def test_a_new_model_is_held_and_the_typed_part_ships(work: dict[str, Path]) -> None:
-    root = work["work"]
+def _add_nova(root: Path, decline: str) -> str:
+    """A refresh that adds Gemini 9 Nova by rule, edits a price and declines
+    another flag; returns the new id."""
     selector = (root / ai.SELECTOR).read_text()
     selector, model_id = dd.add_model(selector, NOVA, None)
     selector = selector.replace('output-price-per-1m="$4.25"', 'output-price-per-1m="$4.50"', 1)
     (root / ai.SELECTOR).write_text(selector)
     cost = (root / ai.COST).read_text()
     cost = cost.replace("| $0.15      | $4.25  | Low  |", "| $0.15      | $4.50  | Low  |", 1)
-    (root / ai.COST).write_text(cost + DECLINE)
+    (root / ai.COST).write_text(cost.rstrip("\n") + "\n" + decline)
     snapshot = json.loads((root / GOOGLE).read_text())
     snapshot["unexpected_slugs"] = ["Gemini 9 Nova"]
     (root / GOOGLE).write_text(json.dumps(snapshot, indent=2) + "\n")
     _regenerate(root)
+    return str(model_id)
+
+
+def test_a_model_added_by_rule_ships_whole(work: dict[str, Path]) -> None:
+    """A new model from the discovery lane's template, a rule decline and the
+    snapshot that flagged them merge without review (2026-11)."""
+    root = work["work"]
+    model_id = _add_nova(root, RULE_DECLINE)
     assert model_id == "gemini-9-nova"
-    # The decline line alone made the gate refuse every run from 2026-10-14.
-    with pytest.raises(ValueError, match="costscale_structure_requires_review"):
+    ai.validate_documents(_reader(work["base"]), _reader(root), DAY)
+    before = {p: (root / p).read_text() for p in PATHS}
+
+    assert si.split(work["base"], work["hold"], PATHS, DAY) is None
+
+    assert {p: (root / p).read_text() for p in PATHS} == before
+    shipped = (root / ai.SELECTOR).read_text()
+    assert "gemini-9-nova" in shipped and _muse_price(shipped) == "$4.50"
+    assert RULE_DECLINE in (root / ai.COST).read_text()
+    assert "Gemini 9 Nova" in (root / GOOGLE).read_text()
+    assert not any(work["hold"].iterdir())
+
+
+def test_a_change_outside_the_rules_is_held_and_the_typed_part_ships(
+    work: dict[str, Path],
+) -> None:
+    """A decline line with the curation pass's own reason is not a rule's: the
+    whole candidate waits, and the typed part ships."""
+    root = work["work"]
+    _add_nova(root, DECLINE)
+    with pytest.raises(ValueError, match="costscale_decline_line"):
         ai.validate_documents(_reader(work["base"]), _reader(root), DAY)
 
     reason = si.split(work["base"], work["hold"], PATHS, DAY)
 
-    assert reason == "costscale_structure_requires_review"
+    assert reason == "costscale_decline_line"
     # update/render_md.py stays the one writer of the markdown: the access-method
     # billing labels it renders are allowed at that sink only (CodeQL
     # codeql-public-billing-render), so the split leaves the file to it.
@@ -149,12 +178,12 @@ def test_a_new_model_is_held_and_the_typed_part_ships(work: dict[str, Path]) -> 
     assert "- new model `gemini-9-nova` (Gemini 9 Nova, $2.00/$10.00)" in report
     assert "- `google-api` adds `gemini-9-nova`" in report
     assert "- decline line: google/Gemini 9 Test" in report
-    assert f"- `{GOOGLE}` changed (outside the typed data set)" in report
+    assert f"- `{GOOGLE}` changed (held with the rest)" in report
 
 
-def test_a_provider_price_waits_with_its_snapshot(work: dict[str, Path]) -> None:
-    # Tests hold the selector to the committed snapshot, and the snapshot is
-    # outside the typed data set: a provider's own price change is reviewed.
+def test_a_provider_price_ships_with_its_snapshot(work: dict[str, Path]) -> None:
+    """Google's own price change and the snapshot it came from merge together
+    (until 2026-11 the snapshot was outside the data set and both waited)."""
     root = work["work"]
     snapshot = json.loads((root / GOOGLE).read_text())
     row = next(m for m in snapshot["models"] if m["id"] == "gemini-3.1-pro")
@@ -169,13 +198,9 @@ def test_a_provider_price_waits_with_its_snapshot(work: dict[str, Path]) -> None
     )
     _regenerate(root)
 
-    assert si.split(work["base"], work["hold"], PATHS, DAY) == (
-        "files outside the typed data set changed"
-    )
-    _render(root)
-    for path in PATHS:
-        assert (root / path).read_text() == (work["base"] / path).read_text(), path
-    assert 'output-price-per-1m="$13.00"' in (work["hold"] / ai.SELECTOR).read_text()
+    assert si.split(work["base"], work["hold"], PATHS, DAY) is None
+    assert 'output-price-per-1m="$13.00"' in (root / ai.SELECTOR).read_text()
+    assert '"output_price_per_1m": 13.0' in (root / GOOGLE).read_text()
 
 
 def test_new_benchmark_rows_wait_and_known_rows_ship() -> None:
@@ -205,13 +230,13 @@ def test_both_refresh_workflows_split_before_the_gate() -> None:
         assert "chore/catalog-review" in text, name
 
 
-def test_a_held_retirement_leaves_the_typed_letters_derived_over_its_own_field(
+def test_a_retirement_ships_with_the_letters_it_moves(
     work: dict[str, Path], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Retiring a model narrows the field ranks are taken over, so the candidate's
-    letters move with it. The retirement tag waits for review; the letters the
-    typed part ships must be derived over the models it keeps, or the refresh PR
-    fails the drift test (#1309, 2026-10-28)."""
+    letters move with it. Since 2026-11 the retirement tag ships with them by rule
+    (until then it waited for review); the letters stay derived over the field
+    the shipped selector keeps, or the refresh PR fails the drift test (#1309)."""
     supersede = _load("supersede")
     derive = _load("derive_ratings")
     root = work["work"]
@@ -226,11 +251,10 @@ def test_a_held_retirement_leaves_the_typed_letters_derived_over_its_own_field(
     assert (root / ai.SELECTOR).read_text().count("retired-on=") > admitted
     _regenerate(root)
 
-    assert si.split(work["base"], work["hold"], PATHS, day) is not None
-    _render(root)
+    assert si.split(work["base"], work["hold"], PATHS, day) is None
     ai.validate_documents(_reader(work["base"]), _reader(root), day)
     shipped = (root / ai.SELECTOR).read_text()
-    assert shipped.count("retired-on=") == admitted
+    assert shipped.count("retired-on=") > admitted
     bench = json.loads((root / ai.BENCH).read_text())["models"]
     assert derive.plan_changes(shipped, bench)[0] == []
-    assert (work["hold"] / ai.SELECTOR).read_text().count("retired-on=") > admitted
+    assert not any(work["hold"].iterdir())

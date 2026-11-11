@@ -27,6 +27,27 @@ names the docs trackers have seen with the last run's signature:
 A price reader that fails keeps its committed snapshot and opens one
 `catalog-reader-failure` issue, closed on the first run it reads again.
 
+## How a model joins or retires
+
+A refresh PR merges itself when the gate admits it
+(`update/automation_integrity.py`), and since 2026-11 that includes models:
+
+- **A new model** a provider's own page prices joins when a second source
+  (a docs tracker or a vendor's default-effort table) names it too. It is
+  written from the template in `update/lifecycle_rules.py` — id, name,
+  prices, its predecessor's letters (or the B placeholder for a new series),
+  jurisdiction, a fixed pricing note — and its prose is written from data.
+  The gate rebuilds that template and refuses anything else in the element.
+- **Another name for a carried model** (Anthropic's "Claude Mythos N" for
+  Fable N) is declined, not added.
+- **A retirement** (`update/supersede.py`) merges with its tags, the letters
+  it moves and the effort ratings.
+
+The price readers map every carried model by name, so a model added this way
+is priced from its provider's page on every later run. What the gate still
+refuses — the curation pass's own prose or decline reasons — waits in the
+draft PR from `chore/catalog-review`.
+
 ## When to run manually
 
 Run this procedure whenever any of the following hold:

@@ -80,6 +80,32 @@ def _variants(name: str) -> set[str]:
     return out
 
 
+CATALOG_PATH = REPO_ROOT / "docs" / "catalog.json"
+
+
+def carried_ids(path: Path = CATALOG_PATH) -> dict[str, str]:
+    """The published catalog's models, keyed by normalized id and name (maker
+    prefix both ways). A price reader maps a row to a carried model with it,
+    so a model the discovery lane added is priced from its provider's own page
+    on every later run, not only the models a reader's hand map names."""
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return {}
+    out: dict[str, str] = {}
+    for row in data.get("models", []):
+        if isinstance(row, dict) and row.get("id"):
+            mid = str(row["id"])
+            for key in sorted(_variants(mid) | _variants(str(row.get("name", "")))):
+                out.setdefault(key, mid)
+    return out
+
+
+def carried_id(name: str, carried: dict[str, str]) -> str | None:
+    """The carried model a provider page's row names, or None."""
+    return next((carried[k] for k in sorted(_variants(name)) if k in carried), None)
+
+
 def catalog_keys(selector_text: str) -> set[str]:
     """Every ``<model>`` id and name in the selector, normalized. Elements are
     matched quote-aware (``selector_re.MODEL_RE``): the prose in a model's

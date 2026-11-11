@@ -42,6 +42,9 @@ from pathlib import Path
 
 import requests
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from discovery import carried_id, carried_ids  # noqa: E402
+
 UPDATE_DIR = Path(__file__).resolve().parent
 DEFAULT_OUTPUT = UPDATE_DIR / "catalog-openai.json"
 CACHE_SNAPSHOT_PATH = UPDATE_DIR / ".cache" / "catalog-openai.json"
@@ -235,16 +238,17 @@ def _columns(span: str) -> tuple[int, int, int | None]:
     return 0, 3, 1  # input, cached input, cache writes, output: the layout before 2026-11
 
 
-def discover_unmapped(md: str) -> list[str]:
+def discover_unmapped(md: str, carried: dict[str, str] | None = None) -> list[str]:
     """Text rows the standard pane prices that the catalog neither maps
-    (``NAME_TO_ID``) nor declines (``DECLINED``) — i.e. models that exist and
-    are priced but that roadmodel has never heard of. Sorted, de-duplicated."""
+    (``NAME_TO_ID``, or ``carried``: update/discovery.py ``carried_ids``) nor
+    declines (``DECLINED``) — i.e. models that exist and are priced but that
+    roadmodel has never heard of. Sorted, de-duplicated."""
     span = _standard_rows_blob(md)
     found: set[str] = set()
     for name, _cells in _table_rows(span):
         canonical = _SUFFIX_RE.sub("", name).strip()
         base = _DATED_PIN_RE.sub("", canonical)
-        if canonical in NAME_TO_ID or base in NAME_TO_ID:
+        if canonical in NAME_TO_ID or base in NAME_TO_ID or carried_id(canonical, carried or {}):
             continue
         if canonical in DECLINED or base in DECLINED:
             continue
@@ -277,14 +281,14 @@ def discovered_prices(md: str, names: list[str]) -> list[dict[str, object]]:
     return out
 
 
-def parse_pricing(md: str) -> list[dict[str, object]]:
+def parse_pricing(md: str, carried: dict[str, str] | None = None) -> list[dict[str, object]]:
     span = _standard_rows_blob(md)
     in_col, out_col, cache_col = _columns(span)
     models: list[dict[str, object]] = []
     seen: set[str] = set()
     for name, cells in _table_rows(span):
         canonical = _SUFFIX_RE.sub("", name).strip()
-        mid = NAME_TO_ID.get(canonical)
+        mid = NAME_TO_ID.get(canonical) or carried_id(canonical, carried or {})
         if mid is None or mid in seen:
             continue
         # Short-context columns, found by their header. The long-context
@@ -321,9 +325,11 @@ def canonical_facts(models: list[dict[str, object]]) -> str:
     )
 
 
-def build_snapshot(md: str, *, source_url: str) -> dict[str, object]:
+def build_snapshot(
+    md: str, *, source_url: str, carried: dict[str, str] | None = None
+) -> dict[str, object]:
     verify_anchors(md)
-    models = parse_pricing(md)
+    models = parse_pricing(md, carried)
 
     found = {str(m["id"]) for m in models}
     missing = sorted(set(NAME_TO_ID.values()) - found)
@@ -334,7 +340,7 @@ def build_snapshot(md: str, *, source_url: str) -> dict[str, object]:
             file=sys.stderr,
         )
 
-    unexpected = discover_unmapped(md)
+    unexpected = discover_unmapped(md, carried)
     if unexpected:
         print(
             "extract_openai_catalog: DISCOVERY — the standard pane prices "
@@ -402,7 +408,7 @@ def main() -> int:
         return 3
 
     try:
-        snapshot = build_snapshot(md, source_url=args.url)
+        snapshot = build_snapshot(md, source_url=args.url, carried=carried_ids())
     except ExtractError as exc:
         print(f"extract_openai_catalog: extraction failed: {exc}", file=sys.stderr)
         return 4

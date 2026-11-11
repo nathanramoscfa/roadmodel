@@ -26,6 +26,19 @@ DATA_PATHS = (
     "update/gemini-thinking.json",
     "update/deepseek-thinking.json",
     "update/default-efforts.json",
+    # Provider price snapshots, context windows and effort ratings: validated
+    # as plain data by update/automation_integrity.py (2026-11), so a refresh
+    # that adds or retires a model by rule merges without a baseline admission.
+    "update/catalog-anthropic.json",
+    "update/catalog-openai.json",
+    "update/catalog-google.json",
+    "update/catalog-xai.json",
+    "update/catalog-deepseek.json",
+    "update/catalog-zai.json",
+    "update/catalog-mistral.json",
+    "update/catalog-groq.json",
+    "docs/context-windows.json",
+    "docs/effort-ratings.json",
 )
 VALIDATOR_FILES = tuple(
     "update/" + name + ".py"
@@ -33,6 +46,7 @@ VALIDATOR_FILES = tuple(
         "automation_integrity",
         "build_catalog",
         "derive_ratings",
+        "lifecycle_rules",
         "model_prose",
         "render_md",
         "sync_static_availability",

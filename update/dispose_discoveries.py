@@ -17,12 +17,22 @@ headline-benchmarks start empty: update/model_prose.py writes them.
 ADD a priced model of a new series too: no same-series model the provider's
 API offers is in the catalog. It starts from the rating guard's B placeholder
 (S speed for a Mini/Flash/Haiku/Nano/Lite name), takes the provider's
-jurisdiction from its snapshot and joins ``<provider>-api``. Neither kind of
-addition auto-merges: a new identity fails the typed refresh boundary
-(update/automation_integrity.py), so update/split_identity.py moves it to the
-catalog's review PR, where a person admits it. Until 2026-10 a new series was
-declined here as NEW_SERIES while the curation pass, barred from adding rows,
-left it to this script, so Gemini 4 Argon reached neither (#1120).
+jurisdiction from its snapshot and joins ``<provider>-api``. Until 2026-10 a
+new series was declined here as NEW_SERIES while the curation pass, barred from
+adding rows, left it to this script, so Gemini 4 Argon reached neither (#1120).
+
+Both kinds merge by rule (2026-11): the new ``<model>`` is the template in
+update/lifecycle_rules.py, which the refresh gate (update/automation_integrity.py)
+rebuilds and admits. Until then each waited in the catalog's review PR for a
+person, and Gemini 4 Carbon and Fable 5.2 sat there. Two rules guard what is
+added:
+
+- A SECOND SOURCE must name the model: a docs tracker or a vendor's
+  default-effort table (``SECOND_SOURCES``), besides the pricing page. Until one
+  does, a provisional ONE_SOURCE line holds it, lifted the run one does.
+- An ALIAS is declined, not added: Anthropic's pricing table lists "Claude
+  Mythos N" for Fable N, so that row is declined as the page's other name for
+  the carried model once Fable N is carried.
 
 DECLINE everything else, with a line in docs/model-tier-cost-scale.md's
 "Declined Models (discovery lane)" section:
@@ -72,6 +82,17 @@ from discovery import (  # noqa: E402
     parse_declined,
     snapshot_paths,
 )
+from lifecycle_rules import (  # noqa: E402
+    NEW_SERIES,
+    ONE_SOURCE,
+    SPECIALIZED,
+    alias_reason,
+    money,
+    pricing_note,
+    valid_id,
+    valid_name,
+)
+from lifecycle_rules import model_element as _rule_element  # noqa: E402
 from merge_catalog import cost_tier_for_output_price  # noqa: E402
 from selector_re import ATTR_RE, METHOD_RE, MODEL_RE  # noqa: E402
 
@@ -81,11 +102,6 @@ SELECTOR_PATH = REPO_ROOT / "docs" / "model-selector.txt"
 COST_SCALE_PATH = REPO_ROOT / "docs" / "model-tier-cost-scale.md"
 REPORT_PATH = UPDATE_DIR / ".last-dispositions.md"
 
-NEW_SERIES = "a new series; new series join through the curation pass, which saw it with its price"
-SPECIALIZED = (
-    "an image, audio, video, embedding, robotics or computer-use model; "
-    "the catalog rates general text models"
-)
 # The name words that mark a specialized model (the Google extractor keeps the
 # same kinds off its flags; a docs page or another provider's list does not).
 _SPECIALIZED_RE = re.compile(
@@ -99,16 +115,21 @@ TRACKER_FLAGS: dict[str, Path] = {
     "google": UPDATE_DIR / "gemini-thinking.json",
     "anthropic": UPDATE_DIR / "claude-code-effort.json",
 }
-PROVIDER_LABEL: dict[str, str] = {
-    "anthropic": "Anthropic",
-    "openai": "OpenAI",
-    "google": "Google",
-    "xai": "xAI",
-    "deepseek": "DeepSeek",
-    "mistral": "Mistral",
-    "zai": "z.ai",
-    "groq": "Groq",
-}
+# Snapshots that name models a provider's docs or catalog list: a model a
+# pricing page flags joins only once one of these names it too, so one misread
+# page cannot add a model (update/default-efforts.json carries every vendor's
+# default-effort table).
+SECOND_SOURCES: tuple[Path, ...] = (
+    UPDATE_DIR / "gemini-thinking.json",
+    UPDATE_DIR / "claude-code-effort.json",
+    UPDATE_DIR / "default-efforts.json",
+)
+# A provider page's other name for a model the catalog carries: Anthropic's
+# pricing table lists "Claude Mythos 5.2" for Fable 5.2 (as it did for 5 and
+# 5.1). (provider, normalized flag pattern, normalized carried name).
+ALIASES: tuple[tuple[str, re.Pattern[str], str], ...] = (
+    ("anthropic", re.compile(r"(?:claude-)?mythos-(?P<v>\d+(?:-\d+)*)"), "fable-{v}"),
+)
 # Providers whose ids separate version digits with a dash ("claude-opus-5-5").
 DASH_VERSIONS = frozenset({"anthropic"})
 _OPTIONS_RE = re.compile(r"<model-options>(.*?)</model-options>", re.DOTALL)
@@ -190,8 +211,10 @@ def new_id(flag: Flag, predecessor_id: str) -> str:
     if not old or not new_digits:
         return re.sub(r"[^a-z0-9.]+", "-", flag.slug.lower()).strip("-")
     tail = predecessor_id[old.end() :]
-    if len(old_digits) > 1 and "-" in old.group(0):
-        sep = "-"
+    # A versioned predecessor sets the separator ("claude-fable-5.1" ->
+    # "claude-fable-5.2", "claude-opus-5-5" -> "claude-opus-5-6").
+    if len(old_digits) > 1:
+        sep = "-" if "-" in old.group(0) else "."
     return predecessor_id[: old.start()] + sep.join(new_digits) + tail
 
 
@@ -215,27 +238,74 @@ def new_name(flag: Flag, predecessor_name: str) -> str:
     return re.sub(r"\d+(?:\.\d+)*", version, predecessor_name, count=1)
 
 
-def _money(value: float) -> str:
-    return f"${value:.2f}"
+_money = money
 
 
 def model_element(
     model_id: str, name: str, flag: Flag, jurisdiction: str, tiers: dict[str, str]
 ) -> str:
-    label = PROVIDER_LABEL.get(flag.provider, flag.provider)
-    t = {c: tiers.get(c, "B") for c in rating_guard.CATEGORIES}
+    """The new ``<model>``, from the template the refresh gate rebuilds it with
+    (update/lifecycle_rules.py)."""
     if flag.input_price is None or flag.output_price is None:
         raise ValueError(f"{flag.provider}/{flag.slug} has no price to add it at")
-    return (
-        f'      <model id="{model_id}" name="{name}"\n'
-        f'             input-price-per-1m="{_money(flag.input_price)}" output-price-per-1m="{_money(flag.output_price)}"\n'
-        f'             jurisdiction="{jurisdiction}"\n'
-        f'             tier-coding="{t["coding"]}" tier-planning="{t["planning"]}" tier-agentic="{t["agentic"]}"\n'
-        f'             tier-multimodal="{t["multimodal"]}" tier-long-context="{t["long-context"]}" tier-knowledge="{t["knowledge"]}"\n'
-        f'             tier-speed="{t["speed"]}"\n'
-        f'             headline-benchmarks=""\n'
-        f'             pricing-notes="Provider-direct {label} API per-token pricing (not via the Cursor pool)"\n'
-        f'             best-for="" />'
+    if not (valid_id(model_id) and valid_name(name)):
+        raise ValueError(
+            f"{flag.provider}/{flag.slug}: {model_id!r} / {name!r} is not a model id and name"
+        )
+    return _rule_element(
+        model_id,
+        name,
+        money(flag.input_price),
+        money(flag.output_price),
+        jurisdiction,
+        tiers,
+        pricing_note(flag.provider),
+    )
+
+
+def _strings(value: object) -> set[str]:
+    """Every string in a JSON value, keys included."""
+    if isinstance(value, str):
+        return {value}
+    if isinstance(value, dict):
+        out: set[str] = set()
+        for key, item in value.items():
+            out |= {str(key)} | _strings(item)
+        return out
+    if isinstance(value, list):
+        return set().union(*(_strings(item) for item in value)) if value else set()
+    return set()
+
+
+def second_source_names(paths: tuple[Path, ...] = SECOND_SOURCES) -> set[str]:
+    """The model names the second sources list, normalized, maker prefix both
+    ways ("Claude Fable 5.2" and "Fable 5.2" read alike)."""
+    names: set[str] = set()
+    for path in paths:
+        if path.exists():
+            for text in _strings(json.loads(path.read_text())):
+                names |= _variants(text)
+    return names
+
+
+def alias_of(flag: Flag, selector: str) -> str | None:
+    """The carried model a flag is another name for, if a rule says so."""
+    for provider, pattern, target in ALIASES:
+        if provider != flag.provider:
+            continue
+        m = pattern.fullmatch(normalize(flag.slug))
+        if m is None:
+            continue
+        key = target.format(**m.groupdict())
+        for mid, model in rating_guard.models(selector).items():
+            if key in _variants(mid) | _variants(model.name):
+                return mid
+    return None
+
+
+def _alias_pattern(flag: Flag) -> bool:
+    return any(
+        p == flag.provider and pattern.fullmatch(normalize(flag.slug)) for p, pattern, _ in ALIASES
     )
 
 
@@ -370,38 +440,52 @@ def _standing(lines: list[Declined]) -> tuple[dict[tuple[str, str], Declined], s
         held = standing.get(key)
         if held is None:
             standing[key] = d
-        elif held.reason == NO_PRICE:
+        elif held.reason in (NO_PRICE, ONE_SOURCE):
             outranked.add(held)
             standing[key] = d
-        elif d.reason == NO_PRICE:
+        elif d.reason in (NO_PRICE, ONE_SOURCE):
             outranked.add(d)
     return standing, outranked
 
 
 def dispose(
-    selector: str, cost_scale: str, flags: list[Flag], today: dt.date
+    selector: str,
+    cost_scale: str,
+    flags: list[Flag],
+    today: dt.date,
+    second: set[str] | None = None,
 ) -> tuple[str, str, list[Action]]:
-    """Return the selector and cost scale with every undecided flag disposed."""
+    """Return the selector and cost scale with every undecided flag disposed.
+    ``second`` is the names a second source lists (``second_source_names``);
+    None skips that rule."""
     actions: list[Action] = []
     declined, drop = _standing(parse_declined(cost_scale))
     for d in sorted(drop, key=lambda d: (d.provider, d.slug)):
         standing = declined[(d.provider, normalize(d.slug))]
-        by_rule = standing.reason in (NO_PRICE, NEW_SERIES, SPECIALIZED)
+        by_rule = standing.reason in (NO_PRICE, NEW_SERIES, SPECIALIZED, ONE_SOURCE)
         detail = (
             "a duplicate line" if by_rule else f"the curation pass declined it: {standing.reason}"
         )
         actions.append(Action("lifted", _listed(d), detail))
     new_declines: list[Declined] = []
     live = derive_ratings.live_ids(selector)
-    for flag in flags:
+    # Another name for a model is decided after the model itself.
+    for flag in sorted(flags, key=_alias_pattern):
         key = (flag.provider, normalize(flag.slug))
         prior = declined.get(key)
         if _variants(flag.slug) & catalog_keys(selector):
             continue  # carried: added by the pass or an earlier run
-        if prior is not None and prior.reason not in (NO_PRICE, NEW_SERIES):
+        if prior is not None and prior.reason not in (NO_PRICE, NEW_SERIES, ONE_SOURCE):
             continue  # the curation pass's decline, or a rule decline: it stands
-        if _SPECIALIZED_RE.search(flag.slug):
+        aliased = alias_of(flag, selector) if _alias_pattern(flag) else None
+        if _alias_pattern(flag) and aliased is None:
+            continue  # its model is not carried yet; decided once it is
+        if aliased is not None:
+            reason = alias_reason(aliased)
+        elif _SPECIALIZED_RE.search(flag.slug):
             reason = SPECIALIZED
+        elif flag.priced and second is not None and not (_variants(flag.slug) & second):
+            reason = ONE_SOURCE
         else:
             offered = _api_offered(selector, flag.provider)
             pool = {
@@ -452,11 +536,11 @@ def dispose(
             drop.add(prior)
         new_declines.append(Declined(flag.provider, flag.slug, reason, today.isoformat()))
         actions.append(Action("declined", flag, reason))
-    # A NO_PRICE line goes once the catalog carries its model, flagged or not:
-    # the extractors stop flagging a carried model.
+    # A provisional line goes once the catalog carries its model, flagged or
+    # not: the extractors stop flagging a carried model.
     carried = catalog_keys(selector)
     for d in declined.values():
-        if d.reason == NO_PRICE and d not in drop and _variants(d.slug) & carried:
+        if d.reason in (NO_PRICE, ONE_SOURCE) and d not in drop and _variants(d.slug) & carried:
             drop.add(d)
             actions.append(Action("lifted", _listed(d), "the catalog carries it now"))
     if new_declines or drop:
@@ -472,6 +556,13 @@ def prune_carried(snapshots: list[Path], selector: str) -> list[str]:
     the rows, and keeps the committed snapshot and the committed catalog in
     agreement within one refresh. Returns ``provider/slug`` for each one pruned."""
     carried = catalog_keys(selector)
+    live = derive_ratings.live_ids(selector)
+    ids = {
+        key: mid
+        for mid, model in rating_guard.models(selector).items()
+        if mid in live
+        for key in _variants(mid) | _variants(model.name)
+    }
     pruned: list[str] = []
     for path in snapshots:
         snap = json.loads(path.read_text())
@@ -490,8 +581,43 @@ def prune_carried(snapshots: list[Path], selector: str) -> list[str]:
             snap["discovered"] = [
                 r for r in rows if not (isinstance(r, dict) and r.get("slug") in gone)
             ]
+            _price_added(snap, rows, gone, ids)
         path.write_text(json.dumps(snap, indent=2, ensure_ascii=False) + "\n")
     return pruned
+
+
+def _price_added(
+    snap: dict[str, object], rows: list[object], gone: list[str], ids: dict[str, str]
+) -> None:
+    """Move a newly carried live model's price row into the snapshot's priced
+    models: from the next run its reader maps it by name
+    (update/discovery.py ``carried_ids``), and the committed snapshot and
+    catalog agree within this one."""
+    models, slug_to_id = snap.get("models"), snap.get("slug_to_id")
+    if not isinstance(models, list):
+        return
+    have = {m.get("id") for m in models if isinstance(m, dict)}
+    for row in rows:
+        if not (isinstance(row, dict) and row.get("slug") in gone):
+            continue
+        slug = str(row["slug"])
+        mid = next((ids[k] for k in sorted(_variants(slug)) if k in ids), None)
+        in_p, out_p = _price(row.get("input_price_per_1m")), _price(row.get("output_price_per_1m"))
+        if mid is None or mid in have or in_p is None or out_p is None:
+            continue
+        models.append(
+            {
+                "id": mid,
+                "slug": slug,
+                "name": slug,
+                "input_price_per_1m": in_p,
+                "output_price_per_1m": out_p,
+                "cache_read_per_1m": None,
+            }
+        )
+        have.add(mid)
+        if isinstance(slug_to_id, dict):
+            slug_to_id[slug] = mid
 
 
 def render_report(actions: list[Action]) -> str:
@@ -511,7 +637,7 @@ def main() -> int:
     today = args.today or dt.datetime.now(dt.UTC).date()
     flags = load_flags(snapshot_paths(), TRACKER_FLAGS)
     selector, cost_scale, actions = dispose(
-        SELECTOR_PATH.read_text(), COST_SCALE_PATH.read_text(), flags, today
+        SELECTOR_PATH.read_text(), COST_SCALE_PATH.read_text(), flags, today, second_source_names()
     )
     report = render_report(actions)
     print(report or "## Discovery lane\n\nNothing left undecided.")

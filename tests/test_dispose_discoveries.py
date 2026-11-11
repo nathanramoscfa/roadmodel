@@ -316,3 +316,125 @@ def test_a_snapshot_stops_flagging_a_model_the_catalog_now_carries(tmp_path: Pat
     # ensure_ascii=False, as the extractors write it.
     assert "—" in snap.read_text()
     assert dd.prune_carried([snap], SELECTOR) == []
+
+
+FABLE = (
+    '      <model id="claude-fable-8.1" name="Fable 8.1"\n'
+    '             input-price-per-1m="$10.00" output-price-per-1m="$50.00"\n'
+    '             jurisdiction="us"\n'
+    '             tier-coding="S" tier-planning="S" tier-agentic="S"\n'
+    '             tier-multimodal="A" tier-long-context="A" tier-knowledge="A"\n'
+    '             tier-speed="D"\n'
+    '             headline-benchmarks="x" pricing-notes="y" best-for="z" />'
+)
+WITH_FABLE = SELECTOR.replace(
+    '    <tier cost="low">',
+    f'    <tier cost="very-high">\n{FABLE}\n    </tier>\n    <tier cost="low">',
+).replace(
+    "</access-methods>",
+    '    <method id="anthropic-api" name="Anthropic API" provider="anthropic" billing="per-token"\n'
+    '            supports-models="claude-fable-8.1" best-for="b" />\n</access-methods>',
+)
+
+
+def test_a_model_one_source_names_waits_for_a_second() -> None:
+    """A pricing page alone does not add a model (2026-11): one misread page
+    must not reach the catalog. A provisional line holds it until another
+    tracked source names it."""
+    flag = _flag("openai", "gpt-6.1-sol", (2.0, 10.0))
+    selector, cost_scale, actions = dd.dispose(SELECTOR, COST_SCALE, [flag], TODAY, set())
+    assert [(a.kind, a.detail) for a in actions] == [("declined", dd.ONE_SOURCE)]
+    assert selector == SELECTOR
+    assert f"- openai/gpt-6.1-sol — {dd.ONE_SOURCE} (declined 2026-10-01)" in cost_scale
+    selector, cost_scale, actions = dd.dispose(
+        selector, cost_scale, [flag], TODAY, dd._variants("GPT-6.1 Sol")
+    )
+    assert "added" in [a.kind for a in actions] and 'id="gpt-6.1-sol"' in selector
+    assert dd.ONE_SOURCE not in cost_scale
+
+
+def test_the_second_sources_name_models_from_any_tracker(tmp_path: Path) -> None:
+    (tmp_path / "a.json").write_text(json.dumps({"anthropic-api": {"Fable 5.2": "high"}}))
+    (tmp_path / "b.json").write_text(json.dumps({"unexpected_models": ["Gemini 4 Carbon"]}))
+    names = dd.second_source_names((tmp_path / "a.json", tmp_path / "b.json", tmp_path / "c.json"))
+    assert dd._variants("Claude Fable 5.2") & names
+    assert dd._variants("Gemini 4 Carbon") & names
+    assert not dd._variants("Gemini 9 Nova") & names
+
+
+def test_a_provider_pages_other_name_is_declined_as_an_alias() -> None:
+    """Anthropic's table lists "Claude Mythos N" for Fable N; the catalog carries
+    Fable, and the Mythos row is declined, whatever order the flags come in."""
+    flags = [
+        _flag("anthropic", "Claude Mythos 8.2", (8.0, 40.0)),
+        _flag("anthropic", "Claude Fable 8.2", (8.0, 40.0)),
+    ]
+    selector, cost_scale, actions = dd.dispose(WITH_FABLE, COST_SCALE, flags, TODAY)
+    assert [a.kind for a in actions] == ["added", "declined"]
+    # The id follows its predecessor's separator ("8.1" -> "8.2").
+    assert 'id="claude-fable-8.2" name="Fable 8.2"' in selector
+    assert "mythos" not in selector.lower()
+    reason = dd.alias_reason("claude-fable-8.2")
+    assert f"- anthropic/Claude Mythos 8.2 — {reason} (declined 2026-10-01)" in cost_scale
+    # Alone, before its model is carried, the alias waits.
+    alone = dd.dispose(WITH_FABLE, COST_SCALE, flags[:1], TODAY)
+    assert alone == (WITH_FABLE, COST_SCALE, [])
+
+
+def test_a_new_model_is_the_template_the_gate_rebuilds() -> None:
+    selector, _, _ = dd.dispose(
+        SELECTOR, COST_SCALE, [_flag("google", "Gemini 9 Nova", (2.0, 10.0))], TODAY
+    )
+    element = next(
+        m.group(0) for m in dd.MODEL_RE.finditer(selector) if 'id="gemini-9-nova"' in m.group(0)
+    )
+    lr = _load("lifecycle_rules")
+    expected = lr.model_element(
+        "gemini-9-nova",
+        "Gemini 9 Nova",
+        "$2.00",
+        "$10.00",
+        "unknown",  # the test flag's; a real flag takes its snapshot's
+        {c: "B" for c in lr.CATEGORIES} | {"speed": element.split('tier-speed="')[1][0]},
+        lr.pricing_note("google"),
+    )
+    assert element == expected.strip()
+
+
+def test_an_added_models_price_row_joins_its_snapshot(tmp_path: Path) -> None:
+    """The committed snapshot prices the model the run added, so it and the
+    catalog agree within the refresh PR."""
+    selector, _, _ = dd.dispose(
+        SELECTOR, COST_SCALE, [_flag("openai", "gpt-6.1-sol", (2.0, 10.0))], TODAY
+    )
+    snap = tmp_path / "catalog-openai.json"
+    snap.write_text(
+        json.dumps(
+            {
+                "provider": "openai",
+                "models": [],
+                "slug_to_id": {},
+                "unexpected_slugs": ["gpt-6.1-sol", "gpt-9"],
+                "discovered": [
+                    {"slug": "gpt-6.1-sol", "input_price_per_1m": 2.0, "output_price_per_1m": 10.0},
+                    {"slug": "gpt-9", "input_price_per_1m": 1.0, "output_price_per_1m": 2.0},
+                ],
+            }
+        )
+    )
+    assert dd.prune_carried([snap], selector) == ["openai/gpt-6.1-sol"]
+    out = json.loads(snap.read_text())
+    assert out["unexpected_slugs"] == ["gpt-9"] and [r["slug"] for r in out["discovered"]] == [
+        "gpt-9"
+    ]
+    assert out["models"] == [
+        {
+            "id": "gpt-6.1-sol",
+            "slug": "gpt-6.1-sol",
+            "name": "gpt-6.1-sol",
+            "input_price_per_1m": 2.0,
+            "output_price_per_1m": 10.0,
+            "cache_read_per_1m": None,
+        }
+    ]
+    assert out["slug_to_id"] == {"gpt-6.1-sol": "gpt-6.1-sol"}

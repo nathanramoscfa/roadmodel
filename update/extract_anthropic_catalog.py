@@ -33,6 +33,9 @@ from pathlib import Path
 
 import requests
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from discovery import carried_id, carried_ids  # noqa: E402
+
 UPDATE_DIR = Path(__file__).resolve().parent
 DEFAULT_OUTPUT = UPDATE_DIR / "catalog-anthropic.json"
 CACHE_SNAPSHOT_PATH = UPDATE_DIR / ".cache" / "catalog-anthropic.json"
@@ -160,9 +163,10 @@ def _row_name(cell: str) -> str | None:
     return name[: tier.start()].strip()
 
 
-def discover_unmapped(md: str) -> list[str]:
+def discover_unmapped(md: str, carried: dict[str, str] | None = None) -> list[str]:
     """Priced rows the catalog neither maps nor declines — models that exist
-    and are priced but that roadmodel has never heard of."""
+    and are priced but that roadmodel has never heard of. ``carried`` maps
+    the catalog's own models (update/discovery.py ``carried_ids``)."""
     header, data = _pricing_table(md)
     del header
     found: set[str] = set()
@@ -174,7 +178,7 @@ def discover_unmapped(md: str) -> list[str]:
         # Claude Opus 4.7"); they price nothing new.
         if not name or "," in name or "/" in name or " and " in name:
             continue
-        if name in NAME_TO_ID or name in DECLINED:
+        if name in NAME_TO_ID or name in DECLINED or carried_id(name, carried or {}):
             continue
         found.add(name)
     return sorted(found)
@@ -243,8 +247,9 @@ def _pricing_table(md: str) -> tuple[list[str], list[list[str]]]:
     return header, data
 
 
-def parse_pricing_table(md: str) -> list[dict[str, object]]:
-    """Per-model canonical pricing facts for the models the catalog maps."""
+def parse_pricing_table(md: str, carried: dict[str, str] | None = None) -> list[dict[str, object]]:
+    """Per-model canonical pricing facts for the models the catalog maps: the
+    hand map's, and with ``carried`` every model the catalog carries."""
     header, data = _pricing_table(md)
     in_col = _col(header, "Input")
     out_col = _col(header, "Output")
@@ -262,7 +267,7 @@ def parse_pricing_table(md: str) -> list[dict[str, object]]:
         if not row:
             continue
         name = _row_name(row[0])
-        mid = NAME_TO_ID.get(name) if name is not None else None
+        mid = (NAME_TO_ID.get(name) or carried_id(name, carried or {})) if name else None
         if name is None or mid is None or mid in seen:
             continue
         in_price = _dollars(row[in_col]) if in_col < len(row) else None
@@ -297,10 +302,12 @@ def canonical_facts(models: list[dict[str, object]]) -> str:
     )
 
 
-def build_snapshot(md: str, *, source_url: str) -> dict[str, object]:
+def build_snapshot(
+    md: str, *, source_url: str, carried: dict[str, str] | None = None
+) -> dict[str, object]:
     verify_anchors(md)
-    models = parse_pricing_table(md)
-    unexpected = discover_unmapped(md)
+    models = parse_pricing_table(md, carried)
+    unexpected = discover_unmapped(md, carried)
     if unexpected:
         print(
             "extract_anthropic_catalog: DISCOVERY — the pricing table prices "
@@ -374,7 +381,7 @@ def main() -> int:
         return 3
 
     try:
-        snapshot = build_snapshot(md, source_url=args.url)
+        snapshot = build_snapshot(md, source_url=args.url, carried=carried_ids())
     except ExtractError as exc:
         print(f"extract_anthropic_catalog: extraction failed: {exc}", file=sys.stderr)
         return 4

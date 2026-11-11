@@ -10,7 +10,9 @@ Until 2026-10 one such change failed the whole run, so for a week no price or
 letter shipped either, and Gemini 4 Argon never reached the catalog (#1120).
 
 This script runs before the integrity check. When the working candidate passes
-the gate and touches no file outside the data set, it does nothing. Otherwise:
+the gate and touches no file outside the data set, it does nothing; since
+2026-11 that includes a model added or retired by rule (update/lifecycle_rules.py),
+with its provider snapshot. Otherwise:
 
 1. it copies the full candidate into ``--hold`` (the review PR's content);
 2. it rewrites the working tree to the typed part, built the way the gate
@@ -218,7 +220,7 @@ def held_report(base: dict[str, str], full: dict[str, str], others: list[str], r
     for mid in sorted(json.loads(full[ai.BENCH])["models"].keys() - old_bench.keys()):
         lines.append(f"- Artificial Analysis row for `{mid}`")
     for path in others:
-        lines.append(f"- `{path}` changed (outside the typed data set)")
+        lines.append(f"- `{path}` changed (held with the rest)")
     lines += [
         "",
         "To admit it, a maintainer reviews this diff, branches from it, points "
@@ -263,7 +265,14 @@ def split(base_dir: Path, hold: Path, paths: list[str], day: dt.date) -> str | N
             (hold / path).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / path, hold / path)
 
-    for path in others:
+    # The data a held model brings with it waits with it: the provider
+    # snapshots, context windows and effort ratings go back to base too.
+    held_data = [
+        p
+        for p in (*ai.PROVIDER_SNAPSHOTS, ai.CONTEXT_WINDOWS, ai.EFFORT_RATINGS)
+        if (base_dir / p).exists() and head_text(p) != base_text(p)
+    ]
+    for path in [*others, *held_data]:
         _write(path, base_text(path))
     bench_text = typed_benchmarks(base[ai.BENCH], full[ai.BENCH])
     avail_text = typed_availability(base[ai.AVAILABILITY], full[ai.AVAILABILITY], base[ai.SELECTOR])
@@ -302,7 +311,7 @@ def split(base_dir: Path, hold: Path, paths: list[str], day: dt.date) -> str | N
     # The typed part is admitted, its markdown as update/render_md.py writes it next.
     rendered = render_md.render(selector)
     ai.validate_documents(base_text, lambda p: rendered if p == ai.MARKDOWN else head_text(p), day)
-    REPORT.write_text(held_report(base, full, others, reason), encoding="utf-8")
+    REPORT.write_text(held_report(base, full, [*others, *held_data], reason), encoding="utf-8")
     return reason
 
 

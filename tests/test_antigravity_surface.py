@@ -29,9 +29,10 @@ def test_antigravity_is_a_google_surface_serving_catalogued_models() -> None:
     model_ids = {m["id"] for m in CATALOG["models"]}
     assert set(ag["supports_models"]) <= model_ids
     # Gemini, plus the third-party models Antigravity serves on Google's quota.
-    assert {"gemini-3.8-flash", "gemini-3.1-pro", "sonnet-4.6", "gpt-oss-120b"} <= set(
-        ag["supports_models"]
-    )
+    # By maker, not by name: a model that retires leaves the list by rule.
+    makers = {m["id"]: m["id"].split("-")[0] for m in CATALOG["models"]}
+    served = {makers[mid] for mid in ag["supports_models"]}
+    assert "gemini" in served and served - {"gemini"}, served
 
 
 def test_google_plans_fund_the_surfaces_they_reach() -> None:
