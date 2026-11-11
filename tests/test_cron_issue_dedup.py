@@ -51,13 +51,14 @@ def _issue_creating_workflows() -> list[Path]:
 def test_there_are_scheduled_issue_creating_workflows() -> None:
     """Guard the guard: if the filter stops matching, the rest passes vacuously."""
     found = {p.name for p in _issue_creating_workflows()}
+    # update-codex.yml filed only "docs introduced model" issues; since 2026-11
+    # the catalog refresh adds such a model itself, so it files none.
     assert found >= {
         "update-models.yml",
         "update-claude-code.yml",
-        "update-codex.yml",
         "update-gemini.yml",
         "update-deepseek.yml",
-    }, f"expected the five refresh crons among issue-filing scheduled workflows, got {found}"
+    }, f"expected the four refresh crons among issue-filing scheduled workflows, got {found}"
 
 
 def test_no_workflow_dedups_issues_through_the_search_index() -> None:

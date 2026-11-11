@@ -87,44 +87,6 @@ jobs:
         if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
         run: python update/extract_gemini_thinking.py --output update/gemini-thinking.json
 
-      - name: Flag new Gemini models for the catalog cron
-        # A Gemini 3.x level-matrix model this tracker hasn't seen is the Cursor
-        # catalog cron's lane. Open a DEDUPLICATED tracking issue (never edit
-        # model lists here) so the flag survives auto-merge. Read from the
-        # freshly-written snapshot's unexpected_models (this page is itself the
-        # reasoning-matrix model source). Deduped by title.
-        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          set -euo pipefail
-          mapfile -t models < <(python -c "import json; [print(m) for m in json.load(open('update/gemini-thinking.json')).get('unexpected_models', [])]")
-          if [ "${#models[@]}" -eq 0 ]; then
-            echo "No new models flagged."
-            exit 0
-          fi
-          gh label create gemini-new-model --color FBCA04 \
-            --description "Gemini docs introduced a model the catalog cron should route" 2>/dev/null || true
-          # REST issues API + exact title, not --search (its search-index lag
-          # returned empty in-run and re-filed dupes daily; see #420 for the
-          # Claude Code fix + rationale).
-          existing="$(gh issue list --state open --limit 200 --json title -q '.[].title' || true)"
-          for model in "${models[@]}"; do
-            [ -z "$model" ] && continue
-            title="chore(catalog): Gemini docs introduced model \"${model}\""
-            if printf '%s\n' "$existing" | grep -Fqx "$title"; then
-              echo "Tracking issue already open for: ${model}"
-              continue
-            fi
-            # Literal Markdown/jq syntax; shell expansion is not intended.
-            # shellcheck disable=SC2016
-            gh issue create \
-              --title "$title" \
-              --label gemini-new-model \
-              --body "$(printf 'The Gemini API thinking docs introduced a thinking-level model **%s**, which the Gemini thinking tracker has not seen before (recorded in `update/gemini-thinking.json` under `unexpected_models`).\n\nThis tracker only FLAGS new models — it never edits selector model lists; that is the catalog cron'"'"'s lane. **Action:** confirm whether **%s** should be added to `<model-options>` / `supports-models` via the catalog refresh.\n\nOpened automatically by the Gemini refresh cron (`.github/workflows/update-gemini.yml`).' "${model}" "${model}")"
-            echo "Opened tracking issue for: ${model}"
-          done
-
       - name: Flag new Gemini thinking levels
         # A docs-added thinking TIER beyond minimal/low/medium/high is significant
         # (it needs a deliberate THINKING-field mapping). The conformance gate

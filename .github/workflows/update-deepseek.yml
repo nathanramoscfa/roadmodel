@@ -87,44 +87,6 @@ jobs:
         if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
         run: python update/extract_deepseek_thinking.py --output update/deepseek-thinking.json
 
-      - name: Flag new DeepSeek models for the catalog cron
-        # A model in the DeepSeek pricing table this tracker hasn't seen is the
-        # Cursor catalog cron's lane (the thinking-mode page lists no models, so
-        # the lineup is read from the pricing page by extract_deepseek_models.py).
-        # Open a DEDUPLICATED tracking issue (never edit model lists / add $ here)
-        # so the flag survives auto-merge. Fail-open (the extractor never errors).
-        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          set -euo pipefail
-          mapfile -t models < <(python update/extract_deepseek_models.py 2>/dev/null || true)
-          if [ "${#models[@]}" -eq 0 ]; then
-            echo "No new models flagged."
-            exit 0
-          fi
-          gh label create deepseek-new-model --color FBCA04 \
-            --description "DeepSeek docs introduced a model the catalog cron should route" 2>/dev/null || true
-          # REST issues API + exact title, not --search (its search-index lag
-          # returned empty in-run and re-filed dupes daily; see #420 for the
-          # Claude Code fix + rationale).
-          existing="$(gh issue list --state open --limit 200 --json title -q '.[].title' || true)"
-          for model in "${models[@]}"; do
-            [ -z "$model" ] && continue
-            title="chore(catalog): DeepSeek docs introduced model \"${model}\""
-            if printf '%s\n' "$existing" | grep -Fqx "$title"; then
-              echo "Tracking issue already open for: ${model}"
-              continue
-            fi
-            # Literal Markdown/jq syntax; shell expansion is not intended.
-            # shellcheck disable=SC2016
-            gh issue create \
-              --title "$title" \
-              --label deepseek-new-model \
-              --body "$(printf 'The DeepSeek pricing docs introduced a model **%s**, which the DeepSeek thinking tracker has not seen before (baseline in `update/extract_deepseek_models.py`).\n\nThis tracker only FLAGS new models — it never edits selector model lists or adds per-token $ pricing; that is the catalog cron'"'"'s lane. **Action:** confirm whether **%s** should be added to `<model-options>` / `supports-models` via the catalog refresh.\n\nOpened automatically by the DeepSeek refresh cron (`.github/workflows/update-deepseek.yml`).' "${model}" "${model}")"
-            echo "Opened tracking issue for: ${model}"
-          done
-
       - name: Flag new DeepSeek reasoning-effort tiers
         # A docs-added NATIVE effort tier beyond high/max is significant (it needs
         # a deliberate THINKING-field mapping). The conformance gate already

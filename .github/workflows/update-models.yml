@@ -3,14 +3,14 @@ name: Update roadmodel catalog docs
 
 on:
   schedule:
-    # Daily at 16:00 UTC. The first step hashes Cursor's pricing page —
-    # the strongest signal for "new model released" — and skips the rest
-    # of the pipeline (most importantly the ~$5 Opus call) on days the
-    # page hasn't changed. See `update/check_sources.py` for the rationale
-    # on why only pricing.md and not every benchmark source. Cron firing
-    # daily keeps the latency between an upstream model release and the
-    # catalog reflecting it under ~24h instead of ~7 days.
+    # Hourly: each run reads every provider's own pricing page and hashes it
+    # with Cursor's page, the docs trackers' model lists and the Codex model
+    # list (update/check_sources.py). A change on any of them refreshes the
+    # catalog within the hour; nothing changed, nothing runs past the gate.
+    # The 16:00 run is the daily one: only it may start the curation pass
+    # (~$5 of Opus tokens) for a change on Cursor's page.
     - cron: "0 16 * * *"
+    - cron: "0 0-15,17-23 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -77,9 +77,59 @@ jobs:
           restore-keys: |
             catalog-sources-hash-
 
+      - name: Refresh provider-direct catalog snapshots
+        # Federation (Phase 4.6): refresh each provider's OWN pricing snapshot from
+        # its own docs so the price-provenance gate (G4 in
+        # update/validate_catalog_conformance.py) checks the selector against
+        # CURRENT provider prices. Every run, before the source gate: a snapshot
+        # that changed (a new model, a new price) is what starts a refresh
+        # (update/check_sources.py). It runs before the curation pass, so the
+        # pass's <provider_discovery> block (update/discovery.py) carries
+        # today's flags and prices: any model update/dispose_discoveries.py
+        # declines later in this run was shown to the pass first, priced.
+        # Fail-open per provider — a fetch/parse failure keeps the committed
+        # snapshot rather than breaking the catalog refresh — but never quiet:
+        # each failed reader is recorded here and reported in an issue by the
+        # last step of this run.
+        id: readers
+        run: |
+          set -uo pipefail
+          # A warning alone was not enough. update/extract_anthropic_catalog.py
+          # stayed broken for weeks after Anthropic restyled a table header
+          # (claude-sonnet-5 kept the aggregator mirror's $3/$15 while Anthropic
+          # charged $2/$10), and the Google reader failed from 2026-11-10 when
+          # the pricing page dropped its HTML tables: the run stayed green, and
+          # Gemini 4 Carbon was never discovered. So each failure is also listed
+          # for the "Report failing price readers" step.
+          # z.ai (Zhipu / GLM) parses the Mintlify .md pricing source.
+          : > "$RUNNER_TEMP/reader-failures.txt"
+          for provider in anthropic openai google xai deepseek zai; do
+            if ! python "update/extract_${provider}_catalog.py"; then
+              echo "::error::${provider} price reader FAILED; keeping the committed (now stale) snapshot — its prices are no longer verified"
+              echo "${provider}" >> "$RUNNER_TEMP/reader-failures.txt"
+            fi
+          done
+          # Mistral has no machine-readable price source, so this is a DRIFT-CHECK
+          # (model-name presence), not a price refresh; it never rewrites the
+          # manually-maintained snapshot. Fail-open: a drift (exit 4) is logged.
+          python update/extract_mistral_catalog.py || echo "mistral drift-check flagged or failed; catalog-mistral.json prices are manually maintained — review"
+          # Groq-hosted gpt-oss: like Mistral, no machine-readable price table, so the
+          # script re-writes the manual snapshot from its constant and DRIFT-CHECKS the
+          # gpt-oss model names against groq.com/pricing (it does not parse prices).
+          python update/extract_groq_catalog.py || echo "groq drift-check flagged or failed; catalog-groq.json prices are manually maintained — review"
+
+      - name: Read the Codex model list
+        # For the source gate; the overlay step syncs the same list into the
+        # Codex methods. Fail-open: an empty list keeps the last signature.
+        run: python update/extract_codex_models.py --recommended > "$RUNNER_TEMP/codex-ids.txt" || true
+
       - name: Check for upstream source changes
+        # Each provider's own sources decide; Cursor's page is one of them and
+        # the only one that starts the curation pass, on the daily run.
         id: gate
-        run: python update/check_sources.py
+        env:
+          CURSOR_DUE: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule == '0 16 * * *' }}
+        run: python update/check_sources.py --cursor-due "${CURSOR_DUE}" --codex-ids "$RUNNER_TEMP/codex-ids.txt"
 
       - name: Flag near-miss supersessions that last three days
         # update/supersede.py prints `NEAR-MISS <old> -> <new>: missing on
@@ -90,7 +140,8 @@ jobs:
         # near-miss on main today AND on main three days ago files ONE
         # title-deduped issue; update/close_resolved_issues.py (cron-health.yml)
         # closes it once the pair resolves. Runs every day, gate or not (no model
-        # call), and never fails the refresh.
+        # call) on the daily run, and never fails the refresh.
+        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 16 * * *'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -137,52 +188,13 @@ jobs:
               || echo "issue create failed for ${old} -> ${new}"
           done
 
-      - name: Refresh provider-direct catalog snapshots
-        # Federation (Phase 4.6): refresh each provider's OWN pricing snapshot from
-        # its own docs so the price-provenance gate (G4 in
-        # update/validate_catalog_conformance.py) checks the selector against
-        # CURRENT provider prices. It runs before the curation pass, so the
-        # pass's <provider_discovery> block (update/discovery.py) carries
-        # today's flags and prices: any model update/dispose_discoveries.py
-        # declines later in this run was shown to the pass first, priced.
-        # Fail-open per provider — a fetch/parse failure keeps the committed
-        # snapshot rather than breaking the catalog refresh — but never quiet:
-        # each failed reader is recorded here and reported in an issue by the
-        # last step of this run.
-        id: readers
-        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
-        run: |
-          set -uo pipefail
-          # A warning alone was not enough. update/extract_anthropic_catalog.py
-          # stayed broken for weeks after Anthropic restyled a table header
-          # (claude-sonnet-5 kept the aggregator mirror's $3/$15 while Anthropic
-          # charged $2/$10), and the Google reader failed from 2026-11-10 when
-          # the pricing page dropped its HTML tables: the run stayed green, and
-          # Gemini 4 Carbon was never discovered. So each failure is also listed
-          # for the "Report failing price readers" step.
-          # z.ai (Zhipu / GLM) parses the Mintlify .md pricing source.
-          : > "$RUNNER_TEMP/reader-failures.txt"
-          for provider in anthropic openai google xai deepseek zai; do
-            if ! python "update/extract_${provider}_catalog.py"; then
-              echo "::error::${provider} price reader FAILED; keeping the committed (now stale) snapshot — its prices are no longer verified"
-              echo "${provider}" >> "$RUNNER_TEMP/reader-failures.txt"
-            fi
-          done
-          # Mistral has no machine-readable price source, so this is a DRIFT-CHECK
-          # (model-name presence), not a price refresh; it never rewrites the
-          # manually-maintained snapshot. Fail-open: a drift (exit 4) is logged.
-          python update/extract_mistral_catalog.py || echo "mistral drift-check flagged or failed; catalog-mistral.json prices are manually maintained — review"
-          # Groq-hosted gpt-oss: like Mistral, no machine-readable price table, so the
-          # script re-writes the manual snapshot from its constant and DRIFT-CHECKS the
-          # gpt-oss model names against groq.com/pricing (it does not parse prices).
-          python update/extract_groq_catalog.py || echo "groq drift-check flagged or failed; catalog-groq.json prices are manually maintained — review"
-
       - name: Refresh roadmodel catalog (Opus)
-        # Skip on scheduled runs when no upstream source changed. Manual
-        # workflow_dispatch always runs — the operator triggered it for
-        # a reason. A check_sources fetch error sets changed=true so the
-        # gate fails open rather than silently skipping a real refresh.
-        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
+        # Runs when Cursor's page changed on the daily run. A change on a
+        # provider's own page needs no model call: the deterministic steps
+        # below add, price and retire models by rule. Manual workflow_dispatch
+        # always runs — the operator triggered it for a reason. A Cursor fetch
+        # error on the daily run counts as changed, so the pass surfaces it.
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.cursor_changed == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           AA_API_KEY: ${{ secrets.AA_API_KEY }}

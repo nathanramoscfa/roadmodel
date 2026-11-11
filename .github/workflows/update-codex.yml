@@ -86,43 +86,6 @@ jobs:
         if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
         run: python update/extract_codex_reasoning.py --output update/codex-reasoning.json
 
-      - name: Flag new Codex models for the catalog cron
-        # A recommended model in models.md this tracker hasn't seen is the Cursor
-        # catalog cron's lane. Open a DEDUPLICATED tracking issue (never edit
-        # model lists here) so the flag survives auto-merge. Deduped by title so
-        # a re-run doesn't spam. Fail-open (the extractor never errors out).
-        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          set -euo pipefail
-          mapfile -t models < <(python update/extract_codex_models.py 2>/dev/null || true)
-          if [ "${#models[@]}" -eq 0 ]; then
-            echo "No new models flagged."
-            exit 0
-          fi
-          gh label create codex-new-model --color FBCA04 \
-            --description "Codex docs introduced a model the catalog cron should route" 2>/dev/null || true
-          # REST issues API + exact title, not --search (its search-index lag
-          # returned empty in-run and re-filed dupes daily; see #420 for the
-          # Claude Code fix + rationale).
-          existing="$(gh issue list --state open --limit 200 --json title -q '.[].title' || true)"
-          for model in "${models[@]}"; do
-            [ -z "$model" ] && continue
-            title="chore(catalog): Codex docs introduced model \"${model}\""
-            if printf '%s\n' "$existing" | grep -Fqx "$title"; then
-              echo "Tracking issue already open for: ${model}"
-              continue
-            fi
-            # Literal Markdown/jq syntax; shell expansion is not intended.
-            # shellcheck disable=SC2016
-            gh issue create \
-              --title "$title" \
-              --label codex-new-model \
-              --body "$(printf 'The Codex models docs now recommend **%s**, which the Codex reasoning-effort tracker has not seen before (baseline in `update/extract_codex_models.py`).\n\nThis tracker only FLAGS new models — it never edits selector model lists; that is the catalog cron'"'"'s lane. **Action:** confirm whether **%s** should be added to `<model-options>` / `supports-models` via the catalog refresh.\n\nOpened automatically by the Codex refresh cron (`.github/workflows/update-codex.yml`).' "${model}" "${model}")"
-            echo "Opened tracking issue for: ${model}"
-          done
-
       - name: Reconcile Codex reasoning-effort (Opus)
         # Skip on scheduled runs when the docs span did not change.
         # workflow_dispatch always runs. --dry-run previews without writing.
