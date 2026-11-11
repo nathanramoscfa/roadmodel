@@ -196,12 +196,19 @@ def parse_text_models(md: str) -> tuple[list[dict[str, object]], list[str]]:
         }
 
     missing = [slug for slug in CURATED if slug not in by_slug]
-    if missing:
+    if len(missing) == len(CURATED):
         raise ExtractError(
-            f"curated z.ai model(s) missing/unpriced on the pricing page: {missing} "
-            f"(delisting/rename? re-verify CURATED)"
+            f"no curated z.ai model priced on the pricing page: {missing} (restructure?)"
         )
-    curated = [by_slug[slug] for slug in CURATED]
+    if missing:
+        # One delisted model (GLM-4.5-Air left the page by 2026-11) must not
+        # stop the others' prices from being read; it keeps its last price.
+        print(
+            f"extract_zai_catalog: WARNING curated model(s) missing/unpriced on the "
+            f"pricing page: {missing} (delisting/rename? re-verify CURATED)",
+            file=sys.stderr,
+        )
+    curated = [by_slug[slug] for slug in CURATED if slug in by_slug]
     return curated, page_slugs
 
 
@@ -248,6 +255,8 @@ def build_snapshot(md: str, *, source_url: str) -> dict[str, object]:
         "models": models,
         "slug_to_id": dict(sorted(CURATED.items())),
         "unexpected_slugs": unexpected,
+        # Curated models the page no longer prices (a delisting or rename).
+        "missing_mapped_models": sorted(set(CURATED.values()) - {str(m["id"]) for m in models}),
         "section_sha256": hashlib.sha256(facts.encode("utf-8")).hexdigest(),
     }
 

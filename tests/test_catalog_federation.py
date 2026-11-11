@@ -254,12 +254,20 @@ def test_zai_extractor_raises_on_restructure() -> None:
         mod.build_snapshot("# Pricing\n\nNo table here.\n", source_url="x")
 
 
-def test_zai_extractor_raises_when_curated_missing() -> None:
-    """A curated model vanishing from the page is a delisting/rename — fail loud."""
+def test_zai_extractor_reports_a_missing_curated_model() -> None:
+    """A curated model leaving the page is reported, and the others' prices
+    are still read (GLM-4.5-Air's delisting stopped every z.ai price from
+    2026-11 until this). Every curated model gone is a restructure: fail loud."""
     mod = _load("extract_zai_catalog")
     md = ZAI_MD.read_text().replace("| GLM-5.2", "| GLM-5.2-renamed")
+    snap = mod.build_snapshot(md, source_url="x")
+    assert snap["missing_mapped_models"] == ["glm-5.2"]
+    assert "glm-5.2" not in {m["id"] for m in snap["models"]} and snap["models"]
+    gone = md
+    for slug in mod.CURATED:
+        gone = gone.replace(f"| {slug} ", f"| {slug}-renamed ")
     with pytest.raises(mod.ExtractError):
-        mod.build_snapshot(md, source_url="x")
+        mod.build_snapshot(gone, source_url="x")
 
 
 def test_zai_extractor_cli_writes_snapshot(tmp_path: Path) -> None:
