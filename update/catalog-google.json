@@ -51,22 +51,8 @@
     "Gemini 3 Flash": "gemini-3-flash",
     "Gemini 2.5 Flash": "gemini-2.5-flash"
   },
-  "unexpected_slugs": [
-    "Gemini 3.6 Flash",
-    "Gemini 4 Carbon"
-  ],
-  "discovered": [
-    {
-      "slug": "Gemini 4 Carbon",
-      "input_price_per_1m": 2.0,
-      "output_price_per_1m": 10.0
-    },
-    {
-      "slug": "Gemini 3.6 Flash",
-      "input_price_per_1m": 0.75,
-      "output_price_per_1m": 3.75
-    }
-  ],
+  "unexpected_slugs": [],
+  "discovered": [],
   "missing_mapped_models": [],
   "section_sha256": "0dc9e6950f62360c3126444d16f5c75912e14b6f43281a6091ed96effb69ace4"
 }

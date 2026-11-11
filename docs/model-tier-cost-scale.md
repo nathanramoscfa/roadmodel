@@ -450,3 +450,4 @@ model per line, in exactly this form:
 - xai/grok-build-0.1 — build-agent preview removed from the catalog on 2026-07-15 when Cursor delisted it; retired (declined 2026-09-25)
 - google/Gemini 3.1 Flash-Lite Image — an image, audio, video, embedding, robotics or computer-use model; the catalog rates general text models (declined 2026-10-07)
 - google/Gemini Robotics Er 2 — an image, audio, video, embedding, robotics or computer-use model; the catalog rates general text models (declined 2026-10-07)
+- zai/GLM-5.3-FlashX-Legal — no price on the provider page; re-checked each run (declined 2026-11-11)

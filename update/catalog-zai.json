@@ -20,14 +20,6 @@
       "input_price_per_1m": 0.6,
       "output_price_per_1m": 2.2,
       "cache_read_per_1m": 0.11
-    },
-    {
-      "id": "glm-4.5-air",
-      "slug": "GLM-4.5-Air",
-      "name": "GLM-4.5-Air",
-      "input_price_per_1m": 0.2,
-      "output_price_per_1m": 1.1,
-      "cache_read_per_1m": 0.03
     }
   ],
   "slug_to_id": {
@@ -35,6 +27,11 @@
     "GLM-4.6": "glm-4.6",
     "GLM-5.2": "glm-5.2"
   },
-  "unexpected_slugs": [],
-  "section_sha256": "cd3a62841b95fc5fbadd099638a33a52232a6c42ce5f9a4a62de77cf70bf54c5"
+  "unexpected_slugs": [
+    "GLM-5.3-FlashX-Legal"
+  ],
+  "missing_mapped_models": [
+    "glm-4.5-air"
+  ],
+  "section_sha256": "1e99f340413e17487e691720c842555b4da084ef4e6c7cbe07888ae991e012c6"
 }
