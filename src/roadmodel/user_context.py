@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 import os
-from importlib import resources
 from pathlib import Path
 from typing import Final
 
+from roadmodel.data_files import data_file
 from roadmodel.errors import BundledDocNotFoundError, UserContextNotFoundError
 from roadmodel.private_files import atomic_private_write
 
@@ -45,7 +45,7 @@ def resolve(*, cli_path: Path | None) -> Path:
 
 def bootstrap(target: Path) -> None:
     target = target.expanduser()
-    template_path = resources.files("roadmodel.data") / _USER_CONTEXT_TEMPLATE
+    template_path = data_file(_USER_CONTEXT_TEMPLATE)
     try:
         template_text = template_path.read_text(encoding="utf-8")
     except FileNotFoundError as exc:

@@ -13,6 +13,9 @@ dependencies = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.27",
     "pydantic>=2.6",
+    # app/live_data.py fetches main's catalog with it; the provider SDKs in
+    # roadmodel[recommend] already install it.
+    "httpx>=0.27",
 ]
 
 [project.optional-dependencies]

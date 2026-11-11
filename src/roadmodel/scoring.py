@@ -53,7 +53,6 @@ code. Nothing here calls a model.
 
 from __future__ import annotations
 
-import functools
 import json
 import math
 import re
@@ -61,10 +60,10 @@ import statistics
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timedelta, timezone
-from importlib import resources
 from typing import Any, Final
 
 from roadmodel import cost as _cost
+from roadmodel import data_files as _data
 from roadmodel import ladder_layout as _layout
 from roadmodel import series as _series
 
@@ -232,9 +231,9 @@ FUNDING_PREFERENCE: Final[dict[str, int]] = {
 # Baseline allowed jurisdictions when the user-context declares none.
 BASELINE_JURISDICTIONS: Final[tuple[str, ...]] = ("us", "eu", "uk", "ca", "au", "jp", "kr")
 
-BUNDLED_BENCHMARKS_PATH = resources.files("roadmodel.data") / "benchmarks.json"
-BUNDLED_CONTEXT_PATH = resources.files("roadmodel.data") / "context-windows.json"
-BUNDLED_EFFORT_TOKENS_PATH = resources.files("roadmodel.data") / "effort-tokens.json"
+BUNDLED_BENCHMARKS_PATH = _data.data_file("benchmarks.json")
+BUNDLED_CONTEXT_PATH = _data.data_file("context-windows.json")
+BUNDLED_EFFORT_TOKENS_PATH = _data.data_file("effort-tokens.json")
 # A context window must hold the task's material plus the instructions and the
 # answer: 10% above the material's own size.
 CONTEXT_HEADROOM: Final[float] = 1.1
@@ -352,7 +351,7 @@ def context_windows() -> dict[str, int]:
     return {str(k): v for k, v in models.items() if isinstance(v, int) and v > 0}
 
 
-@functools.cache
+@_data.cached_on("effort-tokens.json")
 def _effort_tokens() -> dict[str, Any]:
     """docs/effort-tokens.json (update/measure_effort_tokens.py); empty when
     the file is missing or unreadable."""
@@ -373,7 +372,7 @@ def _positive(row: Any) -> dict[str, float]:
     }
 
 
-@functools.cache
+@_data.cached_on("effort-tokens.json")
 def effort_token_multipliers() -> dict[str, dict[str, float]]:
     """Each measured model's output-token multiplier at each effort, relative
     to a typical model at high (docs/effort-tokens.json ``models``)."""
@@ -391,7 +390,7 @@ def effort_token_multipliers() -> dict[str, dict[str, float]]:
     return out
 
 
-@functools.cache
+@_data.cached_on("effort-tokens.json")
 def derived_token_multipliers() -> dict[str, dict[str, float]]:
     """The multiplier of each ladder model at each effort not measured,
     derived from its measured ones (docs/effort-tokens.json ``derived``)."""
@@ -401,7 +400,7 @@ def derived_token_multipliers() -> dict[str, dict[str, float]]:
     return {str(mid): by for mid, row in derived.items() if (by := _positive(row))}
 
 
-@functools.cache
+@_data.cached_on("effort-tokens.json")
 def settable_levels() -> dict[str, list[str]]:
     """The ladder levels each measured model's own API offers
     (docs/effort-tokens.json ``settable``): Gemini 4 Argon takes low, medium

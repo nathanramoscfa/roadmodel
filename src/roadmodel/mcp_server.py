@@ -9,7 +9,6 @@ import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
-from importlib import resources
 from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Any, Literal
@@ -17,6 +16,7 @@ from typing import Any, Literal
 from roadmodel import recommend as recommender
 from roadmodel import user_context
 from roadmodel.config import Config, load_config
+from roadmodel.data_files import data_file
 from roadmodel.errors import BundledDocNotFoundError, MissingProviderKeyError
 from roadmodel.providers import ProviderAdapter
 from roadmodel.providers._safety import transport_timeout
@@ -70,15 +70,11 @@ def _check_prompts(system: str, user: str) -> None:
         raise ValueError("Combined prompts exceed the tool byte limit.")
 
 
-BUNDLED_SELECTOR_PATH: Traversable = resources.files("roadmodel.data") / "model-selector.txt"
-BUNDLED_TIER_COST_PATH: Traversable = resources.files("roadmodel.data") / "model-tier-cost-scale.md"
-BUNDLED_CATALOG_PATH: Traversable = resources.files("roadmodel.data") / "catalog.json"
-BUNDLED_SETTINGS_DISPLAY_PATH: Traversable = (
-    resources.files("roadmodel.data") / "settings-display.md"
-)
-BUNDLED_PHASE_TEMPLATE_PATH: Traversable = (
-    resources.files("roadmodel.data") / "phase-roadmap-template.md"
-)
+BUNDLED_SELECTOR_PATH: Traversable = data_file("model-selector.txt")
+BUNDLED_TIER_COST_PATH: Traversable = data_file("model-tier-cost-scale.md")
+BUNDLED_CATALOG_PATH: Traversable = data_file("catalog.json")
+BUNDLED_SETTINGS_DISPLAY_PATH: Traversable = data_file("settings-display.md")
+BUNDLED_PHASE_TEMPLATE_PATH: Traversable = data_file("phase-roadmap-template.md")
 
 
 def _read_bundled_doc(path: Traversable, filename: str) -> str:

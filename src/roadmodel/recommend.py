@@ -8,12 +8,12 @@ import re
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
-from importlib import resources
 from importlib.resources.abc import Traversable
 from typing import Any, Final
 
-from roadmodel import cost, scoring, series, usage, user_context
+from roadmodel import cost, data_files, scoring, series, usage, user_context
 from roadmodel.config import Config
+from roadmodel.data_files import data_file
 from roadmodel.errors import (
     BundledDocNotFoundError,
     MalformedResponseError,
@@ -25,33 +25,19 @@ from roadmodel.providers import google as google_provider
 from roadmodel.providers import openai as openai_provider
 from roadmodel.providers.openai_compatible import ADAPTERS as _compatible_adapters
 
-BUNDLED_SELECTOR_PATH: Traversable = resources.files("roadmodel.data") / "model-selector.txt"
-BUNDLED_TIER_COST_PATH: Traversable = resources.files("roadmodel.data") / "model-tier-cost-scale.md"
+BUNDLED_SELECTOR_PATH: Traversable = data_file("model-selector.txt")
+BUNDLED_TIER_COST_PATH: Traversable = data_file("model-tier-cost-scale.md")
 # The per-surface DISPLAY rules for the selector's MAX MODE / EFFORT / THINKING /
 # ORCHESTRATION fields — see _structured_settings, which implements them. (The
 # selector owns the EMISSION rule — which dials a platform has at all; this doc
 # owns what to CALL them on each surface.)
-BUNDLED_SETTINGS_DISPLAY_PATH: Traversable = (
-    resources.files("roadmodel.data") / "settings-display.md"
-)
-BUNDLED_USER_CONTEXT_TEMPLATE_PATH: Traversable = (
-    resources.files("roadmodel.data") / "user-context.example.md"
-)
-BUNDLED_PHASE_ROADMAP_TEMPLATE_PATH: Traversable = (
-    resources.files("roadmodel.data") / "phase-roadmap-template.md"
-)
-BUNDLED_PROJECT_ROADMAP_TEMPLATE_PATH: Traversable = (
-    resources.files("roadmodel.data") / "project-roadmap-template.md"
-)
-BUNDLED_PLANNING_KIT_HOWTO_PATH: Traversable = (
-    resources.files("roadmodel.data") / "planning-kit-how-to-use.md"
-)
-BUNDLED_PROMPT_PROJECT_ROADMAP_PATH: Traversable = (
-    resources.files("roadmodel.data") / "prompt-project-roadmap.md"
-)
-BUNDLED_PROMPT_PHASE_ROADMAP_PATH: Traversable = (
-    resources.files("roadmodel.data") / "prompt-phase-roadmap.md"
-)
+BUNDLED_SETTINGS_DISPLAY_PATH: Traversable = data_file("settings-display.md")
+BUNDLED_USER_CONTEXT_TEMPLATE_PATH: Traversable = data_file("user-context.example.md")
+BUNDLED_PHASE_ROADMAP_TEMPLATE_PATH: Traversable = data_file("phase-roadmap-template.md")
+BUNDLED_PROJECT_ROADMAP_TEMPLATE_PATH: Traversable = data_file("project-roadmap-template.md")
+BUNDLED_PLANNING_KIT_HOWTO_PATH: Traversable = data_file("planning-kit-how-to-use.md")
+BUNDLED_PROMPT_PROJECT_ROADMAP_PATH: Traversable = data_file("prompt-project-roadmap.md")
+BUNDLED_PROMPT_PHASE_ROADMAP_PATH: Traversable = data_file("prompt-phase-roadmap.md")
 
 # The block contract the selector's <output-format> emits. SOURCE OF TRUTH: the
 # "OUTPUT CONTRACT VERSION:" line at the top of <output-format> in
@@ -1634,13 +1620,21 @@ def _enforce_table_effort(ladder: dict[str, dict[str, str]], row: scoring.Ladder
 
 
 # Ladder tables already computed in this process, by user-context text, the
-# unavailable models and any catalog override. The catalog and benchmarks are
-# bundled, so one context always yields the same table; rebuilding it (28 rows,
-# each ranking the whole pool) cost the hosted service about a second a request
-# for a well-funded user (Phase 4.5 soak, 2026-10-08: B9 latency). Rows are
-# read, never mutated. Oldest entry out first past _TABLE_CACHE_MAX.
-_TABLE_CACHE: dict[tuple[str, tuple[str, ...], str], dict[str, scoring.Ladder]] = {}
+# unavailable models, any catalog override and the data files the scorer reads
+# (data_files.stamp), so one context always yields the same table until the
+# service swaps in a newer catalog; rebuilding it (28 rows, each ranking the
+# whole pool) cost the hosted service about a second a request for a
+# well-funded user (Phase 4.5 soak, 2026-10-08: B9 latency). Rows are read,
+# never mutated. Oldest entry out first past _TABLE_CACHE_MAX.
+_TABLE_CACHE: dict[tuple[object, ...], dict[str, scoring.Ladder]] = {}
 _TABLE_CACHE_MAX: Final = 64
+# The files a ladder table is computed from.
+_TABLE_DATA: Final = (
+    "catalog.json",
+    "benchmarks.json",
+    "context-windows.json",
+    "effort-tokens.json",
+)
 
 
 def _ladder_table_for(
@@ -1652,6 +1646,7 @@ def _ladder_table_for(
         user_context_text,
         tuple(sorted(unavailable_models or [])),
         os.environ.get("ROADMODEL_CATALOG_PATH", ""),
+        data_files.stamp(*_TABLE_DATA),
     )
     cached = _TABLE_CACHE.get(key)
     if cached is not None:

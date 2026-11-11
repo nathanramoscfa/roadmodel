@@ -45,7 +45,13 @@ from .pools import table as pool_table
 
 logger = logging.getLogger(__name__)
 
-_BUNDLED_CATALOG_PATH: Traversable = resources.files("roadmodel.data") / "catalog.json"
+try:  # a roadmodel that reads ROADMODEL_DATA_DIR (app/live_data.py) finds main's catalog
+    from roadmodel import data_files  # type: ignore[import-untyped]
+
+    _BUNDLED_CATALOG_PATH: Traversable = data_files.data_file("catalog.json")
+except ImportError:  # pragma: no cover - exercised only against an older roadmodel
+    data_files = None
+    _BUNDLED_CATALOG_PATH = resources.files("roadmodel.data") / "catalog.json"
 
 # Billing kinds reachable with the user's OWN API key / pay-per-token. Mirrors
 # web/lib/api-providers.ts API_BILLING. `subscription-included` and
@@ -333,10 +339,12 @@ def _consumption_block(*, flat_funding: bool = False) -> str:
 
 
 def load_catalog() -> dict[str, Any]:
-    """Load the catalog (env override -> bundled), mirroring roadmodel.cost.
+    """Load the catalog (env override -> live -> bundled), mirroring roadmodel.cost.
 
     Honors ``ROADMODEL_CATALOG_PATH`` so tests can drive a fixture catalog;
-    otherwise reads the catalog bundled in the pinned roadmodel package.
+    otherwise reads the catalog the package reads: main's when the service
+    keeps a live set (app/live_data.py), else the one bundled in the pinned
+    roadmodel package.
     """
     override = os.environ.get("ROADMODEL_CATALOG_PATH")
     if override:
@@ -410,10 +418,13 @@ _DIAL_FALLBACK: dict[str, dict[str, bool]] = {
 }
 
 # Catalog-derived dial map, cached per catalog source (the ROADMODEL_CATALOG_PATH
-# override, or "" for the bundled one) so a warm Function never re-parses the
-# ~200KB catalog on the request path, while tests pointing at a fixture catalog
-# still get their own entry.
-_DIAL_CACHE: dict[str, dict[str, dict[str, bool]]] = {}
+# override, or "" for the package's own, with the stamp of the live catalog the
+# package reads) so a warm Function never re-parses the ~200KB catalog on the
+# request path, a newer live catalog gets its own entry, and tests pointing at
+# a fixture catalog still get theirs. Past _DIAL_CACHE_MAX entries it starts
+# over, so a long-lived instance does not keep one per refresh.
+_DIAL_CACHE: dict[tuple[str, str], dict[str, dict[str, bool]]] = {}
+_DIAL_CACHE_MAX = 8
 
 
 def _build_dial_map(catalog: dict[str, Any]) -> dict[str, dict[str, bool]]:
@@ -443,7 +454,8 @@ def platform_dials(platform: str, *, catalog: dict[str, Any] | None = None) -> d
     """
     if catalog is not None:
         return _build_dial_map(catalog).get(platform.strip().lower(), {})
-    key = os.environ.get("ROADMODEL_CATALOG_PATH", "")
+    live = repr(data_files.stamp("catalog.json")) if data_files is not None else ""
+    key = (os.environ.get("ROADMODEL_CATALOG_PATH", ""), live)
     cached = _DIAL_CACHE.get(key)
     if cached is None:
         try:
@@ -451,6 +463,8 @@ def platform_dials(platform: str, *, catalog: dict[str, Any] | None = None) -> d
         except Exception:  # noqa: BLE001 - dial lookup is best-effort, never fatal
             logger.warning("platform dial map build failed (non-fatal)")
             cached = dict(_DIAL_FALLBACK)
+        if len(_DIAL_CACHE) >= _DIAL_CACHE_MAX:
+            _DIAL_CACHE.clear()
         _DIAL_CACHE[key] = cached
     return cached.get(platform.strip().lower(), {})
 
