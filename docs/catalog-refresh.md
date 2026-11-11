@@ -1,13 +1,31 @@
 # Catalog Refresh — Manual Fallback Procedure
 
-The Monday catalog-refresh cron in
+The catalog-refresh cron in
 [`.github/workflows/update-models.yml`](../.github/workflows/update-models.yml)
 opens a PR that refreshes [`docs/model-selector.txt`](model-selector.txt),
 [`docs/model-tier-cost-scale.md`](model-tier-cost-scale.md), the rendered
 [`docs/model-selector.md`](model-selector.md), and the machine-readable
 [`docs/catalog.json`](catalog.json) in a single commit. This document covers
 the manual fallback when the cron fails or when a correction is needed
-between Mondays.
+between runs.
+
+## What starts a refresh
+
+The cron checks every hour. Each run reads every provider's own pricing page
+(`update/extract_*_catalog.py`) and the Codex model list, then
+`update/check_sources.py` compares them, Cursor's pricing page and the model
+names the docs trackers have seen with the last run's signature:
+
+- **A provider's own source changed** (a new model or price on Google's,
+  Anthropic's or OpenAI's page, or a tracker naming a new model): the
+  deterministic refresh runs within the hour and adds, prices or retires
+  models by rule. No model call.
+- **Cursor's page changed:** on the daily 16:00 UTC run, the curation pass
+  (Opus) runs too, for Cursor's own models and the models Cursor offers.
+- **Nothing changed:** the run stops after the gate.
+
+A price reader that fails keeps its committed snapshot and opens one
+`catalog-reader-failure` issue, closed on the first run it reads again.
 
 ## When to run manually
 

@@ -205,6 +205,36 @@ def _table_rows(span: str) -> list[tuple[str, list[str]]]:
     return out
 
 
+def _find(values: list[str], *need: str, avoid: tuple[str, ...] = ("long",)) -> int | None:
+    """The first header cell naming every ``need`` and no ``avoid``."""
+    return next(
+        (
+            i
+            for i, c in enumerate(values)
+            if all(n in c for n in need) and not any(a in c for a in avoid)
+        ),
+        None,
+    )
+
+
+def _columns(span: str) -> tuple[int, int, int | None]:
+    """Value-cell indices of the short-context input, output and cached-input
+    columns, read from the table's header. OpenAI reordered them in 2026-11
+    (input, output, cached input, then the cache writes); the reader had read
+    fixed positions and failed on the first row with no cache-write price."""
+    for line in span.splitlines():
+        cells = [c.strip().lower() for c in line.strip().strip("|").split("|")]
+        if not cells or cells[0] != "model":
+            continue
+        values = cells[1:]
+        inp = _find(values, "input", avoid=("long", "cached"))
+        out = _find(values, "output")
+        if inp is not None and out is not None:
+            return inp, out, _find(values, "cached")
+        break
+    return 0, 3, 1  # input, cached input, cache writes, output: the layout before 2026-11
+
+
 def discover_unmapped(md: str) -> list[str]:
     """Text rows the standard pane prices that the catalog neither maps
     (``NAME_TO_ID``) nor declines (``DECLINED``) — i.e. models that exist and
@@ -228,6 +258,7 @@ def discovered_prices(md: str, names: list[str]) -> list[dict[str, object]]:
     catalog cron can add it at the provider's own price without searching for
     it. A row whose cells do not parse is listed without a price."""
     span = _standard_rows_blob(md)
+    in_col, out_col, _ = _columns(span)
     wanted = set(names)
     out: list[dict[str, object]] = []
     seen: set[str] = set()
@@ -237,8 +268,8 @@ def discovered_prices(md: str, names: list[str]) -> list[dict[str, object]]:
             continue
         seen.add(canonical)
         entry: dict[str, object] = {"slug": canonical}
-        if len(cells) >= 4:
-            in_price, out_price = _num(cells[0]), _num(cells[3])
+        if len(cells) > max(in_col, out_col):
+            in_price, out_price = _num(cells[in_col]), _num(cells[out_col])
             if in_price is not None and out_price is not None:
                 entry["input_price_per_1m"] = in_price
                 entry["output_price_per_1m"] = out_price
@@ -248,6 +279,7 @@ def discovered_prices(md: str, names: list[str]) -> list[dict[str, object]]:
 
 def parse_pricing(md: str) -> list[dict[str, object]]:
     span = _standard_rows_blob(md)
+    in_col, out_col, cache_col = _columns(span)
     models: list[dict[str, object]] = []
     seen: set[str] = set()
     for name, cells in _table_rows(span):
@@ -255,14 +287,14 @@ def parse_pricing(md: str) -> list[dict[str, object]]:
         mid = NAME_TO_ID.get(canonical)
         if mid is None or mid in seen:
             continue
-        # Short-context columns: input, cached input, cache writes, output.
-        # The long-context columns that follow price the same model above the
-        # context threshold and are not what the catalog quotes.
-        if len(cells) < 4:
+        # Short-context columns, found by their header. The long-context
+        # columns price the same model above the context threshold and are
+        # not what the catalog quotes.
+        if len(cells) <= max(in_col, out_col):
             continue
-        in_price = _num(cells[0])
-        cache_price = _num(cells[1])
-        out_price = _num(cells[3])
+        in_price = _num(cells[in_col])
+        cache_price = _num(cells[cache_col]) if cache_col is not None else None
+        out_price = _num(cells[out_col])
         if in_price is None or out_price is None:
             raise ExtractError(f"could not parse input/output price for {name!r}")
         seen.add(mid)
