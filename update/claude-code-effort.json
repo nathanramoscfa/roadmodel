@@ -15,14 +15,14 @@
     "max"
   ],
   "per_model_effort": {
-    "Fable 5.1": [
+    "Fable 5.2": [
       "low",
       "medium",
       "high",
       "xhigh",
       "max"
     ],
-    "Fable 5": [
+    "Fable 5.1": [
       "low",
       "medium",
       "high",
@@ -92,11 +92,12 @@
     ]
   },
   "default_effort": {
-    "*": "high",
+    "Fable 5.2": "medium",
     "Opus 5.5": "medium",
     "Sonnet 5.5": "medium",
     "Haiku 5.5": "medium",
-    "Opus 4.7": "xhigh"
+    "Opus 4.7": "xhigh",
+    "*": "high"
   },
   "fallback_rule": "highest supported level at or below the requested level",
   "ultracode": {
@@ -137,10 +138,10 @@
       "Opus 5.5",
       "Sonnet 5.5",
       "Haiku 5.5",
-      "Fable 5.1",
-      "Fable 5"
+      "Fable 5.2",
+      "Fable 5.1"
     ]
   },
   "unexpected_models": [],
-  "section_sha256": "07ffd56f129b60029e3a9ca4009de64d1b6d9a26ff1fee385564391e67897d30"
+  "section_sha256": "17a3e9574c18960a3f6c0e66f5abe9d1810fada162f336c76e056df65ad0ee73"
 }
