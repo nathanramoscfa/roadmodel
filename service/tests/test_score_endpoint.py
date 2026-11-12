@@ -338,5 +338,5 @@ def test_the_rationale_names_the_version_an_inherited_figure_measured() -> None:
         blended_price_usd=4.0,
         platform_name="Codex",
     )
-    why = score._why(candidate, score.scoring.Task("knowledge", "medium"))
+    why = score._why(candidate, scoring.Task("knowledge", "medium"))
     assert "measurements of the version before it (gpt-6-sol)" in why.quality
