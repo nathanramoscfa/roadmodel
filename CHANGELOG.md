@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.113] — 2026-11-11
+
+- **A new version is picked before Artificial Analysis measures it.** /recommend and `roadmodel score` pick only from the frontier of models with an AA Intelligence Index, and since a recommendation names the latest version of a series, the older version also drops out wherever the newer one runs. So Fable 5.2 and GPT-6.1 Terra, which AA has not measured yet, took their whole series off the picks. A catalog model AA has not measured that is a later version of one it has now stands on that version's rows (`scoring.inherit_unmeasured`) until AA measures it, the same way it already starts on that version's rating letters. Its AA Index reads ≈ in ladder tables and the engine's ladder table, and `/v1/score`'s rationale names the version measured. A new series (Gemini 4 Carbon) has no previous version and waits. The copies count only for their own model: composites, evidence scales, the market line and effort shifts are still read over the models AA measured.
+
 ## [0.2.112] — 2026-11-11
 
 - **A review draft no refresh still needs now closes itself.** The rolling `chore/catalog-review` draft was rebuilt only by runs that held something, so after a run that passed the gate whole it stayed open asking for a review of data already superseded. `update/split_identity.py` now leaves an empty `update/.last-held.md` when nothing is held, and `scripts/open-review-pr.sh` closes the open draft then; with no report at all (the split did not run) the draft stays.

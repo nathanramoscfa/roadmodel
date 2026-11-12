@@ -715,7 +715,9 @@ def test_relayout_turns_a_ranked_table_into_the_ladder_table() -> None:
     assert new.startswith("**Deploys:** CI → live on merge.\n\n|")
     assert new.endswith("\n\n**Conversation:** New\n\n**Model rationale:** unchanged.\n")
     assert "**Runs:**" not in new and "Thinking" not in new
-    assert "≈ estimated from the model's measured levels." in " ".join(new.split())
+    assert "≈ estimated from the model's measured levels or its previous version's." in " ".join(
+        new.split()
+    )
     # A second pass finds nothing left to convert.
     assert ladder_layout.relayout(new, price=_fake_price) == (new, 0, 0)
 

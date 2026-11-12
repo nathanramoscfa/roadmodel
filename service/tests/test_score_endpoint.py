@@ -316,3 +316,27 @@ def test_the_terms_are_the_candidates_own(client: TestClient) -> None:
 
 def test_healthz_lists_score(client: TestClient) -> None:
     assert "score" in client.get("/healthz").json()["capabilities"]
+
+
+def test_the_rationale_names_the_version_an_inherited_figure_measured() -> None:
+    """A new version AA has not measured stands on its previous version's row
+    (roadmodel.scoring.inherit_unmeasured); the sentence says whose."""
+    from types import SimpleNamespace
+
+    from app import score
+
+    candidate = SimpleNamespace(
+        model_name="GPT-6.1 Sol",
+        quality=80.0,
+        quality_source="aa:hle+letter",
+        letter="A",
+        aa_inherited_from="gpt-6-sol",
+        requirement=60.0,
+        requirement_penalty=0.0,
+        cost_penalty=0.0,
+        effective_cost_usd=0.0,
+        blended_price_usd=4.0,
+        platform_name="Codex",
+    )
+    why = score._why(candidate, scoring.Task("knowledge", "medium"))
+    assert "measurements of the version before it (gpt-6-sol)" in why.quality

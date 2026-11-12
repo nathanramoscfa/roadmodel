@@ -193,7 +193,13 @@ frontier, in code (`scoring.ladder`):
    costs them $0, which would collapse the frontier to its top model, while
    list price is what a pick draws from a capped pool. A model the frontier
    leaves out (the same price as a stronger one, or dearer and weaker) is
-   never a pick.
+   never a pick. A new version AA has not measured yet stands on its
+   previous version's rows (`inherit_unmeasured`: Fable 5.2 on Fable 5.1's),
+   shown ≈, as it starts on that version's rating letters; without them the
+   series would leave the frontier, since `rank` drops the older version
+   wherever the newer one runs. A new series has no previous version and
+   waits for AA. The copies are figures for their own model only: every
+   scale and fit over the measured models leaves them out.
 3. **Efforts as points.** AA measures a reasoning model at several efforts,
    one row each, and its figures move with the effort: GPT-6 Luna reads
    21.5 on the AA Index at low and 38.1 at max. `docs/benchmarks.json` keeps
