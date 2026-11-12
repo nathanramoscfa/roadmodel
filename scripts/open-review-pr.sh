@@ -12,12 +12,24 @@
 # last. The PR stays a draft. The refresh merger never takes it, and the
 # refresh-integrity status fails on it by design: a maintainer admits it from a
 # branch of their own (the PR body says how).
+#
+# An empty update/.last-held.md means this run's candidate passed the gate
+# whole, so whatever an earlier run held has been superseded: the open draft is
+# closed rather than left asking for a review of stale data. No report at all
+# means the split did not run, and the draft stays.
 set -euo pipefail
 
 branch="$1" title="$2" hold="$3"
 shift 3
 if [ ! -s update/.last-held.md ]; then
   echo "Nothing held for review."
+  if [ -e update/.last-held.md ]; then
+    stale="$(gh pr list --head "$branch" --state open --json url -q '.[0].url' || true)"
+    if [ -n "$stale" ]; then
+      gh pr close "$stale" --delete-branch --comment "Superseded: the latest refresh passed the typed boundary whole, so nothing held here still waits for review. A later run that holds something opens a new draft."
+      echo "Closed: $stale"
+    fi
+  fi
   exit 0
 fi
 git config user.name "roadmodel-bot"

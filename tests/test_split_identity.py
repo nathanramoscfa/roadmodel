@@ -105,6 +105,8 @@ def test_a_typed_refresh_ships_as_it_is(work: dict[str, Path]) -> None:
     assert si.split(work["base"], work["hold"], PATHS, DAY) is None
     assert {p: (root / p).read_text() for p in PATHS} == before
     assert not any(work["hold"].iterdir())
+    # An empty report: this run held nothing, so an older draft is stale.
+    assert (root / "update" / ".last-held.md").read_text() == ""
 
 
 def _add_nova(root: Path, decline: str) -> str:
