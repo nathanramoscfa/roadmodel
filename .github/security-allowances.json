@@ -385,7 +385,7 @@
           "line_sha256": "fe92193f628b0e24f2c5abeac63540750959b929998c715c215d5e63ea0e374b",
           "mode": "100644",
           "path": "tests/test_packaging.py",
-          "sha256": "cbbedbfef00b72e6804a00fef995c9c4e1beaf4756b6bbb888fc40557f7f9c6b"
+          "sha256": "f6e55edc157870ddb7dab192b09ddb6856257e12c33c86fadb9bdb6da31922c5"
         },
         "tool_sha256": "036b9c3d6791be984e34cf9372d6f83228380851ffb0f2bba37eaf3546a382f7"
       },
