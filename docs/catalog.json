@@ -1,9 +1,9 @@
 {
   "schema_version": "5",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-11-12T22:05:51Z",
+  "generated_at_utc": "2026-11-12T22:56:20Z",
   "source_doc_sha256": {
-    "model-selector.txt": "e06a867b0928c1fb6c08a9fd34cb8541dd23aa9bdbd35dd7a35f395e21cfdcfc",
+    "model-selector.txt": "5ed5692103a542acb77567695b3763b4f7d89f523914836ea773640d6ad983fc",
     "model-tier-cost-scale.md": "28893241d2c499fa8b6b9318845806e3079077019dee3034abb0da2fdae30b8d"
   },
   "models": [
@@ -82,7 +82,7 @@
       "superseded_by": null,
       "superseded_on": null,
       "added_on": "2026-11-12",
-      "always_thinks": false,
+      "always_thinks": true,
       "retires_on": null
     },
     {

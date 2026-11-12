@@ -951,13 +951,14 @@ def test_check_h_warns_but_passes_without_the_attribute(tmp_path: Path) -> None:
     )
     assert result.returncode == 0, result.stderr
     assert "PASS" in result.stdout
-    assert result.stdout.count("WARNING check H") == 5
+    # Five models are listed; retired Fable 5 is skipped.
+    assert result.stdout.count("WARNING check H") == 4
     titles = [item["title"] for item in json.loads(queue.read_text())]
     assert (
         'chore(selector): "claude-opus-5-5" always thinks in Claude Code but lacks always-thinks="yes"'
         in titles
     )
-    assert len(titles) == 5
+    assert len(titles) == 4
 
 
 def test_check_h_is_silent_when_selector_and_docs_agree(tmp_path: Path) -> None:
@@ -977,9 +978,14 @@ def test_check_h_warns_on_a_marked_model_the_docs_do_not_list() -> None:
     gate = _load_conformance()
     snapshot = _docs_1020()
     selector = REAL_SELECTOR.read_text().replace(' always-thinks="yes"', "")
-    marked = _mark_always_thinks(selector, (*ALWAYS_THINKING_IDS, "opus-4.8"))
+    # Fable 5.2 is newer than the 2026-10-20 docs, so they do not list it.
+    marked = _mark_always_thinks(selector, (*ALWAYS_THINKING_IDS, "claude-fable-5.2"))
     warnings = gate.check_always_thinks(marked, snapshot)
-    assert len(warnings) == 1 and "'opus-4.8'" in warnings[0] and "do not list" in warnings[0]
+    assert len(warnings) == 1 and "'claude-fable-5.2'" in warnings[0]
+    assert "do not list" in warnings[0]
+    # A retired model is never offered: never a warning (opus-4.8 retired 2026-10-28).
+    retired = _mark_always_thinks(selector, (*ALWAYS_THINKING_IDS, "opus-4.8"))
+    assert gate.check_always_thinks(retired, snapshot) == []
     # A non-Claude model is outside these docs: never a warning.
     other = _mark_always_thinks(selector, (*ALWAYS_THINKING_IDS, "gemini-3-pro"))
     assert gate.check_always_thinks(other, snapshot) == []
@@ -988,12 +994,12 @@ def test_check_h_warns_on_a_marked_model_the_docs_do_not_list() -> None:
     stale["extended_thinking"]["cannot_disable_on"] = []
     assert (
         len(gate.check_always_thinks(_mark_always_thinks(selector, ALWAYS_THINKING_IDS), stale))
-        == 5
+        == 4
     )
     items = gate.always_thinks_review_items(warnings)
     assert (
         items[0][0]
-        == 'chore(selector): "opus-4.8" is marked always-thinks="yes" but the docs let thinking turn off'
+        == 'chore(selector): "claude-fable-5.2" is marked always-thinks="yes" but the docs let thinking turn off'
     )
 
 

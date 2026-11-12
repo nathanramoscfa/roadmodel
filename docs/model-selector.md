@@ -67,9 +67,9 @@ decision; only the settings vocabulary differs):
   `uncapped` consumption-headroom posture; `Ultracode` only when the task
   warrants it), with `THINKING: On` only where the model has the toggle.
   An `always-thinks="yes"` model (Opus 5.5, Sonnet 5.5, Haiku 5.5,
-  Fable 5, Fable 5.1) gets NO THINKING line: Claude Code shows no
-  Thinking switch for it. Emit NO Max Mode line: Claude Code has no such
-  control.
+  Fable 5, Fable 5.1, Fable 5.2) gets NO THINKING line: Claude Code
+  shows no Thinking switch for it. Emit NO Max Mode line: Claude Code
+  has no such control.
 - Frontier GPT model on Codex — the surface exposes reasoning effort only,
   so recommend the model at the ladder's level (e.g. `EFFORT: High`, or
   `XHigh` for the novel-problem / multi-step-proof conditions). Emit no
@@ -395,9 +395,10 @@ differently:
   Alt+T, `alwaysThinkingEnabled`, or `MAX_THINKING_TOKENS=0`.
   Thinking can NOT be turned off on the models marked
   `always-thinks="yes"` in `<model-options>` (Opus 5.5, Sonnet 5.5,
-  Haiku 5.5, Fable 5, Fable 5.1): Claude Code shows "Thinking can't be
-  turned off" in place of the switch, its VS Code panel hides the
-  Thinking toggle for them, a saved `alwaysThinkingEnabled: false` or
+  Haiku 5.5, Fable 5, Fable 5.1, Fable 5.2): Claude Code shows
+  "Thinking can't be turned off" in place of the switch, its VS Code
+  panel hides the Thinking toggle for them, a saved
+  `alwaysThinkingEnabled: false` or
   `MAX_THINKING_TOKENS=0` has no effect, and the model decides per step
   how much to think from the effort level alone. Claude
   Code 2.1.257 ships Claude Fable 5.1 as the new default Fable model
