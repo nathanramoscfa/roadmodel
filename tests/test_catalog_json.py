@@ -596,4 +596,5 @@ def test_always_thinks_marks_exactly_the_models_that_cannot_turn_thinking_off() 
         "claude-sonnet-5-5",
         "claude-haiku-5-5",
         "claude-fable-5.1",
+        "claude-fable-5.2",
     }

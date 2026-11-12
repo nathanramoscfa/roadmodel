@@ -267,7 +267,14 @@ def test_always_thinks_resolves_ids_names_and_the_claude_prefix(
 
     monkeypatch.setenv("ROADMODEL_CATALOG_PATH", str(REPO_ROOT / "docs" / "catalog.json"))
 
-    for ref in ("claude-opus-5-5", "Opus 5.5", "Claude Opus 5.5", "Fable 5.1", "Haiku 5.5"):
+    for ref in (
+        "claude-opus-5-5",
+        "Opus 5.5",
+        "Claude Opus 5.5",
+        "Fable 5.1",
+        "Fable 5.2",
+        "Haiku 5.5",
+    ):
         assert always_thinks(ref) is True, ref
     for ref in ("Opus 5", "claude-opus-5", "Opus 4.8", "GPT-6.1 Sol", "", "not a model"):
         assert always_thinks(ref) is False, ref

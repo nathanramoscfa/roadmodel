@@ -1115,7 +1115,9 @@ def check_always_thinks(selector: str, snapshot: dict[str, object]) -> list[str]
     map to selector models by the ``name`` attribute ("Opus 5.5", "Fable 5.1").
     The reverse direction looks only at models of a family the Claude Code
     effort table covers (Opus, Sonnet, Haiku, Fable), since these docs say
-    nothing about any other provider's models.
+    nothing about any other provider's models. A retired model is skipped: it
+    is never offered, and the docs drop retired models (Fable 5 left them on
+    2026-11-10, and its warning was refiled on every run after).
     """
     thinking = snapshot.get("extended_thinking")
     listed_raw = thinking.get("cannot_disable_on") if isinstance(thinking, dict) else None
@@ -1126,7 +1128,8 @@ def check_always_thinks(selector: str, snapshot: dict[str, object]) -> list[str]
 
     by_name: dict[str, list[dict[str, str]]] = {}
     for attrs in selector_models(selector):
-        by_name.setdefault(attrs.get("name", ""), []).append(attrs)
+        if "retired-on" not in attrs:
+            by_name.setdefault(attrs.get("name", ""), []).append(attrs)
 
     warnings: list[str] = []
     for name in listed:
