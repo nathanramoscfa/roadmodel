@@ -255,6 +255,14 @@ jobs:
             python update/merge_catalog.py --sync-method codex-cli --ids "${codex_ids}"
             python update/merge_catalog.py --sync-method codex-api --ids "${codex_ids}"
           fi
+          # Claude Code's docs list the models it runs in their effort table
+          # (update/claude-code-effort.json, refreshed daily); a catalogued one
+          # belongs on the claude-code method. Same pattern: deterministic,
+          # additive, fail-open (update/claude_code_models.py).
+          claude_code_ids="$(python update/claude_code_models.py | paste -sd, - || true)"
+          if [ -n "${claude_code_ids}" ]; then
+            python update/merge_catalog.py --sync-method claude-code --ids "${claude_code_ids}"
+          fi
           # OpenRouter lists every model it routes on a public endpoint
           # (openrouter.ai/api/v1/models); a catalogued one belongs on the
           # openrouter method. Same pattern as the Codex sync: deterministic,
