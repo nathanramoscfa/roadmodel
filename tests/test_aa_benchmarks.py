@@ -16,6 +16,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 _spec = importlib.util.spec_from_file_location(
     "fetch_aa_benchmarks", REPO_ROOT / "update" / "fetch_aa_benchmarks.py"
@@ -388,3 +390,31 @@ def test_a_model_new_to_the_layer_has_no_speed_to_keep() -> None:
 def test_the_benchmark_refresh_reports_a_hold_in_its_pr() -> None:
     text = (REPO_ROOT / ".github" / "workflows" / "update-benchmarks.yml").read_text()
     assert 'd.get("held")' in text
+
+
+def _gone(status: int) -> Any:
+    response = fab.requests.Response()
+    response.status_code = status
+
+    def fetch(_key: str) -> list[dict[str, Any]]:
+        raise fab.requests.HTTPError(f"{status}", response=response)
+
+    return fetch
+
+
+def test_a_retired_endpoint_keeps_the_layer_and_lets_the_refresh_go_on(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """AA answers 410 Gone since 2026-11-04. The run keeps the committed layer
+    and exits 0, so the ratings, retirements and the unmeasured-effort flag
+    after it still run; any other HTTP error still fails the run."""
+    monkeypatch.setenv("AA_API_KEY", "synthetic")
+    monkeypatch.setattr(fab.sys, "argv", ["fetch_aa_benchmarks.py"])
+    monkeypatch.setattr(fab, "save_map", lambda *_: pytest.fail("wrote the map"))
+    monkeypatch.setattr(fab, "fetch_aa_models", _gone(410))
+    assert fab.main() == 0
+    assert "410 Gone" in capsys.readouterr().out
+
+    monkeypatch.setattr(fab, "fetch_aa_models", _gone(500))
+    with pytest.raises(fab.requests.HTTPError):
+        fab.main()
