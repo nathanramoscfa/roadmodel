@@ -23,7 +23,14 @@
 # GATED: skips cleanly until the 5 prod-soak secrets are seeded as Actions
 # secrets (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_ANON_KEY,
 # SITE_PASSWORD, and optional ROADMODEL_LATENCY_BYPASS_TOKEN). Until then it logs
-# a notice and no-ops. NOTE: SUPABASE_SERVICE_ROLE_KEY grants full DB access —
+# a notice and no-ops. Once they are, ROADMODEL_DOGFOOD_EMAIL is required too:
+# the account the signed-in probes run as, one on the operator lane (the founder
+# or the invite list) so they reach the signed-in engine.
+#
+# A soak that stops before its scorecard (a missing secret, a failed sign-in)
+# FAILS the run. From 2026-10-13 to 2026-11-12 it crashed before its first
+# request every day, because #1105 made the account required and nothing passed
+# one, and the job stayed green. NOTE: SUPABASE_SERVICE_ROLE_KEY grants full DB access —
 # seeding it into Actions is a deliberate exposure decision (see the PR).
 
 name: Recommender soak
@@ -63,9 +70,14 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+          ROADMODEL_DOGFOOD_EMAIL: ${{ secrets.ROADMODEL_DOGFOOD_EMAIL }}
         run: |
           if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] \
              && [ -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ] && [ -n "$SITE_PASSWORD" ]; then
+            if [ -z "$ROADMODEL_DOGFOOD_EMAIL" ]; then
+              echo "::error::ROADMODEL_DOGFOOD_EMAIL is not set, so the soak cannot sign in. Seed it as an Actions secret."
+              exit 1
+            fi
             echo "have=true" >> "$GITHUB_OUTPUT"
           else
             echo "have=false" >> "$GITHUB_OUTPUT"
@@ -116,6 +128,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
           ROADMODEL_LATENCY_BYPASS_TOKEN: ${{ secrets.ROADMODEL_LATENCY_BYPASS_TOKEN }}
+          ROADMODEL_DOGFOOD_EMAIL: ${{ secrets.ROADMODEL_DOGFOOD_EMAIL }}
         run: |
           set +e
           umask 077
@@ -127,16 +140,22 @@ jobs:
           NODE_PATH="$(pwd)/node_modules" node_modules/.bin/tsx ../scripts/soak-recommend.ts 2>&1 | tee "$SOAK_LOG"
           echo "exit=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
           echo "health=$(grep -m1 '^SERVICE_HEALTH:' "$SOAK_LOG" || true)" >> "$GITHUB_OUTPUT"
+          # SOAK_DONE is the script's last line: without it nothing was scored.
+          if grep -q '^SOAK_DONE' "$SOAK_LOG"; then
+            echo "finished=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "finished=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
-        if: steps.check.outputs.have == 'true' && steps.soak.outputs.exit != '3'
+        if: steps.check.outputs.have == 'true' && steps.soak.outputs.finished == 'true' && steps.soak.outputs.exit != '3'
         with:
           python-version: "3.13"
 
       - name: Install the roadmodel production runs
         # B2 recomputes the gold ladder rows, and the judge's fact sheet reads
         # the catalog: both must be the release production serves, not main.
-        if: steps.check.outputs.have == 'true' && steps.soak.outputs.exit != '3'
+        if: steps.check.outputs.have == 'true' && steps.soak.outputs.finished == 'true' && steps.soak.outputs.exit != '3'
         run: |
           V=$(curl -fsS https://roadmodel-api.vercel.app/healthz | python -c 'import json,sys; print(json.load(sys.stdin)["roadmodel_version"])')
           echo "Production runs roadmodel $V"
@@ -147,7 +166,7 @@ jobs:
 
       - name: Score B2 and B6 (judge)
         id: judge
-        if: steps.check.outputs.have == 'true' && steps.soak.outputs.exit != '3'
+        if: steps.check.outputs.have == 'true' && steps.soak.outputs.finished == 'true' && steps.soak.outputs.exit != '3'
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           JUDGE: ${{ inputs.judge }}
@@ -160,7 +179,7 @@ jobs:
           echo "exit=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
 
       - name: Track regression in a single issue
-        if: steps.check.outputs.have == 'true' && (steps.soak.outputs.exit != '0' || (steps.judge.outputs.exit != '' && steps.judge.outputs.exit != '0'))
+        if: steps.check.outputs.have == 'true' && steps.soak.outputs.finished == 'true' && (steps.soak.outputs.exit != '0' || (steps.judge.outputs.exit != '' && steps.judge.outputs.exit != '0'))
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
@@ -237,7 +256,7 @@ jobs:
             });
 
       - name: Close the alarm once the recommender answers again
-        if: steps.check.outputs.have == 'true' && steps.soak.outputs.exit != '' && steps.soak.outputs.exit != '3'
+        if: steps.check.outputs.have == 'true' && steps.soak.outputs.finished == 'true' && steps.soak.outputs.exit != '' && steps.soak.outputs.exit != '3'
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
           HEALTH: ${{ steps.soak.outputs.health }}
@@ -264,4 +283,12 @@ jobs:
           HEALTH: ${{ steps.soak.outputs.health }}
         run: |
           echo "::error title=Recommender is down::${HEALTH}"
+          exit 1
+
+      - name: Fail the run when the soak did not finish
+        # Neither a bar miss nor an outage: no request was scored, so the
+        # tracking issue keeps its last scorecard and cron-health sees red.
+        if: steps.check.outputs.have == 'true' && steps.soak.outputs.finished != 'true'
+        run: |
+          echo "::error title=Soak did not finish::scripts/soak-recommend.ts stopped before its scorecard; the soak step's log says where."
           exit 1
