@@ -10,8 +10,10 @@ Until 2026-10 one such change failed the whole run, so for a week no price or
 letter shipped either, and Gemini 4 Argon never reached the catalog (#1120).
 
 This script runs before the integrity check. When the working candidate passes
-the gate and touches no file outside the data set, it does nothing; since
-2026-11 that includes a model added or retired by rule (update/lifecycle_rules.py),
+the gate and touches no file outside the data set, it changes nothing and
+leaves ``update/.last-held.md`` empty, which tells scripts/open-review-pr.sh
+that a draft from an earlier run holds nothing still waiting; since 2026-11
+that includes a model added or retired by rule (update/lifecycle_rules.py),
 with its provider snapshot. Otherwise:
 
 1. it copies the full candidate into ``--hold`` (the review PR's content);
@@ -256,6 +258,7 @@ def split(base_dir: Path, hold: Path, paths: list[str], day: dt.date) -> str | N
     except (ValueError, KeyError, TypeError) as error:
         reason = str(error) or type(error).__name__
     if reason is None:
+        REPORT.write_text("", encoding="utf-8")
         return None
 
     base = {p: base_text(p) for p in ai.INPUTS}

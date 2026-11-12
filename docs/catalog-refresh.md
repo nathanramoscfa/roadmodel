@@ -46,7 +46,8 @@ A refresh PR merges itself when the gate admits it
 The price readers map every carried model by name, so a model added this way
 is priced from its provider's page on every later run. What the gate still
 refuses — the curation pass's own prose or decline reasons — waits in the
-draft PR from `chore/catalog-review`.
+draft PR from `chore/catalog-review`. A later refresh that passes the gate
+whole closes that draft, since nothing in it still waits.
 
 ## When to run manually
 
