@@ -294,7 +294,10 @@ def test_committed_zai_snapshot_invariants() -> None:
     assert snap["jurisdiction"] == "cn"
     assert snap["overlay_mode"] == "whole-element"
     ids = {m["id"] for m in snap["models"]}
-    assert {"glm-5.2", "glm-4.6", "glm-4.5-air"} <= ids
+    # A curated model z.ai delists is reported, not priced (GLM-4.5-Air, 2026-11).
+    missing = set(snap.get("missing_mapped_models", []))
+    assert {"glm-5.2", "glm-4.6", "glm-4.5-air"} <= ids | missing
+    assert not ids & missing
     for m in snap["models"]:
         assert m["input_price_per_1m"] > 0
         assert m["output_price_per_1m"] > 0
