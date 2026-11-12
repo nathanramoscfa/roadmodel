@@ -133,12 +133,10 @@ def test_healthz_returns_200(client: TestClient, monkeypatch: pytest.MonkeyPatch
 
     assert response.status_code == 200
     body = response.json()
-    assert set(body.keys()) == {"status", "roadmodel_version", "capabilities", "data"}
+    assert set(body.keys()) == {"status", "roadmodel_version", "capabilities"}
     assert "visitor-key" in body["capabilities"]
     assert body["status"] == "ok"
     assert body["roadmodel_version"] == "0.2.0"
-    # Live data is off in tests (conftest), so the package reads its bundle.
-    assert body["data"]["source"] == "bundled"
 
 
 def test_recommend_returns_200(

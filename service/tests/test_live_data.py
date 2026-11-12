@@ -13,8 +13,9 @@ The guarantees under test:
   retry interval after a failure);
 - ROADMODEL_LIVE_DATA=0, or a ROADMODEL_DATA_DIR the deployment set itself,
   turns it off;
-- /healthz says which catalog the package reads, and a request never fails
-  because the download did.
+- an authenticated request starts the download (app/auth.py), an
+  unauthenticated one never does, and a request never fails because the
+  download did.
 """
 
 from __future__ import annotations
@@ -108,8 +109,6 @@ def test_a_good_set_is_published_and_read(github: _GitHub) -> None:
     # The package and the service's own catalog reader both read it now.
     assert data_files.override_dir() == published
     assert funding.load_catalog()["generated_at_utc"] == "2099-01-01T00:00:00Z"
-    assert live_data.status()["source"] == "live"
-    assert live_data.status()["catalog_generated_at"] == "2099-01-01T00:00:00Z"
 
 
 def test_it_asks_one_fixed_https_host_for_each_file(github: _GitHub) -> None:
@@ -167,7 +166,6 @@ def test_a_set_that_fails_a_check_is_not_published(
     assert "ROADMODEL_DATA_DIR" not in os.environ
     assert _sets() == []  # nothing half written is left behind
     assert data_files.override_dir() is None
-    assert live_data.status()["source"] == "bundled"
 
 
 def _connect_error(request: httpx.Request) -> httpx.Response:
@@ -287,30 +285,42 @@ def _client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     return TestClient(app, headers={"Authorization": f"Bearer {_TOKEN}"})
 
 
-def test_a_request_fetches_first_and_healthz_reports_it(
+_TASK = {
+    "category": "coding",
+    "complexity": "high",
+    "novel": False,
+    "budget_priority": "balanced",
+}
+
+
+def test_an_authenticated_request_fetches_first(
     github: _GitHub, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    body = _client(monkeypatch).get("/healthz").json()
-    assert body["data"]["source"] == "live"
-    assert body["data"]["fetched_at"]
+    assert _client(monkeypatch).post("/v1/score", json=_TASK).status_code == 200
+    assert data_files.override_dir() is not None
     assert len(github.requests) == len(live_data.FILES)
+
+
+def test_an_unauthenticated_request_starts_no_download(
+    github: _GitHub, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client = _client(monkeypatch)
+    assert (
+        client.post("/v1/score", json=_TASK, headers={"Authorization": "Bearer wrong"}).status_code
+        == 401
+    )
+    assert client.get("/healthz").status_code == 200
+    assert github.requests == []
+    assert data_files.override_dir() is None
 
 
 def test_a_request_never_fails_because_github_does(
     github: _GitHub, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     github.fail = _connect_error
-    client = _client(monkeypatch)
-    response = client.get("/healthz")
-    assert response.status_code == 200
-    assert response.json()["data"]["source"] == "bundled"
-    task = {
-        "category": "coding",
-        "complexity": "high",
-        "novel": False,
-        "budget_priority": "balanced",
-    }
-    assert client.post("/v1/score", json=task).status_code == 200
+    assert _client(monkeypatch).post("/v1/score", json=_TASK).status_code == 200
+    assert github.requests
+    assert data_files.override_dir() is None
 
 
 def test_the_real_client_follows_no_redirect_and_gives_up_fast() -> None:

@@ -3,10 +3,10 @@
 
 The roadmodel package reads its data files from ROADMODEL_DATA_DIR when that
 directory holds a set it can read (roadmodel.data_files). This module keeps
-one filled. The first request on an instance downloads the files a catalog
-refresh changes from the repository's main branch, checks every one, and
-publishes them as a new directory; the first request after REFRESH_SECONDS
-starts the next download in the background. Any failure keeps the last good
+one filled. The first authenticated request on an instance (app/auth.py)
+downloads the files a catalog refresh changes from the repository's main
+branch, checks every one, and publishes them as a new directory; the first
+such request after REFRESH_SECONDS starts the next download in the background. Any failure keeps the last good
 set, or the bundled data when there is none, so /recommend never fails because
 GitHub is unreachable.
 
@@ -240,6 +240,7 @@ def refresh() -> bool:
     _STATE.published = str(target)
     _STATE.fetched_at = time.time()
     _prune({str(target), previous or ""})
+    logger.info("live data: published a new set from main")
     return True
 
 
@@ -267,7 +268,8 @@ def _start_if_due() -> threading.Thread | None:
 
 
 def ensure_fresh() -> None:
-    """Keep the live set current; the app runs it before every request.
+    """Keep the live set current; require_bearer (app/auth.py) runs it once a
+    request's token checks out.
 
     A cold instance waits up to COLD_WAIT_SECONDS for its first download, so
     its first answers already read main's catalog; every later download runs
@@ -280,26 +282,3 @@ def ensure_fresh() -> None:
             worker.join(COLD_WAIT_SECONDS)
     except Exception:  # noqa: BLE001 - live data is best-effort, never fatal
         logger.warning("live data check failed; using the current data")
-
-
-def status() -> dict[str, str | None]:
-    """Which data the package reads now, for /healthz: "live" (main's catalog,
-    fetched at ``fetched_at``) or "bundled", and that catalog's
-    generated_at_utc."""
-    live = data_files is not None and data_files.override_dir() is not None
-    generated: str | None = None
-    try:
-        source = data_files.data_file("catalog.json") if data_files is not None else None
-        if source is not None:
-            value = json.loads(source.read_text(encoding="utf-8")).get("generated_at_utc")
-            generated = value if isinstance(value, str) else None
-    except Exception:  # noqa: BLE001 - a status read never fails the probe
-        generated = None
-    fetched: str | None = None
-    if live and _STATE.fetched_at is not None:
-        fetched = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(_STATE.fetched_at))
-    return {
-        "source": "live" if live else "bundled",
-        "catalog_generated_at": generated,
-        "fetched_at": fetched,
-    }

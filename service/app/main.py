@@ -8,7 +8,6 @@ from fastapi import Depends, FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from . import live_data
 from .auth import require_bearer
 from .boundaries import RequestBoundaries
 from .models import LadderResponse, RecommendRequest, RecommendResponse
@@ -25,16 +24,12 @@ from .visitor import router as visitor_router
 # the web tier's e2e-mode gate.
 _DOCS_ENABLED = os.environ.get("VERCEL") != "1"
 
-# Every request first keeps the catalog current: main's data files, fetched
-# at most every 15 minutes (app/live_data.py), so a catalog change merged to
-# main reaches /recommend without a roadmodel release. It never fails a request.
 app = FastAPI(
     title="roadmodel-service",
     version="0.4.0",
     docs_url="/docs" if _DOCS_ENABLED else None,
     redoc_url="/redoc" if _DOCS_ENABLED else None,
     openapi_url="/openapi.json" if _DOCS_ENABLED else None,
-    dependencies=[Depends(live_data.ensure_fresh)],
 )
 
 
@@ -54,17 +49,14 @@ async def invalid_request(_request: Request, _error: RequestValidationError) -> 
 CAPABILITIES: list[str] = ["visitor-key", "score"]
 
 
-# "data" says which catalog the package reads: "live" (main's, fetched at
-# fetched_at) or "bundled" (the one released in roadmodel_version).
 @app.get("/healthz")
-def healthz() -> dict[str, str | list[str] | dict[str, str | None]]:
+def healthz() -> dict[str, str | list[str]]:
     from importlib.metadata import version
 
     return {
         "status": "ok",
         "roadmodel_version": version("roadmodel"),
         "capabilities": CAPABILITIES,
-        "data": live_data.status(),
     }
 
 
