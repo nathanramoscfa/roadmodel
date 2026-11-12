@@ -53,16 +53,28 @@ test("actual Supabase SSR refresh and rejection preserve cookies, forwarded head
       const req = new NextRequest("https://contract.invalid" + path, { headers: { cookie: old } });
       const res = await middleware(req);
       const cookies = res.cookies.getAll();
-      expect(cookies.length).toBeGreaterThanOrEqual(3);
+      expect(cookies.length).toBeGreaterThanOrEqual(1);
       expect(cookies.every((c) => c.path === "/" && c.sameSite === "lax" && c.secure === true)).toBe(true);
       expect(res.headers.get("cache-control")).toContain("no-store");
       expect(res.headers.get("expires")).toBe("0"); expect(res.headers.get("pragma")).toBe("no-cache");
       expect(res.headers.get("content-security-policy")).toContain("'nonce-");
       if (mode === "refresh") {
+        // @supabase/ssr 0.12 re-sets only the chunks that changed (0.10 re-set
+        // every one). The browser keeps the old jar with these on top, and that
+        // must read back as the refreshed session.
+        const kept = new Map(jar);
+        for (const c of cookies) kept.set(c.name, c.value);
+        const browser = createServerClient(process.env.SUPABASE_URL, "synthetic-public-key", {
+          global: { fetch: globalThis.fetch }, auth: { autoRefreshToken: false, detectSessionInUrl: false },
+          cookies: { getAll: () => [...kept].map(([name, value]) => ({ name, value })), setAll() {} },
+        });
+        expect((await browser.auth.getSession()).data.session?.refresh_token).toBe("synthetic-refresh-refresh");
         expect(req.headers.get("cookie")).not.toBe(old);
         expect(res.headers.get("x-middleware-request-cookie")).toBe(req.headers.get("cookie"));
         expect(res.headers.get("x-middleware-request-x-nonce")).toBeTruthy();
       } else {
+        // A rejected refresh clears every chunk the browser holds.
+        expect(cookies.length).toBe(jar.size);
         expect(cookies.every((c) => c.maxAge === 0 && c.value === "")).toBe(true);
         if (path.startsWith("/api/")) expect(res.status).toBe(401);
         else expect(new URL(res.headers.get("x-middleware-rewrite")!).pathname).toBe("/login");

@@ -8,6 +8,10 @@ updates:
     groups:
       actions:
         update-types: [minor, patch]
+        # A CodeQL action bump changes the CodeQL version every allowance in
+        # .github/security-allowances.json binds, so it needs its own review
+        # and must not hold the rest of the group back (#1285).
+        exclude-patterns: ["github/codeql-action*"]
   - package-ecosystem: npm
     directory: /web
     schedule:
@@ -16,6 +20,15 @@ updates:
     groups:
       npm:
         update-types: [minor, patch]
+    ignore:
+      # TypeScript 7 ships only the native compiler, without the JavaScript
+      # API that typescript-eslint (<6.1), Next's build and two specs call.
+      - dependency-name: typescript
+        versions: [">= 7.0.0"]
+      # eslint-config-next 15 supports ESLint 9 at most; ESLint 10 comes with
+      # the move to Next 16.
+      - dependency-name: eslint
+        versions: [">= 10.0.0"]
   - package-ecosystem: pip
     directories: [/, /service, /tests, /update, /.github]
     schedule:
