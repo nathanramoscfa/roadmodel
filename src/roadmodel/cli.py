@@ -22,7 +22,7 @@ from typing import Any, Callable, TypeVar, cast
 
 import click
 
-from roadmodel import __version__, cost, scoring, user_context
+from roadmodel import __version__, cost, data_files, scoring, user_context
 from roadmodel import recommend as recommender
 from roadmodel.config import PROVIDER_CHOICES, load_config
 from roadmodel.errors import (
@@ -105,7 +105,7 @@ def _read_catalog_doc(doc: str) -> str:
 def _catalog_doc_path(doc: str) -> Path:
     resource, filename = _catalog_doc_resource(doc)
     try:
-        with resources.as_file(resource) as on_disk_path:
+        with resources.as_file(data_files.locate(resource)) as on_disk_path:
             return on_disk_path
     except FileNotFoundError as exc:
         raise BundledDocNotFoundError(filename) from exc

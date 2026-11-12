@@ -1,12 +1,12 @@
 # src/roadmodel/cost.py
 """Pure session-cost estimator over the bundled catalog.
 
-Reads `roadmodel/data/catalog.json` via `importlib.resources`, resolves a
-`(model, platform)` pair against the catalog's per-token prices and
-access-method `billing` field, applies the Cursor Max Mode 2x-input rule
-when `max_mode=True` and the chosen access method exposes Max Mode, and
-decorates the result with a `funding_source` label resolved against the
-user's `user-context.md`.
+Reads `roadmodel/data/catalog.json` (or the newer copy in
+`ROADMODEL_DATA_DIR`; see `data_files`), resolves a `(model, platform)` pair
+against the catalog's per-token prices and access-method `billing` field,
+applies the Cursor Max Mode 2x-input rule when `max_mode=True` and the chosen
+access method exposes Max Mode, and decorates the result with a
+`funding_source` label resolved against the user's `user-context.md`.
 
 No network, no provider calls; the module is pure. All paths can be
 overridden by env vars (`ROADMODEL_CATALOG_PATH`, `ROADMODEL_USER_CONTEXT`)
@@ -19,19 +19,19 @@ import json
 import os
 import re
 from dataclasses import dataclass, field
-from importlib import resources
 from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Any, Final
 
 from roadmodel import user_context
+from roadmodel.data_files import data_file
 from roadmodel.errors import (
     AlternativeRejectedError,
     BundledDocNotFoundError,
     UserContextNotFoundError,
 )
 
-BUNDLED_CATALOG_PATH: Traversable = resources.files("roadmodel.data") / "catalog.json"
+BUNDLED_CATALOG_PATH: Traversable = data_file("catalog.json")
 
 _FUNDING_PRIORITY: Final[dict[str, int]] = {
     # A FUNDED local method is $0 with no usage pool behind it at all — it

@@ -7,6 +7,8 @@ from typing import Final
 
 from fastapi import HTTPException, Request
 
+from . import live_data
+
 
 def _internal_token() -> str:
     token = os.environ.get("ROADMODEL_INTERNAL_TOKEN")
@@ -41,4 +43,8 @@ def require_bearer(request: Request) -> Request:
             detail="invalid_or_missing_bearer",
         )
 
+    # Every model endpoint passes here, so an authenticated request first keeps
+    # the catalog current (app/live_data.py); an unauthenticated one never
+    # starts a download. It never fails the request.
+    live_data.ensure_fresh()
     return request
