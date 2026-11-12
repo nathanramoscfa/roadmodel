@@ -689,6 +689,47 @@ def test_a_default_the_docs_stop_stating_is_routed_for_review() -> None:
     assert mod.snapshot_shrink(old, {"default_effort": {"*": "max", "Opus 4.7": "low"}}) == []
 
 
+LIVE_MD_1112 = REPO_ROOT / "tests" / "fixtures" / "model-config-sample-2026-11-12.md"
+ALL_LEVELS = ["low", "medium", "high", "xhigh", "max"]
+
+
+def test_extractor_reads_the_2026_11_10_docs() -> None:
+    """The docs added Fable 5.2 on 2026-11-10 and reworded both default
+    statements: the table row says "the Fable 5.2, ..., and Haiku 5.5 models" and
+    the blanket default became "Other models ... default to `high`". Neither
+    parser read its new form, the two disagreed, and the tracker stopped, so
+    Fable 5.2 never reached Claude Code. The effort table now has a family row,
+    "Fable models", which stands for the versions the page names."""
+    mod = _load_extractor()
+    snap = mod.build_snapshot(LIVE_MD_1112.read_text(), source_url="file://live")
+    assert snap["default_effort"] == {
+        "*": "high",
+        "Fable 5.2": "medium",
+        "Opus 5.5": "medium",
+        "Sonnet 5.5": "medium",
+        "Haiku 5.5": "medium",
+        "Opus 4.7": "xhigh",
+    }
+    assert snap["per_model_effort"]["Fable 5.2"] == ALL_LEVELS
+    assert snap["per_model_effort"]["Fable 5.1"] == ALL_LEVELS
+    assert "Fable models" not in snap["per_model_effort"]
+    assert snap["extended_thinking"]["cannot_disable_on"] == [
+        "Opus 5.5",
+        "Sonnet 5.5",
+        "Haiku 5.5",
+        "Fable 5.2",
+        "Fable 5.1",
+    ]
+    assert snap["unexpected_models"] == []
+
+
+def test_a_family_row_the_page_names_no_version_of_stops_the_run() -> None:
+    mod = _load_extractor()
+    table = "| Model | Levels |\n| :- | :- |\n| Nova models | `low` |\n| Opus 5.5 | `low` |\n"
+    with pytest.raises(mod.ExtractError, match="Nova models"):
+        mod.parse_effort_table(table)
+
+
 # --------------------------------------------------------------------------- #
 # Always-thinking models (2026-10-20)
 #
