@@ -819,8 +819,14 @@ def test_extractor_refuses_an_empty_list_when_the_docs_state_the_fact() -> None:
 
 
 def test_committed_snapshot_lists_the_always_thinking_models() -> None:
+    """Every model the catalog marks always-thinking is in the snapshot. Read
+    from the catalog, not a fixed list: a retired model may leave the docs, as
+    Fable 5 did on 2026-11-10, and the refresh then failed on this pin."""
     snapshot = json.loads(REAL_SNAPSHOT.read_text())
-    assert set(ALWAYS_THINKING) <= set(snapshot["extended_thinking"]["cannot_disable_on"])
+    catalog = json.loads((REPO_ROOT / "docs" / "catalog.json").read_text())
+    marked = {m["name"] for m in catalog["models"] if m.get("always_thinks")}
+    assert marked
+    assert marked <= set(snapshot["extended_thinking"]["cannot_disable_on"])
 
 
 # --- shrink guard ---------------------------------------------------------- #
@@ -852,8 +858,11 @@ def test_snapshot_shrink_reports_dropped_entries() -> None:
 
 
 def test_extractor_cli_queues_a_shrink_for_review(tmp_path: Path) -> None:
+    # The baseline is the 2026-10-20 docs' own snapshot, not the committed one,
+    # which moves with every docs change (Fable 5.2 in, Fable 5 out, 11-10).
     baseline = tmp_path / "committed.json"
-    baseline.write_text(REAL_SNAPSHOT.read_text())
+    snap = _load_extractor().build_snapshot(LIVE_MD_1020.read_text(), source_url="file://live")
+    baseline.write_text(json.dumps(snap))
     queue = tmp_path / "review.json"
 
     def run(md: Path) -> subprocess.CompletedProcess[str]:
@@ -902,6 +911,22 @@ def _mark_always_thinks(selector: str, ids: tuple[str, ...]) -> str:
     return marked
 
 
+def _docs_1020() -> dict[str, object]:
+    """The 2026-10-20 docs' snapshot, which lists ALWAYS_THINKING. Check H's
+    tests read it rather than the committed snapshot, which moves with every
+    docs change (Fable 5.2 in, Fable 5 out, 2026-11-10)."""
+    snap: dict[str, object] = _load_extractor().build_snapshot(
+        LIVE_MD_1020.read_text(), source_url="file://live"
+    )
+    return snap
+
+
+def _docs_1020_file(tmp_path: Path) -> Path:
+    path = tmp_path / "snapshot-1020.json"
+    path.write_text(json.dumps(_docs_1020()))
+    return path
+
+
 def test_check_h_warns_but_passes_without_the_attribute(tmp_path: Path) -> None:
     """The committed selector may not carry always-thinks yet: warnings only."""
     selector = REAL_SELECTOR.read_text()
@@ -917,7 +942,7 @@ def test_check_h_warns_but_passes_without_the_attribute(tmp_path: Path) -> None:
             "--selector",
             str(path),
             "--snapshot",
-            str(REAL_SNAPSHOT),
+            str(_docs_1020_file(tmp_path)),
             "--review-queue",
             str(queue),
         ],
@@ -937,20 +962,20 @@ def test_check_h_warns_but_passes_without_the_attribute(tmp_path: Path) -> None:
 
 def test_check_h_is_silent_when_selector_and_docs_agree(tmp_path: Path) -> None:
     gate = _load_conformance()
-    snapshot = json.loads(REAL_SNAPSHOT.read_text())
+    snapshot = _docs_1020()
     selector = REAL_SELECTOR.read_text().replace(' always-thinks="yes"', "")
     marked = _mark_always_thinks(selector, ALWAYS_THINKING_IDS)
     assert gate.check_always_thinks(marked, snapshot) == []
     path = tmp_path / "selector.txt"
     path.write_text(marked)
-    result = _run_conformance(path, REAL_SNAPSHOT)
+    result = _run_conformance(path, _docs_1020_file(tmp_path))
     assert result.returncode == 0, result.stderr
     assert "WARNING" not in result.stdout
 
 
 def test_check_h_warns_on_a_marked_model_the_docs_do_not_list() -> None:
     gate = _load_conformance()
-    snapshot = json.loads(REAL_SNAPSHOT.read_text())
+    snapshot = _docs_1020()
     selector = REAL_SELECTOR.read_text().replace(' always-thinks="yes"', "")
     marked = _mark_always_thinks(selector, (*ALWAYS_THINKING_IDS, "opus-4.8"))
     warnings = gate.check_always_thinks(marked, snapshot)
