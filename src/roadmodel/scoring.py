@@ -295,6 +295,9 @@ class Candidate:
     # figure ties are judged on; None when AA has not measured it there or the
     # category has no evidence (multimodal).
     evidence_points: float | None = None
+    # The earlier version whose AA row stands for this model until AA
+    # measures it (inherit_unmeasured); None for AA's own measurement.
+    aa_inherited_from: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -336,6 +339,37 @@ def _load_benchmarks() -> dict[str, Any]:
         return {}
     models = raw.get("models") if isinstance(raw, dict) else None
     return models if isinstance(models, dict) else {}
+
+
+def _inherited_from(row: Any) -> str | None:
+    """The model whose row ``row`` copies (:func:`inherit_unmeasured`); None
+    for a row AA measured."""
+    source = row.get("inherited_from") if isinstance(row, dict) else None
+    return source if isinstance(source, str) and source else None
+
+
+def inherit_unmeasured(bench: dict[str, Any], catalog: dict[str, Any]) -> dict[str, Any]:
+    """``bench`` with a row for every catalog model AA has not measured that is
+    a later version of one it has (:mod:`roadmodel.series`): a copy of the
+    newest such version's row, marked ``inherited_from``, shown ≈ wherever its
+    AA Index is printed. The operator's rule, as for the rating letters a new
+    version starts on: until AA measures Fable 5.2 it stands where Fable 5.1
+    measured, instead of leaving the series off the frontier (:func:`rank`
+    drops Fable 5.1 wherever Fable 5.2 runs). A new series has no earlier
+    version and stays unmeasured. The copies are figures for their own model
+    only: composites, evidence scales, the market line and effort shifts are
+    read over the rows AA measured."""
+    measured = [m for m, row in bench.items() if isinstance(row, dict) and not _inherited_from(row)]
+    out = dict(bench)
+    for model in catalog.get("models", []):
+        mid = str(model.get("id", "")) if isinstance(model, dict) else ""
+        if not mid or mid in bench:
+            continue
+        older = [m for m in measured if _series.is_newer(m, mid)]
+        if older:
+            source = max(older, key=lambda m: (_series.version(m), m))
+            out[mid] = {**bench[source], "inherited_from": source}
+    return out
 
 
 def context_windows() -> dict[str, int]:
@@ -474,7 +508,17 @@ def with_composites(bench: dict[str, Any]) -> dict[str, Any]:
     evaluations of every row measured on all its parts: the mean of the row's
     mid-rank percentiles on those parts, among those rows (0 = lowest). A
     model's rows at other efforts (``effort_variants``) get the composite too,
-    their percentiles taken among the headline rows."""
+    their percentiles taken among the headline rows. A row copied from an
+    earlier version (:func:`inherit_unmeasured`) is not ranked: it takes that
+    version's composites."""
+    copies = {mid: source for mid, row in bench.items() if (source := _inherited_from(row))}
+    out = _measured_composites({m: row for m, row in bench.items() if m not in copies})
+    for mid, source in copies.items():
+        out[mid] = {**out.get(source, bench[mid]), "inherited_from": source}
+    return out
+
+
+def _measured_composites(bench: dict[str, Any]) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for mid, row in bench.items():
         if isinstance(row, dict):
@@ -616,7 +660,7 @@ def market_exchange_rate(
     xs: list[float] = []
     ys: list[float] = []
     for m in catalog.get("models", []):
-        if not isinstance(m, dict):
+        if not isinstance(m, dict) or _inherited_from(bench.get(str(m.get("id", "")))):
             continue
         price = blended_price(m)
         if price <= 0:
@@ -1039,7 +1083,7 @@ def _evidence_scale(
     vals = [
         v
         for m in catalog.get("models", [])
-        if isinstance(m, dict)
+        if isinstance(m, dict) and not _inherited_from(bench.get(str(m.get("id", ""))))
         for v in [_evidence(bench, str(m.get("id", "")), key)]
         if v is not None
     ]
@@ -1168,7 +1212,9 @@ def rank(
     every model stands on its headline row at its posture's effort: the pool
     :func:`ladder` expands itself."""
     cat = catalog if catalog is not None else _cost._load_catalog()
-    raw_bench = benchmarks if benchmarks is not None else _load_benchmarks()
+    raw_bench = (
+        benchmarks if benchmarks is not None else inherit_unmeasured(_load_benchmarks(), cat)
+    )
     bench = with_composites(raw_bench)
     text = user_context_text or ""
     headroom = consumption_headroom(text)
@@ -1307,6 +1353,7 @@ def rank(
                 score=round(score, 2),
                 notes=notes,
                 evidence_points=None if points is None else round(points, 2),
+                aa_inherited_from=_inherited_from(bench.get(model_id)),
             )
             # One row per model: its best reachable platform. A funded platform
             # always beats an unfunded one regardless of score; equal scores go
@@ -1849,7 +1896,7 @@ def ladder(
 
     None when no pool model carries an AA Index (no frontier to read)."""
     cat = catalog if catalog is not None else _cost._load_catalog()
-    bench = benchmarks if benchmarks is not None else _load_benchmarks()
+    bench = benchmarks if benchmarks is not None else inherit_unmeasured(_load_benchmarks(), cat)
     base = Task(task.category, task.complexity, task.novel, "balanced")
     ranking = rank(
         base,
@@ -2217,7 +2264,7 @@ def _pick(
     run on, so it can be backed up and replaced. ValueError when the model
     is not one this user-context can reach."""
     cat = catalog if catalog is not None else _cost._load_catalog()
-    bench = benchmarks if benchmarks is not None else _load_benchmarks()
+    bench = benchmarks if benchmarks is not None else inherit_unmeasured(_load_benchmarks(), cat)
     model_id = _model_ref_id(model, cat)
     base = Task(task.category, task.complexity, task.novel, "balanced")
 
@@ -2461,7 +2508,7 @@ def estimated_aa_index(bench: dict[str, Any], model_id: str, level: str) -> floa
     a = max(anchors, key=EFFORT_LADDER.index) if lo else min(anchors, key=EFFORT_LADDER.index)
     shifts = []
     for other in bench:
-        if other == model_id:
+        if other == model_id or _inherited_from(bench[other]):
             continue
         row = _aa_by_level(bench, other)
         if want in row and a in row:
@@ -2479,15 +2526,18 @@ def ladder_aa(
     When AA names no level for the model, its one row stands for the model
     only on a surface with no dial for it (``dial`` false): where the
     operator sets a level, that row's effort is unknown, so it is no figure
-    for ``level`` (Gemini 3 Flash's row on the Google API's dial). None when
-    AA has not measured the model at all."""
+    for ``level`` (Gemini 3 Flash's row on the Google API's dial). A row
+    copied from an earlier version (:func:`inherit_unmeasured`) is an estimate
+    too. None when AA has not measured the model at all."""
+    inherited = _inherited_from(bench.get(model_id)) is not None
     if measured_levels(bench, model_id):
         measured = _evidence(bench, model_id, FRONTIER_INDEX, normalize_level(level))
         if measured is not None:
-            return measured, False
+            return measured, inherited
         estimate = estimated_aa_index(bench, model_id, level)
         return estimate, estimate is not None
-    return (None if dial else _evidence(bench, model_id, FRONTIER_INDEX)), False
+    value = None if dial else _evidence(bench, model_id, FRONTIER_INDEX)
+    return value, inherited and value is not None
 
 
 def ladder_aa_index(
@@ -2655,7 +2705,7 @@ def settings_ladder(
     (:mod:`roadmodel.ladder_layout`); None when no pool model carries an AA
     Index."""
     cat = catalog if catalog is not None else _cost._load_catalog()
-    bench = benchmarks if benchmarks is not None else _load_benchmarks()
+    bench = benchmarks if benchmarks is not None else inherit_unmeasured(_load_benchmarks(), cat)
     off = list(unavailable_models or [])
     seen: dict[frozenset[str], Ladder | None] = {}
 
@@ -2788,7 +2838,7 @@ def ladder_table(
     """The ladder for every classification in :func:`table_keys`, keyed by
     :func:`table_key`; a classification with no frontier is left out."""
     cat = catalog if catalog is not None else _cost._load_catalog()
-    bench = benchmarks if benchmarks is not None else _load_benchmarks()
+    bench = benchmarks if benchmarks is not None else inherit_unmeasured(_load_benchmarks(), cat)
     out: dict[str, Ladder] = {}
     for category, complexity, novel in table_keys():
         lad = ladder(
@@ -2804,7 +2854,9 @@ def ladder_table(
 
 
 def _aa_text(p: FrontierPoint) -> str:
-    return "not measured" if p.aa_index is None else f"{p.aa_index:g}"
+    if p.aa_index is None:
+        return "not measured"
+    return f"{_layout.ESTIMATE_MARK if p.candidate.aa_inherited_from else ''}{p.aa_index:g}"
 
 
 def render_ladder_table(table: dict[str, Ladder]) -> str:

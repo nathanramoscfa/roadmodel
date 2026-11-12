@@ -171,7 +171,9 @@ def ladder_markdown(
             "the tokens the model writes at that level."
         )
     if unmeasured:
-        notes.append(f"{ESTIMATE_MARK} estimated from the model's measured levels.")
+        notes.append(
+            f"{ESTIMATE_MARK} estimated from the model's measured levels or its previous version's."
+        )
     parts = ["\n".join(_grid(rows))]
     if notes:
         parts.append(textwrap.fill(" ".join(notes), width=WIDTH, break_long_words=False))

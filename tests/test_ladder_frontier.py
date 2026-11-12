@@ -550,9 +550,15 @@ def test_the_real_catalog_and_user_context_example_yield_a_full_table() -> None:
         on_frontier = {p.candidate.model_id for p in lad.points}
         assert all(r.candidate.model_id in on_frontier or r.specialist for r in lad.rungs.values())
     # Claude Max + ChatGPT Pro, no Google plan: Opus 5.5 tops the multimodal
-    # frontier at an A, and Fable 5.1 (S for multimodal) takes QUALITY.
+    # frontier at an A, and Fable (S for multimodal) takes QUALITY. Its latest
+    # version wherever one runs: Fable 5.2, standing on Fable 5.1's AA row
+    # until AA measures it (scoring.inherit_unmeasured), else Fable 5.1.
     quality = table["multimodal/medium"].rungs["quality"]
-    assert quality.specialist and quality.candidate.model_id == "claude-fable-5.1"
+    fable = {m["id"] for m in scoring._cost._load_catalog()["models"]} & {
+        "claude-fable-5.1",
+        "claude-fable-5.2",
+    }
+    assert quality.specialist and quality.candidate.model_id == max(fable)
 
 
 def test_on_claude_code_the_rows_effort_is_set_when_the_engine_copies_only_the_model(

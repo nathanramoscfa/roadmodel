@@ -164,9 +164,17 @@ def scoring_text(req: ScoreRequest) -> str:
 def _why(c: Any, task: scoring.Task) -> Why:
     """One plain sentence per score term, from the candidate's own figures."""
     label = f"{task.category} work"
+    # An older roadmodel's candidates carry no aa_inherited_from.
+    inherited_from = getattr(c, "aa_inherited_from", None)
     if c.quality_source == "letter":
         quality = (
             f"{c.model_name} rates {c.quality:.0f} of 100 for {label}, from its {c.letter} rating."
+        )
+    elif inherited_from:
+        quality = (
+            f"{c.model_name} rates {c.quality:.0f} of 100 for {label}: Artificial Analysis "
+            f"measurements of the version before it ({inherited_from}), until it is measured "
+            f"itself, weighted 70/30 with its {c.letter} rating."
         )
     else:
         quality = (
