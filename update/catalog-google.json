@@ -101,8 +101,16 @@
     "Gemini 3 Flash": "gemini-3-flash",
     "Gemini 2.5 Flash": "gemini-2.5-flash"
   },
-  "unexpected_slugs": [],
-  "discovered": [],
+  "unexpected_slugs": [
+    "Gemini 4 Hydrogen"
+  ],
+  "discovered": [
+    {
+      "slug": "Gemini 4 Hydrogen",
+      "input_price_per_1m": 1.5,
+      "output_price_per_1m": 7.5
+    }
+  ],
   "missing_mapped_models": [],
   "section_sha256": "cda87d19ce6f3aefa4d46e57a060cecdbde312312be6c205b513980df99e56fb"
 }
