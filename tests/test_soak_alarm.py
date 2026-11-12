@@ -62,6 +62,33 @@ def test_recovery_closes_the_alarm() -> None:
     assert 'state: "closed"' in close["with"]["script"]
 
 
+def test_a_soak_that_never_scores_fails_the_run() -> None:
+    """From 2026-10-13 to 2026-11-12 the soak crashed before its first request:
+    #1105 made the sign-in account required and the workflow never passed one.
+    The job stayed green, so nobody saw it. The account is passed and required
+    now, and a run that ends without the scorecard fails instead of reporting."""
+    steps = _steps()
+    account = "${{ secrets.ROADMODEL_DOGFOOD_EMAIL }}"
+    check = steps["Check prod-soak secrets present"]
+    assert check["env"]["ROADMODEL_DOGFOOD_EMAIL"] == account
+    assert "exit 1" in check["run"]
+    soak = steps["Run soak (report-only)"]
+    assert soak["env"]["ROADMODEL_DOGFOOD_EMAIL"] == account
+    assert "grep -q '^SOAK_DONE'" in soak["run"] and "finished=false" in soak["run"]
+    script = (REPO_ROOT / "scripts" / "soak-recommend.ts").read_text()
+    assert 'console.log("SOAK_DONE")' in script
+    # A run that never scored reports no scorecard and no recovery.
+    for name in (
+        "Score B2 and B6 (judge)",
+        "Track regression in a single issue",
+        "Close the alarm once the recommender answers again",
+    ):
+        assert "steps.soak.outputs.finished == 'true'" in steps[name]["if"], name
+    fail = steps["Fail the run when the soak did not finish"]
+    assert "steps.soak.outputs.finished != 'true'" in fail["if"]
+    assert "exit 1" in fail["run"]
+
+
 def test_cron_health_posts_with_the_workflow_token() -> None:
     wf = yaml.safe_load((REPO_ROOT / ".github" / "workflows" / "cron-health.yml").read_text())
     assert wf["jobs"]["health"]["permissions"]["issues"] == "write"
