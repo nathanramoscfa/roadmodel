@@ -79,9 +79,12 @@ EFFORT_ORDER = ("low", "medium", "high", "xhigh", "max")
 # purpose — that flag is the handoff to the catalog cron.
 # "Haiku 5.5" added 2026-10-20: the catalog carries it as claude-haiku-5-5 since
 # 0.2.87 (#1151), so flagging it daily had become noise.
+# "Fable 5.2" added 2026-11-12: the catalog carries it as claude-fable-5.2 since
+# the refresh of 2026-11-11 (#1460).
 KNOWN_MODELS = frozenset(
     {
         "Haiku 5.5",
+        "Fable 5.2",
         "Fable 5.1",
         "Fable 5",
         "Opus 5.5",
@@ -209,11 +212,25 @@ def parse_effort_table(in_scope: str) -> dict[str, list[str]]:
         for model in re.split(r",|\band\b", model_cell):
             model = model.strip().strip(",").strip()
             if model:
-                per_model[model] = levels
+                for name in _family_members(model, in_scope):
+                    per_model[name] = levels
 
     if len(per_model) < 2:
         raise ExtractError(f"effort table parsed too few models: {per_model!r}")
     return per_model
+
+
+def _family_members(cell: str, in_scope: str) -> list[str]:
+    """A table cell's models: the cell itself, or for a family row ("Fable
+    models", 2026-11-10) every version of it the page names elsewhere."""
+    family = _FAMILY_RE.fullmatch(cell)
+    if family is None or _MODEL_NAME_RE.fullmatch(cell):
+        return [cell]
+    named = dict.fromkeys(n.rstrip(".") for n in _MODEL_NAME_RE.findall(in_scope))
+    members = _expand_family(family.group("family"), list(named))
+    if not members:
+        raise ExtractError(f"the effort table lists {cell!r}, but the page names no model of it")
+    return members
 
 
 def build_effort_levels(per_model: dict[str, list[str]]) -> list[str]:
@@ -267,6 +284,10 @@ def parse_defaults(in_scope: str) -> dict[str, str]:
     for em in re.finditer(r"\bdefaults?\s+to\s+`(\w+)`", in_scope):
         head = in_scope[max(0, em.start() - 160) : em.start()]
         clause = re.split(r"except that |`(?:,\s*|\s+and\s+)|[;:]\s+|\.\s+|\n", head)[-1]
+        # 2026-11-10: "Other models in the effort levels table default to `high`".
+        if re.match(r"other models\b", clause.strip(), re.I):
+            defaults["*"] = em.group(1).lower()
+            continue
         for name in re.split(r",|\band\b", clause):
             name = name.strip()
             if _MODEL_NAME_RE.fullmatch(name):
@@ -285,9 +306,13 @@ def parse_default_rows(in_scope: str) -> dict[str, str]:
     """
     rows: dict[str, str] = {}
     for level, scope in _DEFAULT_ROW_RE.findall(in_scope):
-        if scope.startswith("every model"):
+        # 2026-11-10: "The default on the Fable 5.2, ..., and Haiku 5.5 models",
+        # "The default on the other models in the effort table".
+        scope = re.sub(r"^the\s+", "", scope.strip())
+        if scope.startswith(("every model", "other models")):
             rows["*"] = level.lower()
             continue
+        scope = re.sub(r"\s+models?$", "", scope)
         for name in re.split(r",|\band\b", scope):
             if _MODEL_NAME_RE.fullmatch(name.strip()):
                 rows[name.strip()] = level.lower()
