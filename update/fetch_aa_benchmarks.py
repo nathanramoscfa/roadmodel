@@ -425,7 +425,19 @@ def main() -> int:
         )
         return 2
 
-    aa = fetch_aa_models(api_key)
+    try:
+        aa = fetch_aa_models(api_key)
+    except requests.HTTPError as error:
+        if error.response is None or error.response.status_code != 410:
+            raise
+        # Artificial Analysis retired this endpoint on 2026-11-04. Until a
+        # replacement source is settled the layer stays as last fetched, and
+        # the rest of the refresh (ratings, retirements, the unmeasured-effort
+        # flag) still runs on it instead of stopping here every night.
+        print(
+            f"::warning::{AA_ENDPOINT} returned 410 Gone; docs/benchmarks.json stays as last fetched."
+        )
+        return 0
     if args.dump:
         args.dump.write_text(json.dumps(aa, indent=2))
     catalog_ids = load_catalog_ids()
