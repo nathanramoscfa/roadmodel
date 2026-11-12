@@ -9,12 +9,11 @@ from one HTML table:
 
 1. **Thinking toggle** — ``{"thinking": {"type": "enabled/disabled"}}`` (default
    ``enabled``). Whether the model reasons before answering.
-2. **Reasoning-effort enum** — ``{"reasoning_effort": "high/max"}`` (OpenAI
-   format) / ``{"output_config": {"effort": "high/max"}}`` (Anthropic format),
-   default ``high`` (``max`` for some complex agent requests). Unlike Codex /
-   Gemini, DeepSeek effort has ONLY ``high`` and ``max`` — no ``low`` / ``medium``
-   tier (for compatibility the API accepts ``low`` / ``medium`` mapped to
-   ``high`` and ``xhigh`` mapped to ``max``, captured as ``effort_aliases``).
+2. **Reasoning-effort enum** — ``{"reasoning_effort": "low/high/max"}`` (OpenAI
+   format) / ``{"output_config": {"effort": "low/high/max"}}`` (Anthropic
+   format), default ``high`` (``max`` for some complex agent requests). Until
+   2026-08 the docs listed only ``high`` and ``max``; the API also accepts other
+   names and maps them onto these tiers (captured as ``effort_aliases``).
 
 Like ``ai.google.dev``, ``api-docs.deepseek.com`` serves NO clean Markdown
 endpoint (the ``.md`` suffix 404s; the models API needs auth), so this extractor
@@ -57,13 +56,14 @@ USER_AGENT = "roadmodel-updater/1.0 (+https://github.com/nathanramoscfa/roadmode
 FETCH_TIMEOUT = 30
 
 # Canonical display order for the DeepSeek reasoning vocabulary — matching the
-# docs' own cell order ("enabled/disabled" and "high/max") so the snapshot reads
-# the way the docs (and the selector bullet) present it. A toggle/effort value
+# docs' own cell order ("enabled/disabled" and "low/high/max") so the snapshot
+# reads the way the docs (and the selector bullet) present it. `low` became a
+# native tier in 2026-08 (the selector has mapped it since #528). A toggle/effort value
 # outside these sets is FLAGGED (a docs-added native tier is significant — it
 # needs a deliberate THINKING-field mapping), never silently absorbed. This
 # mirrors the Gemini extractor's unexpected_levels guard (PR #229).
 TOGGLE_ORDER = ("enabled", "disabled")
-EFFORT_ORDER = ("high", "max")
+EFFORT_ORDER = ("low", "high", "max")
 
 # Sentinel substrings that MUST survive on the page. Their absence means the
 # docs were restructured and the deterministic parse can no longer be trusted —

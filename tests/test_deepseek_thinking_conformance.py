@@ -142,6 +142,16 @@ def test_extractor_flags_unexpected_effort_value() -> None:
     assert "ultra" in snap["unexpected_effort"]
 
 
+def test_extractor_reads_low_as_a_known_tier() -> None:
+    """The docs have listed `low/high/max` since 2026-08 and the selector maps
+    `low` (#528), so it is baseline, not a new tier to flag on every run (#536)."""
+    mod = _load("extract_deepseek_thinking")
+    html = SAMPLE_HTML.read_text().replace('"high/max"', '"low/high/max"')
+    snap = mod.build_snapshot(html, source_url="x")
+    assert snap["reasoning_effort"] == ["low", "high", "max"]
+    assert snap["unexpected_effort"] == []
+
+
 def test_extractor_flags_unexpected_toggle_value() -> None:
     mod = _load("extract_deepseek_thinking")
     html = SAMPLE_HTML.read_text().replace('"enabled/disabled"', '"enabled/disabled/paused"')
