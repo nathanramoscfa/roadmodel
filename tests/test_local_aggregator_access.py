@@ -408,10 +408,16 @@ def test_conformance_gate_aggregator_set_mirrors_cost_module() -> None:
 
 
 def test_a_host_surface_never_decides_a_maker() -> None:
-    """Antigravity is Google's, and it serves Claude Sonnet 4.6 and gpt-oss-120b
-    too. Counting it made both makers ambiguous (None), and would have let the
-    backup guard pair two models from the same real maker."""
-    assert cost.model_provider("sonnet-4.6") == "anthropic"
+    """Antigravity is Google's, and it serves Claude models and gpt-oss-120b
+    too. Counting it made those makers ambiguous (None), and would have let the
+    backup guard pair two models from the same real maker. The Claude models
+    come from the catalog, since a refresh retires them by rule."""
+    methods = {m["id"]: m for m in cost._load_catalog()["access_methods"]}
+    served = set(methods["antigravity"]["supports_models"])
+    claude = served & set(methods["anthropic-api"]["supports_models"])
+    assert claude, "Antigravity serves no Claude model to test with"
+    for model_id in sorted(claude):
+        assert cost.model_provider(model_id) == "anthropic"
     assert cost.model_provider("gemini-3.8-flash") == "google"
     assert cost.model_provider("gpt-oss-120b") not in {None, "google"}
 
