@@ -120,7 +120,7 @@ jobs:
             gh issue create \
               --title "$title" \
               --label deepseek-new-effort \
-              --body "$(printf 'The DeepSeek API thinking-mode docs introduced a reasoning-effort tier **%s** beyond the known baseline (high/max), recorded in `update/deepseek-thinking.json` under `unexpected_effort`.\n\nThe refresh cron has flowed it into `reasoning_effort`, so the conformance gate (check F) now requires the selector to enumerate and map it. **Action:** confirm the THINKING-field mapping the cron chose for **%s** (a new top-of-scale tier defaults to `XHigh`).\n\nOpened automatically by the DeepSeek refresh cron (`.github/workflows/update-deepseek.yml`).' "${tier}" "${tier}")"
+              --body "$(printf 'The DeepSeek API thinking-mode docs introduced a reasoning-effort tier **%s** beyond the known baseline (low/high/max), recorded in `update/deepseek-thinking.json` under `unexpected_effort`.\n\nThe refresh cron has flowed it into `reasoning_effort`, so the conformance gate (check F) now requires the selector to enumerate and map it. **Action:** confirm the THINKING-field mapping the cron chose for **%s** (a new top-of-scale tier defaults to `XHigh`).\n\nOpened automatically by the DeepSeek refresh cron (`.github/workflows/update-deepseek.yml`).' "${tier}" "${tier}")"
             echo "Opened tracking issue for tier: ${tier}"
           done
 
