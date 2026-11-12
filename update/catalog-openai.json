@@ -22,6 +22,14 @@
       "cache_read_per_1m": 0.1
     },
     {
+      "id": "gpt-6.1-terra",
+      "slug": "gpt-6.1-terra",
+      "name": "gpt-6.1-terra",
+      "input_price_per_1m": 1.0,
+      "output_price_per_1m": 5.0,
+      "cache_read_per_1m": 0.05
+    },
+    {
       "id": "gpt-6-luna",
       "slug": "gpt-6-luna",
       "name": "gpt-6-luna",
@@ -76,27 +84,19 @@
       "input_price_per_1m": 2.5,
       "output_price_per_1m": 15.0,
       "cache_read_per_1m": 0.25
-    },
-    {
-      "id": "gpt-6.1-terra",
-      "slug": "gpt-6.1-terra",
-      "name": "gpt-6.1-terra",
-      "input_price_per_1m": 1.0,
-      "output_price_per_1m": 5.0,
-      "cache_read_per_1m": null
     }
   ],
   "slug_to_id": {
     "gpt-6-astra": "gpt-6-astra",
     "gpt-6.1-sol": "gpt-6.1-sol",
+    "gpt-6.1-terra": "gpt-6.1-terra",
     "gpt-6-luna": "gpt-6-luna",
     "gpt-6-sol": "gpt-6-sol",
     "gpt-5.6-sol": "gpt-5.6-sol",
     "gpt-5.6-terra": "gpt-5.6-terra",
     "gpt-5.6-luna": "gpt-5.6-luna",
     "gpt-5.5": "gpt-5.5",
-    "gpt-5.4": "gpt-5.4",
-    "gpt-6.1-terra": "gpt-6.1-terra"
+    "gpt-5.4": "gpt-5.4"
   },
   "unexpected_slugs": [],
   "discovered": [],
@@ -107,5 +107,5 @@
     "gpt-5.4-mini",
     "gpt-5.4-nano"
   ],
-  "section_sha256": "12b208286def23ebae26236ee576c625f0dd410c3dc8e2607ac56152824db573"
+  "section_sha256": "4e0bc4be1eba84188f933207126b0ba7a42e338f42d8973c02ee527cf5cc3c9d"
 }

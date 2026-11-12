@@ -6,6 +6,14 @@
   "overlay_mode": "price-only",
   "models": [
     {
+      "id": "claude-fable-5.2",
+      "slug": "Claude Fable 5.2",
+      "name": "Claude Fable 5.2",
+      "input_price_per_1m": 8.0,
+      "output_price_per_1m": 40.0,
+      "cache_read_per_1m": 0.2
+    },
+    {
       "id": "claude-fable-5.1",
       "slug": "Claude Fable 5.1",
       "name": "Claude Fable 5.1",
@@ -92,17 +100,10 @@
       "input_price_per_1m": 1.0,
       "output_price_per_1m": 5.0,
       "cache_read_per_1m": 0.1
-    },
-    {
-      "id": "claude-fable-5.2",
-      "slug": "Claude Fable 5.2",
-      "name": "Claude Fable 5.2",
-      "input_price_per_1m": 8.0,
-      "output_price_per_1m": 40.0,
-      "cache_read_per_1m": null
     }
   ],
   "slug_to_id": {
+    "Claude Fable 5.2": "claude-fable-5.2",
     "Claude Fable 5.1": "claude-fable-5.1",
     "Claude Fable 5": "claude-fable-5",
     "Claude Opus 5.5": "claude-opus-5-5",
@@ -113,8 +114,7 @@
     "Claude Sonnet 5": "claude-sonnet-5",
     "Claude Sonnet 4.6": "sonnet-4.6",
     "Claude Haiku 5.5": "claude-haiku-5-5",
-    "Claude Haiku 4.5": "claude-4.5-haiku",
-    "Claude Fable 5.2": "claude-fable-5.2"
+    "Claude Haiku 4.5": "claude-4.5-haiku"
   },
   "unexpected_slugs": [
     "Claude Mythos 5",
@@ -139,5 +139,5 @@
     }
   ],
   "missing_mapped_models": [],
-  "section_sha256": "6af79780a13363f6d41f9c396669ed6b36b8cb3211c31da5ddd248a87d7a1255"
+  "section_sha256": "e063b5e9d58d039d8e9c6c51265f71dd23f1c33ef88b53c8efed68664ed00d6d"
 }
