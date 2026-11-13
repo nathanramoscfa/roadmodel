@@ -1,10 +1,10 @@
 {
   "schema_version": "5",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-11-13T04:43:18Z",
+  "generated_at_utc": "2026-11-13T05:05:41Z",
   "source_doc_sha256": {
-    "model-selector.txt": "310b6b1c759838a09fdacc2b303a0d4ad10366467f29eba386362615a9cf1523",
-    "model-tier-cost-scale.md": "28893241d2c499fa8b6b9318845806e3079077019dee3034abb0da2fdae30b8d"
+    "model-selector.txt": "f3bac8931791a90c35aae42b5ffd93403e567cda31453afa0c750ec575fe6d57",
+    "model-tier-cost-scale.md": "74533f200864dd588af41c015d24c11933787b6444aa82e1f26bdb515962b58b"
   },
   "models": [
     {
@@ -420,6 +420,32 @@
       "superseded_by": null,
       "superseded_on": null,
       "added_on": "2026-11-12",
+      "always_thinks": false,
+      "retires_on": null
+    },
+    {
+      "id": "gemini-4-hydrogen",
+      "name": "Gemini 4 Hydrogen",
+      "input_price_per_1m": 1.5,
+      "output_price_per_1m": 7.5,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "B",
+        "planning": "B",
+        "agentic": "B",
+        "multimodal": "B",
+        "long-context": "B",
+        "knowledge": "B",
+        "speed": "B"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "Artificial Analysis has not measured Gemini 4 Hydrogen yet, so its letters are estimates",
+      "pricing_notes": "Provider-direct Google API per-token pricing (not via the Cursor pool)",
+      "best_for": "Competent coding, planning, agentic work, multimodal input, long context and knowledge at a low price.",
+      "superseded_by": null,
+      "superseded_on": null,
+      "added_on": "2026-11-13",
       "always_thinks": false,
       "retires_on": null
     },
@@ -1417,7 +1443,8 @@
         "gemini-3.5-flash-lite",
         "gemini-3.8-flash",
         "gemini-4-argon",
-        "gemini-4-carbon"
+        "gemini-4-carbon",
+        "gemini-4-hydrogen"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
@@ -1468,6 +1495,12 @@
           "low",
           "medium",
           "high"
+        ],
+        "gemini-4-hydrogen": [
+          "low",
+          "medium",
+          "high",
+          "xhigh"
         ]
       },
       "default_effort_by_model": {
@@ -1476,7 +1509,8 @@
         "gemini-3.5-flash-lite": "minimal",
         "gemini-3.8-flash": "medium",
         "gemini-4-argon": "medium",
-        "gemini-4-carbon": "medium"
+        "gemini-4-carbon": "medium",
+        "gemini-4-hydrogen": "high"
       }
     },
     {
@@ -1593,6 +1627,7 @@
         "gemini-3.8-flash",
         "gemini-4-argon",
         "gemini-4-carbon",
+        "gemini-4-hydrogen",
         "glm-4.5-air",
         "glm-4.6",
         "glm-5.2",

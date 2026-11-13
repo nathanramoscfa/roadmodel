@@ -1337,6 +1337,14 @@ Tier ratings:
 - **Pricing notes:** Provider-direct OpenAI API per-token pricing (not via the Cursor pool)
 - **Best for:** Strong coding, planning, agentic work, multimodal input, long context and knowledge, with fast output, at a low price.
 
+#### Gemini 4 Hydrogen — `gemini-4-hydrogen`
+
+- **Pricing:** Input $1.50/M · Output $7.50/M
+- **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **B** · Long-context **B** · Knowledge **B** · Speed **B**
+- **Headline benchmarks:** Artificial Analysis has not measured Gemini 4 Hydrogen yet, so its letters are estimates
+- **Pricing notes:** Provider-direct Google API per-token pricing (not via the Cursor pool)
+- **Best for:** Competent coding, planning, agentic work, multimodal input, long context and knowledge at a low price.
+
 ## Access Methods
 
 Each access method is a way to run one or more models from
@@ -1428,7 +1436,7 @@ Billing types:
 #### Google AI Studio API — `google-api`
 
 - **Billing:** per-token (requires google-api-key)
-- **Supports models:** gemini-3.1-pro,gemini-3-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-2.5-flash,gemini-4-argon,gemini-4-carbon
+- **Supports models:** gemini-3.1-pro,gemini-3-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-2.5-flash,gemini-4-argon,gemini-4-carbon,gemini-4-hydrogen
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
 - **Best for:** Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`, `xhigh`) shared across the 3.x and 2.5 generations — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro / 3.7 Flash / 3.8 Flash / 2.5 Pro / 2.5 Flash / 2.5 Flash-Lite are low/medium/high without `minimal`; `minimal` appears on Flash-line models such as 3.6 Flash, 3.5 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, and 3 Flash). Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation).
 
@@ -1521,7 +1529,7 @@ Billing types:
 #### OpenRouter — `openrouter`
 
 - **Billing:** per-token (requires openrouter-api-key)
-- **Supports models:** gemini-4-carbon,claude-fable-5.2,gpt-6.1-terra,gemini-3.5-flash-lite,gemini-3.1-flash-lite,claude-sonnet-5-5,claude-opus-5-5,claude-opus-5,opus-4.8,claude-fable-5.1,claude-fable-5,opus-4.7,claude-sonnet-5,sonnet-4.6,claude-4.5-haiku,gpt-6-astra,gpt-6.1-sol,gpt-6-sol,gpt-6-luna,gpt-5.6-sol,gpt-5.5,gpt-5.6-terra,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5.1-codex-mini,gpt-5,gpt-5.6-luna,gpt-5.4-mini,gpt-5.4-nano,gpt-5-mini,gemini-3.1-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash,grok-4.7,grok-4.6,grok-4.3,deepseek-v4-pro,deepseek-flash,mistral-medium-3.5,mistral-small-4,codestral,glm-5.3,glm-5.3-flash,glm-5.2,glm-4.6,glm-4.5-air,gpt-oss-120b,gpt-oss-20b,kimi-k3,kimi-k2.7-code,muse-spark-1.3,claude-haiku-5-5,gemini-4-argon,muse-wonder
+- **Supports models:** gemini-4-hydrogen,gemini-4-carbon,claude-fable-5.2,gpt-6.1-terra,gemini-3.5-flash-lite,gemini-3.1-flash-lite,claude-sonnet-5-5,claude-opus-5-5,claude-opus-5,opus-4.8,claude-fable-5.1,claude-fable-5,opus-4.7,claude-sonnet-5,sonnet-4.6,claude-4.5-haiku,gpt-6-astra,gpt-6.1-sol,gpt-6-sol,gpt-6-luna,gpt-5.6-sol,gpt-5.5,gpt-5.6-terra,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5.1-codex-mini,gpt-5,gpt-5.6-luna,gpt-5.4-mini,gpt-5.4-nano,gpt-5-mini,gemini-3.1-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash,grok-4.7,grok-4.6,grok-4.3,deepseek-v4-pro,deepseek-flash,mistral-medium-3.5,mistral-small-4,codestral,glm-5.3,glm-5.3-flash,glm-5.2,glm-4.6,glm-4.5-air,gpt-oss-120b,gpt-oss-20b,kimi-k3,kimi-k2.7-code,muse-spark-1.3,claude-haiku-5-5,gemini-4-argon,muse-wonder
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
 - **Best for:** Per-token AGGREGATOR that resells other makers' models behind one OpenAI-format endpoint and one key (openrouter.ai) — like Cursor's pool but paid per call, not a subscription. Reaches most of the catalog: supports-models is synced daily from openrouter.ai/models (OpenRouter's public model list): each catalogued model it lists as a text chat route, matched by name (absent today: composer-2.5, which is Cursor-only, and gemini-3-pro, which OpenRouter serves only as an image model). The operator should trust it LESS than a provider-direct method — prefer the maker's own method when the operator holds that key. BILLING: OpenRouter charges the maker's list price plus its platform fee (~5% on credit purchases at authoring), so the catalog price is a FLOOR for this method, never an exact estimate. ROUTING: a request may be served by any of OpenRouter's upstream hosts for that model; the MODEL-level jurisdiction filter (Step 0b) still governs which models are eligible, and this method's `us` code is OpenRouter's own (the operator's counterparty), NOT the upstream host's. Exposes the maker's reasoning dial where the routed model documents one (`reasoning_effort` on OpenAI / gpt-oss / GLM / DeepSeek families). Never the maker of any model it resells: the cross-provider BACKUP guard resolves makers through provider-direct methods, exactly as it does for Cursor.
 
