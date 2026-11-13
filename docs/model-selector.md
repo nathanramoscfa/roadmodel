@@ -513,8 +513,9 @@ differently:
   accepts the same six values. Higher effort spends more reasoning
   tokens before visible output.
 - Gemini (Google API, Gemini CLI): a discrete thinking-level
-  knob — `minimal`, `low`, `medium`, `high` — shared across the
-  3.x and 2.5 model generations. Not every model supports every
+  knob — `minimal`, `low`, `medium`, `high`, `xhigh` — shared across
+  the 4, 3.x and 2.5 model generations. `xhigh` is the top level,
+  on the models whose documented row lists it. Not every model supports every
   level: Gemini 3 Pro is low/high only, Gemini 3.1 Pro is
   low/medium/high, and the 2.5 generation (Pro, Flash,
   Flash-Lite) uses low/medium/high without `minimal`. The
@@ -599,8 +600,8 @@ OMITTED. Every other value is an EFFORT level emitted verbatim, with
   rung on the Codex scale, session-wide multi-agent orchestration
   analogous to Claude Code's `ultracode`).
 - Gemini thinking levels: `minimal` → `Off`; `low` → `Low`;
-  `medium` → `Medium`; `high` → `High` (Gemini tops out at `high`
-  — no `xhigh` or `max` tier). `minimal` maps to `Off` for the
+  `medium` → `Medium`; `high` → `High`; `xhigh` → `XHigh` (the
+  top of Gemini's scale). `minimal` maps to `Off` for the
   same reason it sits BELOW the lowest EFFORT rung: reporting it
   as `Low` would overstate the reasoning the operator actually
   gets. Thinking turned off, on models that allow it (e.g. Gemini
@@ -1429,14 +1430,14 @@ Billing types:
 - **Billing:** per-token (requires google-api-key)
 - **Supports models:** gemini-3.1-pro,gemini-3-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-2.5-flash,gemini-4-argon,gemini-4-carbon
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
-- **Best for:** Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) shared across the 3.x and 2.5 generations — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro / 3.7 Flash / 3.8 Flash / 2.5 Pro / 2.5 Flash / 2.5 Flash-Lite are low/medium/high without `minimal`; `minimal` appears on Flash-line models such as 3.6 Flash, 3.5 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, and 3 Flash). Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation).
+- **Best for:** Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`, `xhigh`) shared across the 3.x and 2.5 generations — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro / 3.7 Flash / 3.8 Flash / 2.5 Pro / 2.5 Flash / 2.5 Flash-Lite are low/medium/high without `minimal`; `minimal` appears on Flash-line models such as 3.6 Flash, 3.5 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, and 3 Flash). Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation).
 
 #### Gemini CLI — `gemini-cli`
 
 - **Billing:** per-token (requires google-api-key)
 - **Supports models:** gemini-3.1-pro,gemini-3-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
-- **Best for:** Since 2026-06-18 the Gemini CLI serves only paid Gemini API keys and Gemini Code Assist Standard / Enterprise licences: Google AI Pro, Ultra and free personal accounts moved to Antigravity (`antigravity`). Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro / 3.7 Flash / 3.8 Flash / 2.5 Pro / 2.5 Flash / 2.5 Flash-Lite are low/medium/high without `minimal`; `minimal` appears on Flash-line models such as 3.6 Flash, 3.5 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, and 3 Flash).
+- **Best for:** Since 2026-06-18 the Gemini CLI serves only paid Gemini API keys and Gemini Code Assist Standard / Enterprise licences: Google AI Pro, Ultra and free personal accounts moved to Antigravity (`antigravity`). Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`, `xhigh`) — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro / 3.7 Flash / 3.8 Flash / 2.5 Pro / 2.5 Flash / 2.5 Flash-Lite are low/medium/high without `minimal`; `minimal` appears on Flash-line models such as 3.6 Flash, 3.5 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, and 3 Flash).
 
 #### Gemini (web / app) — `gemini-app`
 
