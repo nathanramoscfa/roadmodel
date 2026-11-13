@@ -36,6 +36,14 @@
       ]
     },
     {
+      "id": "gemini-4-hydrogen",
+      "slug": "Gemini 4 Hydrogen",
+      "name": "Gemini 4 Hydrogen",
+      "input_price_per_1m": 1.5,
+      "output_price_per_1m": 7.5,
+      "cache_read_per_1m": null
+    },
+    {
       "id": "gemini-3.8-flash",
       "slug": "Gemini 3.8 Flash",
       "name": "Gemini 3.8 Flash",
@@ -89,29 +97,21 @@
       "input_price_per_1m": 0.3,
       "output_price_per_1m": 2.5,
       "cache_read_per_1m": null
-    },
-    {
-      "id": "gemini-4-hydrogen",
-      "slug": "Gemini 4 Hydrogen",
-      "name": "Gemini 4 Hydrogen",
-      "input_price_per_1m": 1.5,
-      "output_price_per_1m": 7.5,
-      "cache_read_per_1m": null
     }
   ],
   "slug_to_id": {
     "Gemini 4 Carbon": "gemini-4-carbon",
     "Gemini 4 Argon": "gemini-4-argon",
+    "Gemini 4 Hydrogen": "gemini-4-hydrogen",
     "Gemini 3.8 Flash": "gemini-3.8-flash",
     "Gemini 3.5 Flash-Lite": "gemini-3.5-flash-lite",
     "Gemini 3.1 Flash-Lite": "gemini-3.1-flash-lite",
     "Gemini 3.1 Pro": "gemini-3.1-pro",
     "Gemini 3 Flash": "gemini-3-flash",
-    "Gemini 2.5 Flash": "gemini-2.5-flash",
-    "Gemini 4 Hydrogen": "gemini-4-hydrogen"
+    "Gemini 2.5 Flash": "gemini-2.5-flash"
   },
   "unexpected_slugs": [],
   "discovered": [],
   "missing_mapped_models": [],
-  "section_sha256": "cda87d19ce6f3aefa4d46e57a060cecdbde312312be6c205b513980df99e56fb"
+  "section_sha256": "ca875565b89c01b99b6d1a2106eabf366cfceae00da4159e8d8f49706fbef944"
 }
