@@ -211,7 +211,7 @@ jobs:
               scorecard.trim(),
               "```",
               "",
-              "Report-only (no auto-fix). Tracks the iterate-to-the-bar residuals (#185 / #188 / #189 + determinism). This issue is updated in place each failing run; it auto-resolves when the soak passes (close it once the bar holds).",
+              "Report-only (no auto-fix). Tracks the iterate-to-the-bar residuals (#185 / #188 / #189 + determinism). This issue is updated in place each failing run and closes itself on the first run that meets the whole bar (soak and judge).",
             ].join("\n");
             const open = await github.rest.issues.listForRepo({
               owner: context.repo.owner, repo: context.repo.repo, state: "open", labels: "dogfood", per_page: 100,
@@ -222,6 +222,32 @@ jobs:
             } else {
               await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body, labels: ["dogfood"] });
             }
+
+      - name: Close the tracking issue once the bar is met
+        # The tracking issue said it resolved itself, but no step closed it, so a
+        # one-off miss stayed open until someone closed it by hand (#1514: the
+        # engine ran slow for one morning run and passed two hours later). Only a
+        # run that scored the WHOLE bar closes it: a dispatch with judge: false
+        # scores B2 alone and cannot clear a B6 miss. On a schedule `inputs` is
+        # empty and the judge always runs.
+        if: steps.check.outputs.have == 'true' && steps.soak.outputs.finished == 'true' && steps.soak.outputs.exit == '0' && steps.judge.outputs.exit == '0' && (github.event_name == 'schedule' || inputs.judge)
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const title = "Recommender soak: quality bar not met";
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: "open", labels: "dogfood", per_page: 100,
+            });
+            const found = open.data.find((i) => i.title === title && !i.pull_request);
+            if (!found) return;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: found.number,
+              body: `Bar met: the soak and the judge passed every check ([run](${run})). Closing; a later miss opens a new issue.`,
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: found.number, state: "closed", state_reason: "completed",
+            });
 
       - name: Alarm while the recommender is down
         # exit 3 = scripts/soak-health.ts found half or more requests failing.

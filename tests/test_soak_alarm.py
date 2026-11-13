@@ -62,6 +62,30 @@ def test_recovery_closes_the_alarm() -> None:
     assert 'state: "closed"' in close["with"]["script"]
 
 
+def test_a_run_that_meets_the_bar_closes_the_tracking_issue() -> None:
+    """The tracking issue said it resolved itself, but nothing closed it: #1514
+    (one slow morning run, passed two hours later) would have stayed open until
+    someone closed it by hand. Only a run that scored the whole bar closes it."""
+    steps = _steps()
+    track = steps["Track regression in a single issue"]["with"]["script"]
+    close = steps["Close the tracking issue once the bar is met"]
+    cond = close["if"]
+    assert "steps.soak.outputs.finished == 'true'" in cond
+    assert "steps.soak.outputs.exit == '0'" in cond
+    assert "steps.judge.outputs.exit == '0'" in cond
+    # judge: false scores B2 alone, so it cannot clear a B6 miss.
+    assert "(github.event_name == 'schedule' || inputs.judge)" in cond
+    script = close["with"]["script"]
+    title = 'const title = "Recommender soak: quality bar not met";'
+    assert title in track and title in script  # closes the issue the miss opened
+    assert 'labels: "dogfood"' in script and "i.title === title" in script
+    assert 'state: "closed"' in script and "createComment" in script
+    names = list(steps)
+    assert names.index("Track regression in a single issue") < names.index(
+        "Close the tracking issue once the bar is met"
+    )
+
+
 def test_a_soak_that_never_scores_fails_the_run() -> None:
     """From 2026-10-13 to 2026-11-12 the soak crashed before its first request:
     #1105 made the sign-in account required and the workflow never passed one.
@@ -81,6 +105,7 @@ def test_a_soak_that_never_scores_fails_the_run() -> None:
     for name in (
         "Score B2 and B6 (judge)",
         "Track regression in a single issue",
+        "Close the tracking issue once the bar is met",
         "Close the alarm once the recommender answers again",
     ):
         assert "steps.soak.outputs.finished == 'true'" in steps[name]["if"], name
