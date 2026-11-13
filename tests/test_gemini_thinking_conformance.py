@@ -91,6 +91,7 @@ def test_extractor_reads_the_markdown_copy() -> None:
     assert snap["level_defaults"]["Gemini 2.5 Flash-Lite"] == "off"
     assert snap["per_model_levels"]["Gemini 3 Pro"] == ["low", "high"]
     assert snap["thinking_levels"] == ["minimal", "low", "medium", "high"]
+    assert snap["unexpected_levels"] == []
 
 
 def test_a_page_with_no_table_stops_the_run() -> None:

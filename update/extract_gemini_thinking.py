@@ -57,8 +57,9 @@ FETCH_TIMEOUT = 30
 
 # Canonical display order for the Gemini thinking-level vocabulary. ``minimal``
 # is retained in the ordering only so that if Google ever re-introduces it the
-# level sorts correctly; the current docs enumerate low/medium/high.
-LEVEL_ORDER = ("minimal", "low", "medium", "high")
+# level sorts correctly; ``xhigh`` joined the docs on 2026-11-12 (Gemini 4
+# Hydrogen).
+LEVEL_ORDER = ("minimal", "low", "medium", "high", "xhigh")
 
 # Display names for the Gemini models the docs' level table enumerates, keyed by
 # the model id shown in the page's "Model" column. The selector + conformance
