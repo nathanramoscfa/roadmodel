@@ -50,9 +50,13 @@ export interface ModelRow {
   // Read from the structured benchmark layer when the model is mapped there,
   // else from the catalog prose (the cron's citation) as a fallback.
   aa_index: number | null;
-  // Where aa_index came from: the structured Artificial Analysis snapshot, or
-  // the figure the catalog cites for a model not yet mapped into it.
-  aa_index_source: "snapshot" | "cited" | null;
+  // Where aa_index came from: the structured Artificial Analysis snapshot, the
+  // figure the catalog cites for a model not yet mapped into it, or, for a
+  // later version AA has not measured, its newest measured earlier version's
+  // index (an estimate, shown ≈; lib/catalog-models.ts inheritedSource).
+  aa_index_source: "snapshot" | "cited" | "inherited" | null;
+  // The earlier version an inherited index is copied from, by display name.
+  aa_inherited_from?: string | null;
   // The effort AA ran the headline figure at: the model's top measured effort
   // ("max", "xhigh", …), or null when AA names none or the figure is cited.
   aa_index_effort?: string | null;
@@ -228,7 +232,7 @@ export const FIELD_DEFS: Record<FieldKey, FieldDef> = {
     label: "AA Index",
     fullName: "Artificial Analysis Intelligence Index",
     definition:
-      "The one published composite number: Artificial Analysis's index over its evaluation suite, independently measured on a 0–100 scale. The closest thing to a single numeric rating — use it to separate models that share a letter. '—' means AA has not measured the model. Index versions are not comparable with each other; the snapshot this page carries is named below. A green ring beside the figure marks the cost/quality frontier: a model that scores higher than every other model at its price or less (blended price). Hover a figure for the top score at its price.",
+      "The one published composite number: Artificial Analysis's index over its evaluation suite, independently measured on a 0–100 scale. The closest thing to a single numeric rating — use it to separate models that share a letter. '—' means AA has not measured the model. '≈' marks a later version AA has not measured yet, shown at its newest measured earlier version's index until AA publishes its own; it has no Score. Index versions are not comparable with each other; the snapshot this page carries is named below. A green ring beside the figure marks the cost/quality frontier: a model that scores higher than every other model at its price or less (blended price). Hover a figure for the top score at its price.",
     url: "https://artificialanalysis.ai/",
   },
   value: {

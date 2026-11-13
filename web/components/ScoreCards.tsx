@@ -166,7 +166,7 @@ export function FrontierStatus({
       <Row
         className="mt-1"
         label="AA Index"
-        value={`${num(leader.aa_index)}${leader.aa_index_source === "cited" ? " (cited)" : ""} vs ${num(m.aa_index)}`}
+        value={`${leader.aa_index_source === "inherited" ? "≈" : ""}${num(leader.aa_index)}${leader.aa_index_source === "cited" ? " (cited)" : ""} vs ${m.aa_index_source === "inherited" ? "≈" : ""}${num(m.aa_index)}`}
         valueClass={STRONG}
       />
       <Row label="Blended price" value={`${usd(leaderPrice)} vs ${usd(price)}`} valueClass={STRONG} />
@@ -183,7 +183,7 @@ export function FrontierPointCard({ model: m, leader }: { model: ModelRow; leade
     <div className="w-[19rem] max-w-full" data-testid="frontier-point-card">
       <CardHeader name={m.name} tier={m.tier_cost} />
       <div className="mt-2 space-y-0.5">
-        <Row label="AA Index" value={num(m.aa_index)} valueClass={"font-semibold " + STRONG} />
+        <Row label="AA Index" value={`${m.aa_index_source === "inherited" ? "≈" : ""}${num(m.aa_index)}`} valueClass={"font-semibold " + STRONG} />
         <Row label="Blended price" value={`${usd(price)} per 1M tokens`} valueClass={STRONG} />
         <p className={"text-right text-xs tabular-nums " + MUTED}>
           (3 × {formatUsd(m.input_price_per_1m)} input + {formatUsd(m.output_price_per_1m)} output) ÷ 4
@@ -207,7 +207,7 @@ export function FrontierStepCard({ atPrice, model: m }: { atPrice: number; model
       <div className="mt-2 rounded-md border border-emerald-500/40 bg-emerald-50 px-3 py-2 dark:bg-emerald-500/10">
         <CardHeader name={m.name} tier={m.tier_cost} />
         <div className="mt-1.5 space-y-0.5 text-xs">
-          <Row label="AA Index" value={num(m.aa_index)} valueClass={"font-semibold " + STRONG} />
+          <Row label="AA Index" value={`${m.aa_index_source === "inherited" ? "≈" : ""}${num(m.aa_index)}`} valueClass={"font-semibold " + STRONG} />
           <Row label="Blended price" value={`${usd(price)} per 1M tokens`} valueClass={STRONG} />
         </div>
       </div>
@@ -234,7 +234,7 @@ export function SupersededCard({ model: m, successor }: { model: ModelRow; succe
         maker, costs the same or less, scores higher on the AA Index, rates at least as high in
         every category, and runs on every platform that offers {m.name}.
       </p>
-      {successor && successor.aa_index !== null && m.aa_index !== null && successorPrice !== null && (
+      {successor && successor.aa_index !== null && successor.aa_index_source !== "inherited" && m.aa_index !== null && successorPrice !== null && (
         <div className="mt-2 space-y-0.5 text-xs">
           <Row label="AA Index" value={`${num(successor.aa_index)} vs ${num(m.aa_index)}`} valueClass={STRONG} />
           <Row label="Blended price" value={`${usd(successorPrice)} vs ${usd(price)}`} valueClass={STRONG} />
@@ -269,7 +269,7 @@ export function IndexCard({
       <div className="mt-2">
         <Row
           label={<span className={"font-semibold " + STRONG}>AA Intelligence Index</span>}
-          value={`${num(m.aa_index)}${m.aa_index_effort ? ` at ${effortWord(m.aa_index_effort)}` : ""}`}
+          value={`${m.aa_index_source === "inherited" ? "≈" : ""}${num(m.aa_index)}${m.aa_index_effort ? ` at ${effortWord(m.aa_index_effort)}` : ""}`}
           valueClass={"text-sm font-bold " + STRONG}
         />
       </div>
@@ -277,7 +277,9 @@ export function IndexCard({
         Artificial Analysis&rsquo;s weighted average over its evaluation suite, 0&ndash;100.{" "}
         {m.aa_index_source === "cited"
           ? "As cited in the catalog; this model is not in the Artificial Analysis data snapshot yet."
-          : `From the snapshot of ${snapshot}.`}
+          : m.aa_index_source === "inherited"
+            ? `An estimate: ${m.aa_inherited_from}'s index from the snapshot of ${snapshot}, which ${m.name} stands on until Artificial Analysis measures it. The recommender ranks it the same way.`
+            : `From the snapshot of ${snapshot}.`}
       </p>
       {m.bench && (
         <p className={"mt-1 text-xs leading-[1.125rem] " + MUTED} data-testid="index-measured-as">
@@ -479,7 +481,9 @@ export function ScoreBreakdownCard({
         <p className={MUTED}>
           {m.aa_index_source === "cited"
             ? "AA Index as cited in the catalog; this model is not in the Artificial Analysis data snapshot yet."
-            : `AA Index from the Artificial Analysis snapshot of ${snapshot}.`}
+            : m.aa_index_source === "inherited"
+              ? `AA Index estimated from ${m.aa_inherited_from}'s in the Artificial Analysis snapshot of ${snapshot}.`
+              : `AA Index from the Artificial Analysis snapshot of ${snapshot}.`}
         </p>
       </div>
 

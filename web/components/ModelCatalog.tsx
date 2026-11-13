@@ -889,7 +889,7 @@ export function ModelCatalog({
                           </span>
                         ) : (
                           <HoverCard
-                            label={`${m.name}: AA Index ${m.aa_index}${m.aa_index_effort ? ` at ${effortWord(m.aa_index_effort)}` : ""}${m.value_frontier ? ", on the cost/quality frontier" : ""}. Show where it stands across every cost tier`}
+                            label={`${m.name}: AA Index ${m.aa_index_source === "inherited" ? `about ${m.aa_index}, ${m.aa_inherited_from}'s until Artificial Analysis measures it` : m.aa_index}${m.aa_index_effort ? ` at ${effortWord(m.aa_index_effort)}` : ""}${m.value_frontier ? ", on the cost/quality frontier" : ""}. Show where it stands across every cost tier`}
                             card={
                               <IndexCard
                                 model={m}
@@ -908,6 +908,14 @@ export function ModelCatalog({
                                 data-testid="frontier-mark"
                                 className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full border-2 border-emerald-500 align-middle"
                               />
+                            )}
+                            {m.aa_index_source === "inherited" && (
+                              <span
+                                data-testid="aa-index-estimate"
+                                title={`Estimated: ${m.aa_inherited_from}'s AA Index, until Artificial Analysis measures ${m.name}`}
+                              >
+                                ≈
+                              </span>
                             )}
                             {m.aa_index}
                             {m.aa_index_effort && (
