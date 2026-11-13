@@ -27,9 +27,10 @@ rebuilds and admits. Until then each waited in the catalog's review PR for a
 person, and Gemini 4 Carbon and Fable 5.2 sat there. Two rules guard what is
 added:
 
-- A SECOND SOURCE must name the model: a docs tracker or a vendor's
-  default-effort table (``SECOND_SOURCES``), besides the pricing page. Until one
-  does, a provisional ONE_SOURCE line holds it, lifted the run one does.
+- A SECOND SOURCE must name the model: a docs tracker (its committed snapshot
+  or this run's read of the docs page) or a vendor's default-effort table
+  (``SECOND_SOURCES``), besides the pricing page. Until one does, a provisional
+  ONE_SOURCE line holds it, lifted the run one does.
 - An ALIAS is declined, not added: Anthropic's pricing table lists "Claude
   Mythos N" for Fable N, so that row is declined as the page's other name for
   the carried model once Fable N is carried.
@@ -123,6 +124,11 @@ SECOND_SOURCES: tuple[Path, ...] = (
     UPDATE_DIR / "gemini-thinking.json",
     UPDATE_DIR / "claude-code-effort.json",
     UPDATE_DIR / "default-efforts.json",
+    # This run's own reads of the two docs pages (update-models.yml), so a
+    # tracker held back by its conformance gate still names its models: Gemini
+    # 4 Hydrogen waited while Gemini's new `xhigh` level held the Gemini tracker.
+    UPDATE_DIR / ".cache" / "gemini-thinking.json",
+    UPDATE_DIR / ".cache" / "claude-code-effort.json",
 )
 # A provider page's other name for a model the catalog carries: Anthropic's
 # pricing table lists "Claude Mythos 5.2" for Fable 5.2 (as it did for 5 and

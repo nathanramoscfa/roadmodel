@@ -117,6 +117,13 @@ jobs:
           # script re-writes the manual snapshot from its constant and DRIFT-CHECKS the
           # gpt-oss model names against groq.com/pricing (it does not parse prices).
           python update/extract_groq_catalog.py || echo "groq drift-check flagged or failed; catalog-groq.json prices are manually maintained — review"
+          # The Gemini and Claude Code docs pages, read live into update/.cache/
+          # (never committed here): a model they name is a second source for a
+          # priced one even while that tracker's own run is held back
+          # (update/dispose_discoveries.py SECOND_SOURCES). Their own trackers
+          # alarm on a broken read.
+          python update/extract_gemini_thinking.py --output update/.cache/gemini-thinking.json || echo "Gemini docs read failed; the committed tracker snapshot stands"
+          python update/extract_claude_code_effort.py --output update/.cache/claude-code-effort.json || echo "Claude Code docs read failed; the committed tracker snapshot stands"
 
       - name: Read the Codex model list
         # For the source gate; the overlay step syncs the same list into the
