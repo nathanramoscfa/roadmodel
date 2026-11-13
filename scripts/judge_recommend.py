@@ -141,9 +141,10 @@ Adequate means that at the effort the pick runs, the model's score in the
 task's primary category AND its general score both meet the bar for the
 task's complexity: Low 30, Medium 50, High 70, novel 85. A hard task needs a
 capable model as well as one that does its kind of work. Scores fall as the
-effort drops; a pick within 5 points of the bar is minor at worst. A pick
-cannot run above its task's effort ceiling (in the fact sheet). A score marked
-* is the letter alone (AA has not measured that model there; multimodal has
+effort drops; a pick within 5 points of the bar is minor at worst. That
+allowance is for the pick only: an alternative below the bar is not adequate,
+so it never makes a pricier pick a J3 blocker. A pick cannot run above its
+task's effort ceiling (in the fact sheet). A score marked * is the letter alone (AA has not measured that model there; multimodal has
 no measurements at all): a measured score is the stronger evidence, so an
 unmeasured model's letter-based score never makes it clearly stronger than a
 measured pick.
@@ -470,10 +471,36 @@ def fact_sheet(context: str, unavailable: list[str]) -> str:
             )
         )
     lines.append(
-        "Bars: Low 30, Medium 50, High 70, novel 85. Effort ceilings: a Low task runs at "
-        "medium effort or below, Medium at high or below, High at xhigh or below."
+        "Bars: Low 30, Medium 50, High 70, novel 85. Effort ceilings, the highest effort any "
+        "rung may run at: " + effort_ceilings(context) + "."
     )
     return "\n".join(lines)
+
+
+def effort_ceilings(context: str) -> str:
+    """Each complexity's effort ceiling, read from the scorer: every rung may
+    run up to the effort the QUALITY posture would (scoring._allowed_levels).
+    The line was hand-written and left out the scorer's planning / knowledge
+    bump, so the judge rejected Medium planning picks the scorer allows
+    (2026-11-12)."""
+    headroom = scoring.consumption_headroom(context)
+    labels = {"low": "a Low task", "medium": "Medium", "high": "High"}
+    parts = []
+    for complexity, label in labels.items():
+        tops = {
+            category: scoring.effort_for(
+                scoring.Task(category, complexity, budget="best"), headroom, 1.0
+            )
+            for category in scoring.CATEGORIES
+        }
+        usual = max(set(tops.values()), key=list(tops.values()).count)
+        part = f"{label} at {usual} or below"
+        others = sorted(category for category, top in tops.items() if top != usual)
+        if others:
+            levels = sorted({tops[category] for category in others})
+            part += f" ({' / '.join(levels)} for {' and '.join(others)})"
+        parts.append(part)
+    return ", ".join(parts)
 
 
 def system_prompt(context: str, unavailable: list[str]) -> str:

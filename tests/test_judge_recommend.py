@@ -10,6 +10,7 @@ an API key.
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 import inspect
 import json
@@ -276,6 +277,20 @@ def test_the_fact_sheet_marks_letter_only_scores(world: dict[str, Any]) -> None:
     assert "marked * is the letter alone" in jr.RUBRIC.replace("\n", " ")
 
 
+def test_the_fact_sheets_effort_ceilings_are_the_scorers(world: dict[str, Any]) -> None:
+    """The ceilings were hand-written without the scorer's planning / knowledge
+    bump, so on 2026-11-12 the judge rejected Medium planning picks at XHigh
+    that the scorer allows. They are read from scoring.effort_for now."""
+    ceilings = jr.effort_ceilings(world["context"])
+    task = jr.scoring.Task("planning", "medium", budget="best")
+    top = jr.scoring.effort_for(task, jr.scoring.consumption_headroom(world["context"]), 1.0)
+    assert f"({top} for knowledge and planning)" in ceilings
+    assert "a Low task at medium or below" in ceilings
+    assert ceilings in jr.fact_sheet(world["context"], [])
+    # The rubric's 5-point allowance softens the pick, never an alternative.
+    assert "allowance is for the pick only" in jr.RUBRIC.replace("\n", " ")
+
+
 def test_judge_all_caps_calls_and_never_raises() -> None:
     real = jr.claude_judge("/dev/null", "m")
     calls: list[str] = []
@@ -334,6 +349,19 @@ def test_the_soak_workflow_runs_the_judge_on_the_subscription_token() -> None:
     steps = _steps()
     install = steps["Install the roadmodel production runs"]["run"]
     assert "healthz" in install and "roadmodel==" in install
+    # Production runs the release on main's data files (service/app/live_data.py),
+    # and so does the judge: the same six files, as ROADMODEL_DATA_DIR. Read
+    # FILES from the source, not an import: the service's deps are not here.
+    source = ast.parse((REPO / "service" / "app" / "live_data.py").read_text())
+    files = next(
+        node.value
+        for node in source.body
+        if isinstance(node, ast.AnnAssign) and getattr(node.target, "id", "") == "FILES"
+    )
+    assert isinstance(files, ast.Dict)
+    copied = install.split("for name in ", 1)[1].split("; do", 1)[0].split()
+    assert copied == [ast.literal_eval(key) for key in files.keys if key is not None]
+    assert 'echo "ROADMODEL_DATA_DIR=$LIVE" >> "$GITHUB_ENV"' in install
     judge = steps["Score B2 and B6 (judge)"]
     token = judge["env"]["CLAUDE_CODE_OAUTH_TOKEN"]
     assert token == "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}"  # noqa: S105 - a secret reference
