@@ -285,11 +285,23 @@ def _load_user_context_text() -> str:
         return ""
 
 
+# Engines often name a model with its maker in front ("Claude Fable 5.1",
+# "OpenAI GPT-6.1 Sol") where the catalog's name has none, and the pick then
+# resolved to nothing: no cost table, no tier, no backup guard (#623).
+_MAKER_PREFIXES: Final = frozenset({"anthropic", "claude", "openai", "google", "xai"})
+
+
 def _resolve_model(model_id: str, catalog: dict[str, Any]) -> dict[str, Any]:
     models = catalog.get("models", [])
-    for entry in models:
-        if entry["id"] == model_id or entry["name"] == model_id:
-            return _as_dict(entry)
+    ref = model_id.strip()
+    while True:
+        for entry in models:
+            if entry["id"] == ref or entry["name"] == ref:
+                return _as_dict(entry)
+        maker, _, rest = ref.partition(" ")
+        if maker.lower() not in _MAKER_PREFIXES or not rest.strip():
+            break
+        ref = rest.strip()
     raise ValueError(
         f"Unknown model_id: {model_id!r}. "
         f"Catalog has {len(models)} models; pass either the model id or name."
@@ -476,17 +488,10 @@ def always_thinks(model_ref: str) -> bool:
     surface — the selector's ``always-thinks="yes"`` (Opus 5.5, Sonnet 5.5,
     Haiku 5.5, Fable). Such a model has no Thinking toggle to set. False on a
     catalog miss (never raises), which keeps the toggle the surface documents."""
-    ref = (model_ref or "").strip()
     try:
-        catalog = _load_catalog()
-    except BundledDocNotFoundError:
+        return bool(_resolve_model(model_ref or "", _load_catalog()).get("always_thinks"))
+    except (ValueError, BundledDocNotFoundError):
         return False
-    for candidate in dict.fromkeys((ref, ref.removeprefix("Claude ").strip())):
-        try:
-            return bool(_resolve_model(candidate, catalog).get("always_thinks"))
-        except ValueError:
-            continue
-    return False
 
 
 def model_jurisdiction(model_ref: str) -> str | None:

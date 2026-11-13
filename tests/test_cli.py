@@ -898,6 +898,43 @@ def test_recommend_legacy_flag(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) 
     assert result.stdout.strip() == RESPONSE_GPT_TEST_CODEX.strip()
 
 
+def test_recommend_legacy_flag_with_a_v2_response(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A v2 pick has no MAX MODE line, and --legacy crashed on the missing key
+    (#625). The block now carries the lines the pick has, EFFORT included."""
+    _clear_provider_env(monkeypatch)
+    _set_isolated_home(monkeypatch, tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-test")
+
+    context_path = tmp_path / "xdg" / "roadmodel" / "user-context.md"
+    context_path.parent.mkdir(parents=True, exist_ok=True)
+    context_path.write_text(
+        FIXTURE_USER_CONTEXT_PATH.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    class StaticAdapter:
+        def recommend(self, prompt: str, system: str, **_: object) -> str:
+            return RESPONSE_V2_CLAUDE_CODE
+
+    monkeypatch.setitem(recommend_module.PROVIDER_ADAPTERS, "anthropic", StaticAdapter())
+
+    result = _runner().invoke(cli, ["recommend", "--legacy", "build a SQL agent"])
+    assert result.exit_code == 0, result.output
+    lines = result.stdout.strip().splitlines()
+    assert [line.split(":", 1)[0] for line in lines] == [
+        "MODEL",
+        "PLATFORM",
+        "EFFORT",
+        "THINKING",
+        "CONVERSATION",
+        "RATIONALE",
+    ]
+    assert "EFFORT: Ultracode" in lines
+
+
 def test_recommend_json_output(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     _clear_provider_env(monkeypatch)
     _set_isolated_home(monkeypatch, tmp_path)

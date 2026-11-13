@@ -260,6 +260,26 @@ def test_active_tier_matches_a_price_the_operator_rounded() -> None:
     assert cost_module._match_active_tier(tiers, [("Google AI Pro", "google", 25.0)]) is None
 
 
+def test_maker_prefixed_names_resolve_to_the_catalog_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Engines name picks with the maker in front ("Claude Fable 5.1"), and the
+    pick resolved to nothing: no cost table, tier or backup guard (#623)."""
+    from roadmodel import cost
+
+    monkeypatch.setenv("ROADMODEL_CATALOG_PATH", str(REPO_ROOT / "docs" / "catalog.json"))
+
+    assert cost.canonical_model_name("Claude Fable 5.1") == "Fable 5.1"
+    assert cost.model_id_of("Claude Fable 5.1") == "claude-fable-5.1"
+    assert cost.model_provider("Claude Fable 5.1") == "anthropic"
+    assert cost.canonical_model_name("Anthropic Claude Opus 5.5") == "Opus 5.5"
+    assert cost.canonical_model_name("OpenAI GPT-6 Sol") == "GPT-6 Sol"
+    assert cost.canonical_model_name("Google Gemini 3 Flash") == "Gemini 3 Flash"
+    # Only a leading maker word is dropped, and only after an exact miss.
+    for ref in ("Claude", "Claude Nonexistent 9", "Cursor Fable 5.1", "Fable 5.1 Claude"):
+        assert cost.model_id_of(ref) is None, ref
+
+
 def test_always_thinks_resolves_ids_names_and_the_claude_prefix(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

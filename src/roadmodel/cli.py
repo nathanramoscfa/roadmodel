@@ -202,17 +202,15 @@ def _format_structured_text(payload: dict[str, Any]) -> str:
     return "\n".join(lines).strip() + "\n"
 
 
-def _legacy_six_field_block(result: dict[str, str]) -> str:
-    return "\n".join(
-        [
-            f"MODEL: {result['model']}",
-            f"PLATFORM: {result['platform']}",
-            f"MAX MODE: {result['max_mode']}",
-            f"THINKING: {result['thinking']}",
-            f"CONVERSATION: {result['conversation']}",
-            f"RATIONALE: {result['rationale']}",
-        ]
-    )
+def _legacy_block(result: dict[str, str]) -> str:
+    """The v0.1.x MODEL/…/RATIONALE block. Since output contract v2 every
+    settings line is platform-conditional (a Claude Code pick has no MAX MODE
+    line), so a line the pick doesn't carry is left out rather than read (#625),
+    and EFFORT, where v2 puts the level v0.1.x's THINKING held, is kept."""
+    lines = [("MODEL", "model"), ("PLATFORM", "platform"), ("EFFORT", "effort")]
+    lines += [("MAX MODE", "max_mode"), ("THINKING", "thinking")]
+    lines += [("CONVERSATION", "conversation"), ("RATIONALE", "rationale")]
+    return "\n".join(f"{label}: {result[key]}" for label, key in lines if result.get(key))
 
 
 def _format_cost_command_text(est: cost.SessionCostEstimate) -> str:
@@ -261,7 +259,7 @@ def cli() -> None:
 @click.option(
     "--legacy",
     is_flag=True,
-    help="Emit the v0.1.x six-field MODEL/…/RATIONALE block.",
+    help="Emit the v0.1.x MODEL/…/RATIONALE block (settings lines the pick lacks are left out).",
 )
 @click.option("--input-tokens", type=int, default=None, help="Input tokens for cost fields.")
 @click.option(
@@ -394,7 +392,7 @@ def recommend(
         if want_json:
             click.echo(json.dumps(result, indent=2))
         else:
-            click.echo(_legacy_six_field_block(result))
+            click.echo(_legacy_block(result))
         return
 
     try:
