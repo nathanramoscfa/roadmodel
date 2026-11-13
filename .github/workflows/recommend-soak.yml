@@ -154,7 +154,8 @@ jobs:
 
       - name: Install the roadmodel production runs
         # B2 recomputes the gold ladder rows, and the judge's fact sheet reads
-        # the catalog: both must be the release production serves, not main.
+        # the catalog: both must match production, which runs this release's
+        # code on main's data files (service/app/live_data.py, from 0.2.112).
         if: steps.check.outputs.have == 'true' && steps.soak.outputs.finished == 'true' && steps.soak.outputs.exit != '3'
         run: |
           V=$(curl -fsS https://roadmodel-api.vercel.app/healthz | python -c 'import json,sys; print(json.load(sys.stdin)["roadmodel_version"])')
@@ -163,6 +164,16 @@ jobs:
           python -m pip install --quiet "roadmodel==$V"
           # Claude Code, pinned, for the judge (claude -p).
           npm install -g --no-fund --no-audit @anthropic-ai/claude-code@2.1.293
+          # The six files production fetches from main, so the fact sheet holds
+          # what production picked from. The release's bundle predates them: on
+          # 2026-11-12 it lacked Fable 5.2 on Claude Code, and the judge rejected
+          # four correct picks for routing it there.
+          LIVE="$RUNNER_TEMP/roadmodel-live-data"
+          mkdir -p "$LIVE"
+          for name in catalog.json model-selector.txt model-tier-cost-scale.md benchmarks.json context-windows.json effort-tokens.json; do
+            cp "docs/$name" "$LIVE/$name"
+          done
+          echo "ROADMODEL_DATA_DIR=$LIVE" >> "$GITHUB_ENV"
 
       - name: Score B2 and B6 (judge)
         id: judge
