@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.114] — 2026-11-12
+
+- **A pick named with its maker in front resolves to its model.** Engines often write "Claude Fable 5.1" or "OpenAI GPT-6 Sol", while the catalog names the model "Fable 5.1" or "GPT-6 Sol", so the pick matched nothing: it lost its cost table, its pricing tier and the cross-provider backup check. A leading Anthropic, Claude, OpenAI, Google or xAI is now dropped after an exact miss, everywhere a model is looked up (#623).
+- **`roadmodel recommend --legacy` no longer crashes.** It read a MAX MODE line that output contract v2 leaves out for Claude Code and Codex picks, and stopped with `KeyError: 'max_mode'`. The block now prints the lines the pick carries, in the v0.1.x order, plus EFFORT, where v2 puts the level (#625).
+- **Fable 5.2 runs on Claude Code, with thinking always on.** The bundled catalog lists it among Claude Code's models, read from Claude Code's own docs, and marks it `always-thinks`, so no THINKING line or Thinking toggle is offered for it.
+
 ## [0.2.113] — 2026-11-11
 
 - **A new version is picked before Artificial Analysis measures it.** /recommend and `roadmodel score` pick only from the frontier of models with an AA Intelligence Index, and since a recommendation names the latest version of a series, the older version also drops out wherever the newer one runs. So Fable 5.2 and GPT-6.1 Terra, which AA has not measured yet, took their whole series off the picks. A catalog model AA has not measured that is a later version of one it has now stands on that version's rows (`scoring.inherit_unmeasured`) until AA measures it, the same way it already starts on that version's rating letters. Its AA Index reads ≈ in ladder tables and the engine's ladder table, and `/v1/score`'s rationale names the version measured. A new series (Gemini 4 Carbon) has no previous version and waits. The copies count only for their own model: composites, evidence scales, the market line and effort shifts are still read over the models AA measured.
