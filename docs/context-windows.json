@@ -20,6 +20,7 @@
     "gemini-3.8-flash": 1048576,
     "gemini-4-argon": 1048576,
     "gemini-4-carbon": 1048576,
+    "gemini-4-hydrogen": 1048576,
     "glm-4.5-air": 131072,
     "glm-4.6": 204800,
     "glm-5.2": 1048576,
