@@ -33,7 +33,8 @@ import {
   type BenchRow,
 } from "../lib/benchmark-grid";
 import { modelProvider } from "../lib/catalog-fields";
-import { getModelRows, pastLeaveDate } from "../lib/catalog-models";
+import { getModelRows, inheritedSource, pastLeaveDate } from "../lib/catalog-models";
+import { isNewer } from "../lib/series";
 import { liveCatalog } from "./fixtures/live-catalog";
 
 // Expected row counts are DERIVED from the catalog the page renders, never
@@ -108,10 +109,21 @@ function aaIndexFor(m: ScoredModel): number | null {
   return scoresFor(m.headline_benchmarks ?? "").aaIndex;
 }
 
+// The figure the AA Index column shows: AA's own (or the cited one), else, for
+// a later version AA has not measured, its newest measured earlier version's
+// index, marked ≈. Only AA's own figures enter the Score fit.
+function shownIndexFor(m: ScoredModel): number | null {
+  const own = aaIndexFor(m);
+  if (own !== null) return own;
+  const source = inheritedSource(m.id);
+  const copied = source ? benchmarks.models[source]?.evaluations.artificial_analysis_intelligence_index : null;
+  return typeof copied === "number" ? copied : null;
+}
+
 const WITH_AA = scored.find((m) => aaIndexFor(m) !== null)!;
 // An Anthropic model from today's catalog, for tests that need one by maker.
 const ANTHROPIC_MODEL = catalog.models.find((m) => /^(claude-|opus-|sonnet-|haiku-)/.test(m.id))!;
-const WITHOUT_ANY = scored.find((m) => aaIndexFor(m) === null)!;
+const WITHOUT_ANY = scored.find((m) => shownIndexFor(m) === null)!;
 const AA_VALUE = String(aaIndexFor(WITH_AA));
 
 // The frontier, computed independently of the page: every measured model at
@@ -125,8 +137,10 @@ interface Measured {
   index: number;
 }
 const MEASURED: Measured[] = scored
-  .map((m) => ({ m, price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m), index: aaIndexFor(m) }))
+  .map((m) => ({ m, price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m), index: shownIndexFor(m) }))
   .filter((r): r is Measured => r.index !== null);
+// The rows the Score fit and the Score charts read: AA's own figures.
+const FITTED = MEASURED.filter((r) => aaIndexFor(r.m) !== null);
 function leaderOf(r: Measured, pool: Measured[] = MEASURED): Measured {
   const cheaper = pool.filter((o) => o.price <= r.price);
   const top = Math.max(...cheaper.map((o) => o.index));
@@ -268,7 +282,7 @@ test("Group by Cost tier: Score within each tier (priciest first); Output toggle
   }
   // Sorting by AA Index still puts the highest-index model on top, unmeasured last.
   await page.getByRole("button", { name: /^AA Index/ }).click();
-  const top = [...scored].filter((m) => aaIndexFor(m) !== null).sort((a, b) => aaIndexFor(b)! - aaIndexFor(a)!)[0];
+  const top = [...scored].filter((m) => shownIndexFor(m) !== null).sort((a, b) => shownIndexFor(b)! - shownIndexFor(a)!)[0];
   await expect(page.getByTestId("model-row").first()).toContainText(top.name);
   await expect(page.getByTestId("model-row").last().getByTestId("aa-index")).toHaveText("—");
 
@@ -325,8 +339,8 @@ test("unchecking CN takes it out of every chart and redraws the frontier over th
 
   // The Score charts: every non-CN measured model in a charted tier, no CN
   // dot, and each dot keeps its whole-catalog Score.
-  const fit = fitScoreModel(MEASURED.map((r) => ({ price: r.price, index: r.index, tier: r.m.tier_cost })))!;
-  const charted = pool.filter((r) => (fit.tiers[r.m.tier_cost]?.n ?? 0) >= 2);
+  const fit = fitScoreModel(FITTED.map((r) => ({ price: r.price, index: r.index, tier: r.m.tier_cost })))!;
+  const charted = pool.filter((r) => aaIndexFor(r.m) !== null && (fit.tiers[r.m.tier_cost]?.n ?? 0) >= 2);
   const scorePanel = page.getByTestId("score-charts");
   await expect(scorePanel.getByTestId("score-charts-filter")).toContainText("Jurisdiction: US + EU");
   await expect(scorePanel.getByTestId("score-chart-point")).toHaveCount(charted.length);
@@ -379,7 +393,7 @@ test("unchecking CN takes it out of every chart and redraws the frontier over th
 test("a Cost tier narrows the charts to its models; the frontier still spans every price", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/models");
-  const fit = fitScoreModel(MEASURED.map((r) => ({ price: r.price, index: r.index, tier: r.m.tier_cost })))!;
+  const fit = fitScoreModel(FITTED.map((r) => ({ price: r.price, index: r.index, tier: r.m.tier_cost })))!;
   // The charted tier with the fewest models: the narrowest band on the page.
   const tier = Object.entries(fit.tiers)
     .filter(([, t]) => t.n >= 2)
@@ -391,7 +405,7 @@ test("a Cost tier narrows the charts to its models; the frontier still spans eve
   // One Score chart, the tier's own.
   await expect(page.getByTestId("score-chart")).toHaveCount(1);
   await expect(page.getByTestId("score-chart")).toHaveAttribute("data-tier", tier);
-  await expect(page.getByTestId("score-chart-point")).toHaveCount(inTier.length);
+  await expect(page.getByTestId("score-chart-point")).toHaveCount(inTier.filter((r) => aaIndexFor(r.m) !== null).length);
 
   // The frontier chart: the tier's models, ringed only if they hold the top
   // score across the whole catalog (a band's cheapest model is not ringed for
@@ -560,7 +574,7 @@ test("rating cells are letters only; the Score column is the cost-adjusted score
   const inputs = scored.map((m) => ({
     m,
     price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m),
-    index: aaIndexFor(m),
+    index: shownIndexFor(m),
   }));
   const frontier = new Set([...paretoFrontier(inputs)].map((r) => r.m.id));
   expect(frontier.size).toBeGreaterThan(2);
@@ -823,8 +837,9 @@ test("every model off the frontier names the model that beats it, from any cost 
   // The case that reads as a contradiction without this: the best Score in the
   // table that has no dot. Its AA Index card and its Score card both name the
   // model that beats it; a frontier model's cards say it is on the frontier.
-  const fit = fitScoreModel(measured.map((o) => ({ price: o.price, index: o.index, tier: o.m.tier_cost })));
-  const scoreOf = (o: (typeof measured)[number]) => scoreFor(fit, o.m.tier_cost, o.price, o.index) ?? -Infinity;
+  const fit = fitScoreModel(FITTED.map((o) => ({ price: o.price, index: o.index, tier: o.m.tier_cost })));
+  const scoreOf = (o: (typeof measured)[number]) =>
+    (aaIndexFor(o.m) === null ? null : scoreFor(fit, o.m.tier_cost, o.price, o.index)) ?? -Infinity;
   const beaten = measured.filter((r) => leaderOf(r) !== r).sort((a, b) => scoreOf(b) - scoreOf(a))[0];
   const lead = leaderOf(beaten);
   const row = page.locator(`[data-testid="model-row"][data-model-id="${beaten.m.id}"]`);
@@ -873,7 +888,7 @@ test("Group by Quality is the default: AA Index bands, highest Score first in ea
   const bandOf = (v: number | null) => (v === null ? null : Math.floor(v / 10) * 10);
   const rowsIn = scored.map((m) => ({
     m,
-    band: bandOf(aaIndexFor(m)),
+    band: bandOf(shownIndexFor(m)),
     score: scoreFor(fit, m.tier_cost, blendedPrice(m.input_price_per_1m, m.output_price_per_1m), aaIndexFor(m)),
   }));
   const bands = [...new Set(rowsIn.map((r) => r.band).filter((b): b is number => b !== null))].sort((a, b) => b - a);
@@ -1276,7 +1291,7 @@ test("sorting a category orders by letter, then AA Index", async ({ page }) => {
   const rows = page.getByTestId("model-row");
   const count = await rows.count();
   const seen: { rating: string; aa: number | null }[] = [];
-  const parse = (t: string) => (t.trim() === "—" ? null : Number.parseFloat(t));
+  const parse = (t: string) => (t.trim() === "—" ? null : Number.parseFloat(t.replace("≈", "")));
   for (let i = 0; i < count; i += 1) {
     const r = rows.nth(i);
     const cell = r.locator("td").nth(KNOWLEDGE_TD);
@@ -1519,4 +1534,29 @@ test("each AA Index names the effort Artificial Analysis measured it at", async 
     const plain = page.locator(`[data-testid="model-row"][data-model-id="${without.id}"]`);
     await expect(plain.getByTestId("aa-index-effort")).toHaveCount(0);
   }
+});
+
+test("the series rule matches the recommender's (src/roadmodel/series.py)", () => {
+  expect(isNewer("claude-fable-5.1", "claude-fable-5.2")).toBe(true);
+  expect(isNewer("opus-4.8", "claude-opus-5-5")).toBe(true);
+  expect(isNewer("gpt-5.6-terra", "gpt-6.1-terra")).toBe(true);
+  expect(isNewer("claude-fable-5.2", "claude-fable-5.1")).toBe(false);
+  expect(isNewer("gpt-6-sol", "gpt-6-luna")).toBe(false);
+  expect(isNewer("gpt-5.5", "gpt-5.6-mini")).toBe(false);
+  expect(isNewer("gpt-oss-20b", "gpt-oss-120b")).toBe(false);
+});
+
+test("a later version AA has not measured shows its earlier version's index, marked as an estimate", async ({ page }) => {
+  const heir = scored.find((m) => aaIndexFor(m) === null && shownIndexFor(m) !== null);
+  test.skip(!heir, "every later version in today's catalog is measured");
+  const source = inheritedSource(heir!.id)!;
+  const sourceName = RAW_MODELS.find((m) => m.id === source)?.name ?? benchmarks.models[source].aa_name;
+  await page.goto("/models");
+  const row = page.locator(`[data-testid="model-row"][data-model-id="${heir!.id}"]`);
+  await expect(row.getByTestId("aa-index")).toHaveText(`≈${shownIndexFor(heir!)}`);
+  await expect(row.getByTestId("aa-index-estimate")).toHaveAttribute("title", `Estimated: ${sourceName}'s AA Index, until Artificial Analysis measures ${heir!.name}`);
+  // An estimate has no Score: the market comparison is for AA's own figures.
+  await expect(row.getByTestId("value-cell")).toHaveAttribute("data-value", "");
+  await row.getByTestId("aa-index-trigger").hover();
+  await expect(page.getByTestId("aa-index-card")).toContainText(`An estimate: ${sourceName}'s index`);
 });

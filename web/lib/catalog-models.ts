@@ -30,6 +30,7 @@ import {
 } from "@/lib/benchmark-grid";
 import { withFrontier } from "@/lib/catalog-filter";
 import { BENCHMARKS } from "@/lib/glossary";
+import { compareVersions, isNewer, version } from "@/lib/series";
 
 interface RawModel {
   id: string;
@@ -133,6 +134,21 @@ function indexByEffort(id: string): Record<string, number> | undefined {
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
+// The model whose AA row an unmeasured later version stands on until AA
+// measures it: the newest earlier version of its series in the snapshot, the
+// rule /recommend ranks by (src/roadmodel/scoring.py inherit_unmeasured).
+// Null for a model in the snapshot, and for a new series.
+export function inheritedSource(id: string): string | null {
+  if (BENCH[id]) return null;
+  const older = Object.keys(BENCH).filter((m) => isNewer(m, id));
+  if (older.length === 0) return null;
+  return older.sort((a, b) => compareVersions(version(b), version(a)) || (a < b ? 1 : a > b ? -1 : 0))[0];
+}
+
+function nameOf(id: string): string {
+  return MODELS.find((m) => m.id === id)?.name ?? BENCH[id]?.aa_name ?? id;
+}
+
 // Project a benchmarks.json entry to exactly the grid's columns. AA reports
 // 0 tokens/s for endpoints it has not throughput-tested; that is "not
 // measured", not a speed, so it becomes null like any other gap.
@@ -161,6 +177,11 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
     const bench = benchRowFor(m.id);
     const measured = bench?.values.artificial_analysis_intelligence_index ?? null;
     const cited = measured === null ? extractAaIndex(prose) : null;
+    // Only the index carries over, shown ≈: the grid columns, the effort rows
+    // and the Score stay AA's measurements of this model.
+    const source = measured === null && cited === null ? inheritedSource(m.id) : null;
+    const inheritedIndex = source ? BENCH[source].evaluations[INDEX_KEY] : null;
+    const inherited = typeof inheritedIndex === "number" && Number.isFinite(inheritedIndex) ? inheritedIndex : null;
     return {
       id: m.id,
       name: m.name,
@@ -175,8 +196,10 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
       headline_benchmarks: prose,
       pricing_notes: m.pricing_notes ?? "",
       best_for: m.best_for ?? "",
-      aa_index: measured ?? cited,
-      aa_index_source: measured !== null ? "snapshot" : cited !== null ? "cited" : null,
+      aa_index: measured ?? cited ?? inherited,
+      aa_index_source:
+        measured !== null ? "snapshot" : cited !== null ? "cited" : inherited !== null ? "inherited" : null,
+      aa_inherited_from: inherited !== null && source ? nameOf(source) : null,
       aa_index_by_effort: indexByEffort(m.id),
       aa_index_effort: measured !== null ? (BENCH[m.id]?.aa_effort ?? null) : null,
       token_multiplier_by_effort: multiplierByEffort(m.id),
@@ -199,6 +222,7 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
   const marked = withFrontier(rows);
   const fit = getScoreFit(marked);
   for (const r of marked) {
+    if (r.aa_index_source === "inherited") continue;
     r.value_score = scoreFor(
       fit,
       r.tier_cost,
@@ -210,12 +234,14 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
 }
 
 // The market fit behind the Score column, over the rows given (the page passes
-// the same rows it renders so the header stats match the cells).
+// the same rows it renders so the header stats match the cells). An inherited
+// index is a copy of another model's point, so the fit leaves it out.
 export function getScoreFit(
-  rows: readonly Pick<ModelRow, "input_price_per_1m" | "output_price_per_1m" | "aa_index" | "tier_cost">[],
+  rows: readonly (Pick<ModelRow, "input_price_per_1m" | "output_price_per_1m" | "aa_index" | "tier_cost"> &
+    Partial<Pick<ModelRow, "aa_index_source">>)[],
 ): ScoreFit | null {
   return fitScoreModel(
-    rows.map((r) => ({
+    rows.filter((r) => r.aa_index_source !== "inherited").map((r) => ({
       price: blendedPrice(r.input_price_per_1m, r.output_price_per_1m),
       index: r.aa_index,
       tier: r.tier_cost,
