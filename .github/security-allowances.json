@@ -459,8 +459,8 @@
         "finding_sha256": "f581010fac389415e0ea37581932f4c3156a3e2ef9a5d20921f41dbab1767c7c",
         "language": "python",
         "rule_id": "py/clear-text-storage-sensitive-data",
-        "rule_sha256": "d2d3c242f1fbc70803df33600f7be500d72dcc836f4bc53ce45560520dca05bf",
-        "run_configuration_sha256": "684ba922c5d85de855f826a676452814f67303d3c0f84f8db99ab1739b7db844",
+        "rule_sha256": "6d2da207d4dd612a0dd14e77e1ec851e5136fe8f9481a5523ac94e9d438b6282",
+        "run_configuration_sha256": "c2d86df301573550417f69cb623a7f6d339ae61daa33eb0c72a5b26caa422f07",
         "sources": [
           {
             "mode": "100644",
@@ -635,7 +635,7 @@
             ]
           }
         ],
-        "tool_sha256": "569f90f6267451de751a334faa27a6c5174317a1fa5cc50417e7651151bc739b"
+        "tool_sha256": "0450fb2c479f548d1b395769307b6cc164ff827c89c7d853a8e6aaa313e2e8d3"
       },
       "rationale": "Committed public access-method billing labels are rendered into the public catalog mirror; no private account billing data or credential is read.",
       "reviewed_revision": "a5642b5014e8862c8e976edcfd498c80a28cf2b0"
@@ -649,8 +649,8 @@
         "finding_sha256": "130d070c17e79d8e6481de3ee824ff3849145a11d28d6b4335f774f178ff767e",
         "language": "python",
         "rule_id": "py/clear-text-storage-sensitive-data",
-        "rule_sha256": "d2d3c242f1fbc70803df33600f7be500d72dcc836f4bc53ce45560520dca05bf",
-        "run_configuration_sha256": "684ba922c5d85de855f826a676452814f67303d3c0f84f8db99ab1739b7db844",
+        "rule_sha256": "6d2da207d4dd612a0dd14e77e1ec851e5136fe8f9481a5523ac94e9d438b6282",
+        "run_configuration_sha256": "c2d86df301573550417f69cb623a7f6d339ae61daa33eb0c72a5b26caa422f07",
         "sources": [
           {
             "mode": "100644",
@@ -814,7 +814,7 @@
             ]
           }
         ],
-        "tool_sha256": "569f90f6267451de751a334faa27a6c5174317a1fa5cc50417e7651151bc739b"
+        "tool_sha256": "0450fb2c479f548d1b395769307b6cc164ff827c89c7d853a8e6aaa313e2e8d3"
       },
       "rationale": "Committed public access-method billing labels are rendered into the public catalog mirror; no private account billing data or credential is read.",
       "reviewed_revision": "a5642b5014e8862c8e976edcfd498c80a28cf2b0"
@@ -828,8 +828,8 @@
         "finding_sha256": "bc367a67cb1c6268fc43003d07ab207a43f5493213b6434448ab4c8e3b09ce24",
         "language": "python",
         "rule_id": "py/clear-text-storage-sensitive-data",
-        "rule_sha256": "d2d3c242f1fbc70803df33600f7be500d72dcc836f4bc53ce45560520dca05bf",
-        "run_configuration_sha256": "684ba922c5d85de855f826a676452814f67303d3c0f84f8db99ab1739b7db844",
+        "rule_sha256": "6d2da207d4dd612a0dd14e77e1ec851e5136fe8f9481a5523ac94e9d438b6282",
+        "run_configuration_sha256": "c2d86df301573550417f69cb623a7f6d339ae61daa33eb0c72a5b26caa422f07",
         "sources": [
           {
             "mode": "100644",
@@ -993,7 +993,7 @@
             ]
           }
         ],
-        "tool_sha256": "569f90f6267451de751a334faa27a6c5174317a1fa5cc50417e7651151bc739b"
+        "tool_sha256": "0450fb2c479f548d1b395769307b6cc164ff827c89c7d853a8e6aaa313e2e8d3"
       },
       "rationale": "Committed public access-method billing labels are rendered into the public catalog mirror; no private account billing data or credential is read.",
       "reviewed_revision": "a5642b5014e8862c8e976edcfd498c80a28cf2b0"
@@ -1007,8 +1007,8 @@
         "finding_sha256": "514e09d623f5d351be36a51460e246f4a21967a2cf641bfa06b1ccf56f6202d9",
         "language": "python",
         "rule_id": "py/log-injection",
-        "rule_sha256": "18d52e3185af5fc4b138cbcb714ed5ec459e9e80787eea6a45a0847fec61036a",
-        "run_configuration_sha256": "684ba922c5d85de855f826a676452814f67303d3c0f84f8db99ab1739b7db844",
+        "rule_sha256": "05c52d6c72cc5e2355ba2cc20d8a2d11c8ed1c2bce0627105bde1b370d9483f6",
+        "run_configuration_sha256": "c2d86df301573550417f69cb623a7f6d339ae61daa33eb0c72a5b26caa422f07",
         "sources": [
           {
             "mode": "100644",
@@ -1142,7 +1142,7 @@
             ]
           }
         ],
-        "tool_sha256": "569f90f6267451de751a334faa27a6c5174317a1fa5cc50417e7651151bc739b"
+        "tool_sha256": "0450fb2c479f548d1b395769307b6cc164ff827c89c7d853a8e6aaa313e2e8d3"
       },
       "rationale": "Both complete flows pass through membership validation against committed engine registry keys before fixed warning formatting; arbitrary request text cannot become this log argument.",
       "reviewed_revision": "a5642b5014e8862c8e976edcfd498c80a28cf2b0"
@@ -1156,8 +1156,8 @@
         "finding_sha256": "2e9e0eb0cddbb1eb57cc20ba98be02daf174186a43a42e95e88be282b0f77767",
         "language": "python",
         "rule_id": "py/log-injection",
-        "rule_sha256": "18d52e3185af5fc4b138cbcb714ed5ec459e9e80787eea6a45a0847fec61036a",
-        "run_configuration_sha256": "684ba922c5d85de855f826a676452814f67303d3c0f84f8db99ab1739b7db844",
+        "rule_sha256": "05c52d6c72cc5e2355ba2cc20d8a2d11c8ed1c2bce0627105bde1b370d9483f6",
+        "run_configuration_sha256": "c2d86df301573550417f69cb623a7f6d339ae61daa33eb0c72a5b26caa422f07",
         "sources": [
           {
             "mode": "100644",
@@ -1291,7 +1291,7 @@
             ]
           }
         ],
-        "tool_sha256": "569f90f6267451de751a334faa27a6c5174317a1fa5cc50417e7651151bc739b"
+        "tool_sha256": "0450fb2c479f548d1b395769307b6cc164ff827c89c7d853a8e6aaa313e2e8d3"
       },
       "rationale": "Both complete flows pass through membership validation against committed engine registry keys before fixed warning formatting; arbitrary request text cannot become this log argument.",
       "reviewed_revision": "a5642b5014e8862c8e976edcfd498c80a28cf2b0"
@@ -1305,8 +1305,8 @@
         "finding_sha256": "bfae96e9ca218d14b67376a1fc83a51c2e3d104a292b0131d1e69cf29d97a5a6",
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
-        "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
-        "run_configuration_sha256": "1585ecf701dca032714f5ec869d594aab06feefab8c6f155b4dc4119ad2a60c6",
+        "rule_sha256": "be450b52b48c5219aa316346a04f2300c37b6826603dc91627907194d7eea165",
+        "run_configuration_sha256": "b6f62b4bce6c264cc38283d86a703d16e09c1e25cba5c4c9d0fea0ba21ea6a32",
         "sources": [
           {
             "mode": "100644",
@@ -1352,7 +1352,7 @@
             ]
           }
         ],
-        "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
+        "tool_sha256": "af3e6a3c7b1528a8d003b3bf148c124f743194961b25d030754a80c49f7f1018"
       },
       "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
       "reviewed_revision": "a5642b5014e8862c8e976edcfd498c80a28cf2b0"
@@ -1366,8 +1366,8 @@
         "finding_sha256": "99be1217fb6e8d5d0ec0af9f714702886799e8e5ad71eb603ab6483b21a0e9e4",
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
-        "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
-        "run_configuration_sha256": "1585ecf701dca032714f5ec869d594aab06feefab8c6f155b4dc4119ad2a60c6",
+        "rule_sha256": "be450b52b48c5219aa316346a04f2300c37b6826603dc91627907194d7eea165",
+        "run_configuration_sha256": "b6f62b4bce6c264cc38283d86a703d16e09c1e25cba5c4c9d0fea0ba21ea6a32",
         "sources": [
           {
             "mode": "100644",
@@ -1413,7 +1413,7 @@
             ]
           }
         ],
-        "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
+        "tool_sha256": "af3e6a3c7b1528a8d003b3bf148c124f743194961b25d030754a80c49f7f1018"
       },
       "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
       "reviewed_revision": "a5642b5014e8862c8e976edcfd498c80a28cf2b0"
@@ -1427,8 +1427,8 @@
         "finding_sha256": "4d02f2a7c84613cd7459745fdfcd926a57a77124a2a53098864916394fbf0e0d",
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
-        "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
-        "run_configuration_sha256": "1585ecf701dca032714f5ec869d594aab06feefab8c6f155b4dc4119ad2a60c6",
+        "rule_sha256": "be450b52b48c5219aa316346a04f2300c37b6826603dc91627907194d7eea165",
+        "run_configuration_sha256": "b6f62b4bce6c264cc38283d86a703d16e09c1e25cba5c4c9d0fea0ba21ea6a32",
         "sources": [
           {
             "mode": "100644",
@@ -1492,7 +1492,7 @@
             ]
           }
         ],
-        "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
+        "tool_sha256": "af3e6a3c7b1528a8d003b3bf148c124f743194961b25d030754a80c49f7f1018"
       },
       "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
       "reviewed_revision": "a5642b5014e8862c8e976edcfd498c80a28cf2b0"
@@ -1506,8 +1506,8 @@
         "finding_sha256": "683b990832403248b2c24a2d1fba571c944db6b76a0fb79d7bd6e75c763d1e3a",
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
-        "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
-        "run_configuration_sha256": "1585ecf701dca032714f5ec869d594aab06feefab8c6f155b4dc4119ad2a60c6",
+        "rule_sha256": "be450b52b48c5219aa316346a04f2300c37b6826603dc91627907194d7eea165",
+        "run_configuration_sha256": "b6f62b4bce6c264cc38283d86a703d16e09c1e25cba5c4c9d0fea0ba21ea6a32",
         "sources": [
           {
             "mode": "100644",
@@ -1553,7 +1553,7 @@
             ]
           }
         ],
-        "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
+        "tool_sha256": "af3e6a3c7b1528a8d003b3bf148c124f743194961b25d030754a80c49f7f1018"
       },
       "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
       "reviewed_revision": "a5642b5014e8862c8e976edcfd498c80a28cf2b0"
@@ -1567,8 +1567,8 @@
         "finding_sha256": "1f76de590bdc68722f105531c7568e2e1a10f48e5dc3a997ae4ac26a0c9bd7da",
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
-        "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
-        "run_configuration_sha256": "1585ecf701dca032714f5ec869d594aab06feefab8c6f155b4dc4119ad2a60c6",
+        "rule_sha256": "be450b52b48c5219aa316346a04f2300c37b6826603dc91627907194d7eea165",
+        "run_configuration_sha256": "b6f62b4bce6c264cc38283d86a703d16e09c1e25cba5c4c9d0fea0ba21ea6a32",
         "sources": [
           {
             "mode": "100644",
@@ -1614,7 +1614,7 @@
             ]
           }
         ],
-        "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
+        "tool_sha256": "af3e6a3c7b1528a8d003b3bf148c124f743194961b25d030754a80c49f7f1018"
       },
       "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
       "reviewed_revision": "a5642b5014e8862c8e976edcfd498c80a28cf2b0"
@@ -1628,8 +1628,8 @@
         "finding_sha256": "755235d92bf588b07c5930ed206d65231f7fcf6237471b06970542f1ca7a0122",
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
-        "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
-        "run_configuration_sha256": "1585ecf701dca032714f5ec869d594aab06feefab8c6f155b4dc4119ad2a60c6",
+        "rule_sha256": "be450b52b48c5219aa316346a04f2300c37b6826603dc91627907194d7eea165",
+        "run_configuration_sha256": "b6f62b4bce6c264cc38283d86a703d16e09c1e25cba5c4c9d0fea0ba21ea6a32",
         "sources": [
           {
             "mode": "100644",
@@ -1675,7 +1675,7 @@
             ]
           }
         ],
-        "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
+        "tool_sha256": "af3e6a3c7b1528a8d003b3bf148c124f743194961b25d030754a80c49f7f1018"
       },
       "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
       "reviewed_revision": "a5642b5014e8862c8e976edcfd498c80a28cf2b0"
@@ -1689,8 +1689,8 @@
         "finding_sha256": "d06b38979c0b66d7b5b426f2a9329313544fb6f52f8f536f603c996d0d3398ad",
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
-        "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
-        "run_configuration_sha256": "1585ecf701dca032714f5ec869d594aab06feefab8c6f155b4dc4119ad2a60c6",
+        "rule_sha256": "be450b52b48c5219aa316346a04f2300c37b6826603dc91627907194d7eea165",
+        "run_configuration_sha256": "b6f62b4bce6c264cc38283d86a703d16e09c1e25cba5c4c9d0fea0ba21ea6a32",
         "sources": [
           {
             "mode": "100644",
@@ -1718,7 +1718,7 @@
             ]
           }
         ],
-        "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
+        "tool_sha256": "af3e6a3c7b1528a8d003b3bf148c124f743194961b25d030754a80c49f7f1018"
       },
       "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
       "reviewed_revision": "a5642b5014e8862c8e976edcfd498c80a28cf2b0"
@@ -1732,8 +1732,8 @@
         "finding_sha256": "461f7c2fb00e8a533653c0fda2e35a776fec7ee13e3760bef43e004a629d29e6",
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
-        "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
-        "run_configuration_sha256": "1585ecf701dca032714f5ec869d594aab06feefab8c6f155b4dc4119ad2a60c6",
+        "rule_sha256": "be450b52b48c5219aa316346a04f2300c37b6826603dc91627907194d7eea165",
+        "run_configuration_sha256": "b6f62b4bce6c264cc38283d86a703d16e09c1e25cba5c4c9d0fea0ba21ea6a32",
         "sources": [
           {
             "mode": "100644",
@@ -1779,7 +1779,7 @@
             ]
           }
         ],
-        "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
+        "tool_sha256": "af3e6a3c7b1528a8d003b3bf148c124f743194961b25d030754a80c49f7f1018"
       },
       "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
       "reviewed_revision": "a5642b5014e8862c8e976edcfd498c80a28cf2b0"
@@ -1793,8 +1793,8 @@
         "finding_sha256": "a6006e1549c431e8c9a5a9dfe5d101743b53bd27315feefa24ac881722d367f5",
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
-        "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
-        "run_configuration_sha256": "1585ecf701dca032714f5ec869d594aab06feefab8c6f155b4dc4119ad2a60c6",
+        "rule_sha256": "be450b52b48c5219aa316346a04f2300c37b6826603dc91627907194d7eea165",
+        "run_configuration_sha256": "b6f62b4bce6c264cc38283d86a703d16e09c1e25cba5c4c9d0fea0ba21ea6a32",
         "sources": [
           {
             "mode": "100644",
@@ -1849,7 +1849,7 @@
             ]
           }
         ],
-        "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
+        "tool_sha256": "af3e6a3c7b1528a8d003b3bf148c124f743194961b25d030754a80c49f7f1018"
       },
       "rationale": "Digest is a transient fixed-width input to constant-time comparison; it is neither a stored password verifier nor the gate cookie. Separate bearer derivation retains its accepted protocol boundary.",
       "reviewed_revision": "a5642b5014e8862c8e976edcfd498c80a28cf2b0"
@@ -1863,8 +1863,8 @@
         "finding_sha256": "832f868c152537d414a4f895e5948cd3008d85235d9534c42e8b4f97851bf9e9",
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
-        "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
-        "run_configuration_sha256": "1585ecf701dca032714f5ec869d594aab06feefab8c6f155b4dc4119ad2a60c6",
+        "rule_sha256": "be450b52b48c5219aa316346a04f2300c37b6826603dc91627907194d7eea165",
+        "run_configuration_sha256": "b6f62b4bce6c264cc38283d86a703d16e09c1e25cba5c4c9d0fea0ba21ea6a32",
         "sources": [
           {
             "mode": "100644",
@@ -1919,7 +1919,7 @@
             ]
           }
         ],
-        "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
+        "tool_sha256": "af3e6a3c7b1528a8d003b3bf148c124f743194961b25d030754a80c49f7f1018"
       },
       "rationale": "Digest is a transient fixed-width input to constant-time comparison; it is neither a stored password verifier nor the gate cookie. Separate bearer derivation retains its accepted protocol boundary.",
       "reviewed_revision": "a5642b5014e8862c8e976edcfd498c80a28cf2b0"
