@@ -438,3 +438,14 @@ def test_an_added_models_price_row_joins_its_snapshot(tmp_path: Path) -> None:
         }
     ]
     assert out["slug_to_id"] == {"gpt-6.1-sol": "gpt-6.1-sol"}
+
+
+def test_this_runs_docs_reads_are_second_sources() -> None:
+    """A docs tracker held back by its own gate still names its models: the
+    refresh's live read of each docs page is a second source too."""
+    cache = UPDATE_DIR / ".cache"
+    assert cache / "gemini-thinking.json" in dd.SECOND_SOURCES
+    assert cache / "claude-code-effort.json" in dd.SECOND_SOURCES
+    for path in dd.SECOND_SOURCES:
+        if path.parent == cache:
+            assert UPDATE_DIR / path.name in dd.SECOND_SOURCES

@@ -102,9 +102,12 @@ def local_signature(update_dir: Path, codex_ids: Path | None) -> dict[str, str]:
     for path in sorted(update_dir.glob("catalog-*.json")):
         lines[f"provider:{path.stem.removeprefix('catalog-')}"] = _sha(path.read_bytes())
     for name, field in TRACKERS.items():
-        path = update_dir / f"{name}.json"
-        if path.exists():
-            models = tracker_models(json.loads(path.read_text()), field)
+        # The committed snapshot, and this run's read of the docs page where the
+        # workflow made one (update/dispose_discoveries.py SECOND_SOURCES).
+        paths = [update_dir / f"{name}.json", update_dir / ".cache" / f"{name}.json"]
+        found = [json.loads(path.read_text()) for path in paths if path.exists()]
+        if found:
+            models = sorted({m for snap in found for m in tracker_models(snap, field)})
             lines[f"tracker:{name}"] = _sha(json.dumps(models).encode())
     if codex_ids is not None and codex_ids.exists():
         ids = sorted(x.strip() for x in codex_ids.read_text().splitlines() if x.strip())

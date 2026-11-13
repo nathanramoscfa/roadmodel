@@ -111,3 +111,38 @@ def test_the_workflow_wires_the_gate() -> None:
     assert "--cursor-due" in wf and "--codex-ids" in wf
     opus = wf.split("- name: Refresh roadmodel catalog (Opus)", 1)[1].split("run: |", 1)[0]
     assert "steps.gate.outputs.cursor_changed == 'true'" in opus
+
+
+def test_a_live_docs_read_adds_its_models_to_the_trackers_line(tmp_path: Path) -> None:
+    """Gemini 4 Hydrogen, 2026-11-12: the docs named it, but the Gemini tracker's
+    run was held by its conformance gate, so its committed snapshot never did.
+    The run's own read of the page (update/.cache/) starts the refresh."""
+    (tmp_path / "gemini-thinking.json").write_text(
+        json.dumps({"unexpected_models": ["Gemini 4 Carbon"]})
+    )
+    before = cs.local_signature(tmp_path, None)["tracker:gemini-thinking"]
+    (tmp_path / ".cache").mkdir()
+    (tmp_path / ".cache" / "gemini-thinking.json").write_text(
+        json.dumps({"unexpected_models": ["Gemini 4 Carbon", "Gemini 4 Hydrogen"]})
+    )
+    after = cs.local_signature(tmp_path, None)["tracker:gemini-thinking"]
+    assert after != before
+    # Once the tracker commits the same names, the line holds still.
+    (tmp_path / "gemini-thinking.json").write_text(
+        json.dumps({"unexpected_models": ["Gemini 4 Hydrogen", "Gemini 4 Carbon"]})
+    )
+    assert cs.local_signature(tmp_path, None)["tracker:gemini-thinking"] == after
+    # A live read alone, with no committed snapshot, still signs the tracker.
+    (tmp_path / "gemini-thinking.json").unlink()
+    assert cs.local_signature(tmp_path, None)["tracker:gemini-thinking"] == after
+
+
+def test_the_workflow_reads_the_docs_pages_before_the_gate() -> None:
+    wf = (REPO_ROOT / ".github" / "workflows" / "update-models.yml").read_text()
+    readers = wf.split("- name: Refresh provider-direct catalog snapshots", 1)[1]
+    readers = readers.split("\n      - name:", 1)[0]
+    for name, script in (
+        ("gemini-thinking", "extract_gemini_thinking"),
+        ("claude-code-effort", "extract_claude_code_effort"),
+    ):
+        assert f"python update/{script}.py --output update/.cache/{name}.json ||" in readers
