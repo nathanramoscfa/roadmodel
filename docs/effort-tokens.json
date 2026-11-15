@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at_utc": "2026-11-08T15:06:48Z",
+  "generated_at_utc": "2026-11-15T15:07:07Z",
   "source": "Measured by update/measure_effort_tokens.py: output tokens (reasoning included) per probe on a fixed set of short tasks, at every ladder effort the model's lane can set.",
   "probe_set_sha256": "db1a808e774b2c1afd25f380c9641b83ccacae87f1ead88fc7307f2c539aa4a0",
   "probes": 8,
@@ -571,6 +571,32 @@
           "truncated": 0,
           "ci90": 0.135,
           "multiplier": 4.557
+        }
+      }
+    },
+    "gpt-5.1-codex": {
+      "lane": "openrouter",
+      "levels": {
+        "low": {
+          "mean_output_tokens": 673.2,
+          "runs": 32,
+          "truncated": 0,
+          "ci90": 0.177,
+          "multiplier": 0.783
+        },
+        "medium": {
+          "mean_output_tokens": 1257.1,
+          "runs": 192,
+          "truncated": 0,
+          "ci90": 0.116,
+          "multiplier": 1.462
+        },
+        "high": {
+          "mean_output_tokens": 2182.5,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.085,
+          "multiplier": 2.539
         }
       }
     },
@@ -1287,6 +1313,11 @@
       "high",
       "max"
     ],
+    "gpt-5.1-codex": [
+      "low",
+      "medium",
+      "high"
+    ],
     "gpt-5.6-luna": [
       "low",
       "medium",
@@ -1379,57 +1410,57 @@
   },
   "typical": {
     "high": 1.0,
-    "low": 0.54,
-    "medium": 0.763,
+    "low": 0.525,
+    "medium": 0.738,
     "xhigh": 1.323,
     "max": 1.817
   },
   "derived": {
     "claude-4.5-haiku": {
-      "low": 0.54,
-      "medium": 0.763,
+      "low": 0.525,
+      "medium": 0.738,
       "high": 1.0,
       "xhigh": 1.323,
       "max": 1.817
     },
     "gemini-2.5-flash": {
-      "low": 0.54,
-      "medium": 0.763,
+      "low": 0.525,
+      "medium": 0.738,
       "high": 1.0,
       "xhigh": 1.323,
       "max": 1.817
     },
     "glm-4.5-air": {
-      "low": 0.54,
-      "medium": 0.763,
+      "low": 0.525,
+      "medium": 0.738,
       "high": 1.0,
       "xhigh": 1.323,
       "max": 1.817
     },
     "glm-4.6": {
-      "low": 0.54,
-      "medium": 0.763,
+      "low": 0.525,
+      "medium": 0.738,
       "high": 1.0,
       "xhigh": 1.323,
       "max": 1.817
     },
     "kimi-k2.7-code": {
-      "low": 0.54,
-      "medium": 0.763,
+      "low": 0.525,
+      "medium": 0.738,
       "high": 1.0,
       "xhigh": 1.323,
       "max": 1.817
     },
     "mistral-medium-3.5": {
-      "low": 0.54,
-      "medium": 0.763,
+      "low": 0.525,
+      "medium": 0.738,
       "high": 1.0,
       "xhigh": 1.323,
       "max": 1.817
     },
     "mistral-small-4": {
-      "low": 0.54,
-      "medium": 0.763,
+      "low": 0.525,
+      "medium": 0.738,
       "high": 1.0,
       "xhigh": 1.323,
       "max": 1.817
@@ -1474,6 +1505,8 @@
     "glm-5.3-flash@xhigh": "OpenRouter cannot set this effort",
     "glm-5.3@medium": "OpenRouter cannot set this effort",
     "glm-5.3@xhigh": "OpenRouter cannot set this effort",
+    "gpt-5.1-codex@max": "OpenRouter cannot set this effort",
+    "gpt-5.1-codex@xhigh": "OpenRouter cannot set this effort",
     "gpt-oss-120b@max": "OpenRouter cannot set this effort",
     "gpt-oss-120b@xhigh": "OpenRouter cannot set this effort",
     "gpt-oss-20b@max": "OpenRouter cannot set this effort",
