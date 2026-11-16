@@ -5,7 +5,7 @@ build>=1.2
 # mcp.shared.memory.create_connected_server_and_client_session helper that
 # src/roadmodel/mcp_server.py and tests/test_mcp_server.py target. Keep CI on
 # the 1.x API until the 2.x MCPServer migration lands. Mirrors pyproject [mcp].
-mcp>=1.0,<2
+mcp>=2.3.0,<3
 sqlparse>=0.4
 # psycopg[binary] for tests/test_phase04_migrations.py — live-Postgres
 # migration tests run under the migration-tests CI job against the
