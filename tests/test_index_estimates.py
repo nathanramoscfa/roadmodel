@@ -117,7 +117,10 @@ def test_measured_models_are_never_estimated() -> None:
     entry = _entry(
         [[55 + i, 40 + i, 50 + i, 60 + i] for i in range(3)], ["old-b", "old-a", "new", "old-c"]
     )
-    assert estimate.estimate_all({"old-b": entry}, BENCH) == {}
+    estimates = estimate.estimate_all({"old-b": entry}, BENCH)
+    assert "old-b" not in estimates
+    # The unmeasured model its table lists is placed from it (the fallback).
+    assert estimates["new"].via == ("old-b",)
 
 
 def test_reported_index_components_add_the_component_fit() -> None:
@@ -170,3 +173,73 @@ def test_every_launch_table_is_well_formed() -> None:
                 nums = [v for v in row["values"] if v is not None]
                 assert all(0 <= v <= 100 for v in nums), (mid, row["benchmark"])
                 assert row.get("component") in (None, *estimate.COMPONENTS), (mid, row["benchmark"])
+
+
+# --------------------------------------------------------------------------- #
+# The fallback: later launch tables that list a model its own table can't place.
+
+
+def _launch(owner: str, released: str, columns: list[str | None], rows: list[list[float]]) -> Any:
+    return {
+        "release_date": released,
+        "tables": [
+            {
+                "source": "https://vendor.example/launch",
+                "columns": columns,
+                "rows": [{"benchmark": f"B{i}", "values": r} for i, r in enumerate(rows)],
+            }
+        ],
+    }
+
+
+# "thin" sets itself beside one measured model; "later" (released after it)
+# lists it beside three, where scores 40/50/60 map one-to-one onto the index.
+THIN = _launch("thin", "2026-06-01", ["thin", "old-a", None], [[55, 40, 70]] * 3)
+LATER = _launch(
+    "later",
+    "2026-09-01",
+    ["later", "thin", "old-a", "old-b", "old-c"],
+    [[80 + i, 55 + i, 40 + i, 50 + i, 60 + i] for i in range(3)],
+)
+
+
+def test_later_launch_tables_place_a_model_its_own_table_cannot() -> None:
+    tables = {"thin": THIN, "later": LATER}
+    assert estimate.estimate("thin", THIN, BENCH) is None
+    est = estimate.estimate_all(tables, BENCH)["thin"]
+    assert est.method == estimate.OTHER_METHOD and est.band == estimate.OTHER_BAND
+    assert est.index == pytest.approx(55 - estimate.OTHER_OPTIMISM, abs=0.05)
+    assert est.anchors == ("old-a", "old-b", "old-c") and est.rows == 3
+    assert est.via == ("later",)
+    assert est.as_json()["via"] == ["later"]
+    # A model with no launch table of its own is placed the same way.
+    assert estimate.estimate_all({"later": LATER}, BENCH)["thin"].via == ("later",)
+
+
+def test_the_listing_tables_own_model_and_later_models_never_anchor() -> None:
+    # Even once "later" is measured, its own column stays out (its vendor's own
+    # figures), as does any model released after it ("late", 2026-12-01).
+    bench = {**BENCH, "later": {"release_date": "2026-09-01", "evaluations": {INDEX: 99.0}}}
+    table = LATER["tables"][0]
+    cols = [*table["columns"], "late"]
+    rows = [{**r, "values": [*r["values"], 95.0]} for r in table["rows"]]
+    later = {**LATER, "tables": [{**table, "columns": cols, "rows": rows}]}
+    rows_used = estimate.other_rows("thin", {"thin": THIN, "later": later}, bench)
+    assert {a for _, anchors, _ in rows_used for a in anchors} == {"old-a", "old-b", "old-c"}
+    assert {owner for *_, owner in rows_used} == {"later"}
+
+
+def test_a_model_its_own_table_places_ignores_other_tables() -> None:
+    own = _launch(
+        "thin",
+        "2026-06-01",
+        ["thin", "old-a", "old-b"],
+        [[45 + i, 40 + i, 50 + i] for i in range(3)],
+    )
+    est = estimate.estimate_all({"thin": own, "later": LATER}, BENCH)["thin"]
+    assert est.method == "anchors" and est.via == () and "via" not in est.as_json()
+
+
+def test_too_few_rows_from_other_tables_give_no_estimate() -> None:
+    later = {**LATER, "tables": [{**LATER["tables"][0], "rows": LATER["tables"][0]["rows"][:2]}]}
+    assert "thin" not in estimate.estimate_all({"thin": THIN, "later": later}, BENCH)

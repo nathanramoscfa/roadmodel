@@ -65,6 +65,9 @@ export interface ModelRow {
   aa_index_band?: number | null;
   // The measured models an estimate is placed against, by display name.
   aa_estimate_anchors?: string[] | null;
+  // The models whose launch tables placed an estimate, by display name, when
+  // the model's own launch table is too thin; null for its own table.
+  aa_estimate_via?: string[] | null;
   // The effort AA ran the headline figure at: the model's top measured effort
   // ("max", "xhigh", …); for an estimate, the top effort its dials offer, the
   // setting its launch table reports; null when AA names none or the figure
@@ -242,7 +245,7 @@ export const FIELD_DEFS: Record<FieldKey, FieldDef> = {
     label: "AA Index",
     fullName: "Artificial Analysis Intelligence Index",
     definition:
-      "The one published composite number: Artificial Analysis's index over its evaluation suite, independently measured on a 0–100 scale. The closest thing to a single numeric rating — use it to separate models that share a letter. '—' means AA has not measured the model. '≈' marks a model AA has not measured yet: roadmodel's estimate, placing the model's launch benchmarks beside those of models AA has measured (accurate to about 4 points, with a Score from it), or, where the launch table is too thin, its newest measured earlier version's index (no Score). AA's own figure replaces either once published. Index versions are not comparable with each other; the snapshot this page carries is named below. A green ring beside the figure marks the cost/quality frontier: a model that scores higher than every other model at its price or less (blended price). Hover a figure for the top score at its price.",
+      "The one published composite number: Artificial Analysis's index over its evaluation suite, independently measured on a 0–100 scale. The closest thing to a single numeric rating — use it to separate models that share a letter. '—' means AA has not measured the model. '≈' marks a model AA has not measured yet: roadmodel's estimate, placing the model's launch benchmarks beside those of models AA has measured (accurate to about 4 points, with a Score from it; where its own launch table is too thin, later launches' tables that list it place it, to about 5 points), or, where the launch table is too thin, its newest measured earlier version's index (no Score). AA's own figure replaces either once published. Index versions are not comparable with each other; the snapshot this page carries is named below. A green ring beside the figure marks the cost/quality frontier: a model that scores higher than every other model at its price or less (blended price). Hover a figure for the top score at its price.",
     url: "https://artificialanalysis.ai/",
   },
   value: {

@@ -889,7 +889,7 @@ export function ModelCatalog({
                           </span>
                         ) : (
                           <HoverCard
-                            label={`${m.name}: AA Index ${m.aa_index_source === "inherited" ? `about ${m.aa_index}, ${m.aa_inherited_from}'s until Artificial Analysis measures it` : m.aa_index_source === "estimated" ? `about ${m.aa_index} (±${m.aa_index_band}), roadmodel's estimate from its launch benchmarks until Artificial Analysis measures it` : m.aa_index}${m.aa_index_effort ? ` at ${effortWord(m.aa_index_effort)}` : ""}${m.value_frontier ? ", on the cost/quality frontier" : ""}. Show where it stands across every cost tier`}
+                            label={`${m.name}: AA Index ${m.aa_index_source === "inherited" ? `about ${m.aa_index}, ${m.aa_inherited_from}'s until Artificial Analysis measures it` : m.aa_index_source === "estimated" ? `about ${m.aa_index} (±${m.aa_index_band}), roadmodel's estimate from ${m.aa_estimate_via ? `the launch benchmarks of ${m.aa_estimate_via.join(", ")}` : "its launch benchmarks"} until Artificial Analysis measures it` : m.aa_index}${m.aa_index_effort ? ` at ${effortWord(m.aa_index_effort)}` : ""}${m.value_frontier ? ", on the cost/quality frontier" : ""}. Show where it stands across every cost tier`}
                             card={
                               <IndexCard
                                 model={m}
@@ -922,7 +922,11 @@ export function ModelCatalog({
                               <span
                                 data-testid="aa-index-estimate"
                                 data-source="estimated"
-                                title={`Estimated by roadmodel from ${m.name}'s launch benchmarks (±${m.aa_index_band}), until Artificial Analysis measures it`}
+                                title={
+                                  m.aa_estimate_via
+                                    ? `Estimated by roadmodel from the launch benchmarks of ${m.aa_estimate_via.join(", ")}, which list ${m.name} beside models Artificial Analysis has measured (±${m.aa_index_band}), until Artificial Analysis measures it`
+                                    : `Estimated by roadmodel from ${m.name}'s launch benchmarks (±${m.aa_index_band}), until Artificial Analysis measures it`
+                                }
                               >
                                 ≈
                               </span>
@@ -933,7 +937,9 @@ export function ModelCatalog({
                                 data-testid="aa-index-effort"
                                 title={
                                   m.aa_index_source === "estimated"
-                                    ? `Estimated at ${effortWord(m.aa_index_effort)} effort, the top setting ${m.name} offers and the one its launch benchmarks report`
+                                    ? m.aa_estimate_via
+                                      ? `Estimated at ${effortWord(m.aa_index_effort)} effort, the top setting ${m.name} offers`
+                                      : `Estimated at ${effortWord(m.aa_index_effort)} effort, the top setting ${m.name} offers and the one its launch benchmarks report`
                                     : `Measured at ${effortWord(m.aa_index_effort)} effort, the top one Artificial Analysis ran it at`
                                 }
                                 className="ml-1 text-[11px] font-normal text-brand-slate-400 dark:text-brand-slate-500"

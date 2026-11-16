@@ -236,11 +236,12 @@ BUNDLED_CONTEXT_PATH = _data.data_file("context-windows.json")
 BUNDLED_EFFORT_TOKENS_PATH = _data.data_file("effort-tokens.json")
 BUNDLED_ESTIMATES_PATH = _data.data_file("index-estimates.json")
 # Index points a model AA has not measured is ranked below roadmodel's estimate
-# of its AA Index (roadmodel.estimate, docs/index-estimates.json): about half
-# the estimate's error band (estimate.BAND, 4 points). A new model then wins a
-# pick only by clearing a measured one by more than that, and loses a near tie,
-# where the estimate could as easily be high as low. Its printed index stays
-# the estimate itself.
+# of its AA Index (roadmodel.estimate, docs/index-estimates.json): half the
+# estimate's error band, so 2 for an estimate from the model's own launch table
+# (estimate.BAND, 4 points) and 2.5 for one from later launches' tables
+# (estimate.OTHER_BAND, 5). A new model then wins a pick only by clearing a
+# measured one by more than that, and loses a near tie, where the estimate could
+# as easily be high as low. Its printed index stays the estimate itself.
 ESTIMATE_PENALTY: Final[float] = 2.0
 # A context window must hold the task's material plus the instructions and the
 # answer: 10% above the material's own size.
@@ -307,8 +308,9 @@ class Candidate:
     # measures it (inherit_unmeasured); None for AA's own measurement.
     aa_inherited_from: str | None = None
     # Whether its AA Index is roadmodel's estimate (with_estimates), ranked
-    # ESTIMATE_PENALTY below the figure it prints.
+    # aa_estimate_penalty below the figure it prints.
     aa_estimated: bool = False
+    aa_estimate_penalty: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -386,6 +388,22 @@ def inherit_unmeasured(bench: dict[str, Any], catalog: dict[str, Any]) -> dict[s
 def _estimated(row: Any) -> bool:
     """Whether ``row`` stands on roadmodel's estimate (:func:`with_estimates`)."""
     return isinstance(row, dict) and isinstance(row.get("estimated"), dict)
+
+
+def _penalty(row: Any) -> float:
+    """The index points ``row`` is ranked below the estimate it prints: 0 for
+    anything but roadmodel's estimate."""
+    if not _estimated(row):
+        return 0.0
+    value = row["estimated"].get("penalty")
+    return float(value) if isinstance(value, (int, float)) else ESTIMATE_PENALTY
+
+
+def estimate_penalty(band: Any) -> float:
+    """Half an estimate's error band; ESTIMATE_PENALTY when it states none."""
+    if isinstance(band, (int, float)) and not isinstance(band, bool) and band > 0:
+        return round(float(band) / 2, 2)
+    return ESTIMATE_PENALTY
 
 
 def _unmeasured(row: Any) -> bool:
@@ -475,8 +493,8 @@ def with_estimates(
 ) -> dict[str, Any]:
     """``bench`` with each catalog model AA has not measured that roadmodel
     estimates (roadmodel.estimate: its launch table placed against the measured
-    models the vendor compares it with) standing at that estimate less
-    ``ESTIMATE_PENALTY``, marked ``estimated``. A later version keeps the row
+    models the vendor compares it with) standing at that estimate less half
+    its band (:func:`estimate_penalty`), marked ``estimated``. A later version keeps the row
     :func:`inherit_unmeasured` copied from its previous version, its AA Index
     moved to the estimate at every effort; a new series gets a row of the index
     alone (:func:`_estimated_row`). Like the copies, the estimates are figures
@@ -491,8 +509,9 @@ def with_estimates(
             continue
         if isinstance(row, dict) and not _inherited_from(row):
             continue  # AA has measured it: its own figure stands
-        ranked = float(value) - ESTIMATE_PENALTY
-        meta = {"index": float(value), "band": e.get("band"), "penalty": ESTIMATE_PENALTY}
+        penalty = estimate_penalty(e.get("band"))
+        ranked = float(value) - penalty
+        meta = {"index": float(value), "band": e.get("band"), "penalty": penalty}
         if isinstance(row, dict) and (head := _headline_index(row)) is not None:
             out[mid] = {**_shifted(row, ranked - head), "estimated": meta}
         else:
@@ -1500,6 +1519,7 @@ def rank(
                 evidence_points=None if points is None else round(points, 2),
                 aa_inherited_from=_inherited_from(bench.get(model_id)),
                 aa_estimated=_estimated(bench.get(model_id)),
+                aa_estimate_penalty=_penalty(bench.get(model_id)),
             )
             # One row per model: its best reachable platform. A funded platform
             # always beats an unfunded one regardless of score; equal scores go
@@ -2679,7 +2699,7 @@ def ladder_aa(
     measured the model at all."""
     row = bench.get(model_id)
     inherited = _unmeasured(row)
-    back = ESTIMATE_PENALTY if _estimated(row) else 0.0
+    back = _penalty(row)
 
     def shown(v: float | None) -> float | None:
         return None if v is None else round(v + back, 1)
@@ -3013,7 +3033,7 @@ def aa_text(p: FrontierPoint) -> str:
     if p.aa_index is None:
         return "not measured"
     c = p.candidate
-    value = round(p.aa_index + ESTIMATE_PENALTY, 1) if c.aa_estimated else p.aa_index
+    value = round(p.aa_index + c.aa_estimate_penalty, 1) if c.aa_estimated else p.aa_index
     mark = _layout.ESTIMATE_MARK if (c.aa_inherited_from or c.aa_estimated) else ""
     return f"{mark}{value:g}"
 

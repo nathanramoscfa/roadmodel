@@ -174,8 +174,8 @@ def _why(c: Any, task: scoring.Task) -> Why:
     elif estimated and "artificial_analysis_intelligence_index" in c.quality_source:
         quality = (
             f"{c.model_name} rates {c.quality:.0f} of 100 for {label}: roadmodel's estimate of "
-            "its Artificial Analysis Intelligence Index from its launch benchmarks, less a margin "
-            "for the estimate's uncertainty, until Artificial Analysis measures it."
+            "its Artificial Analysis Intelligence Index from published launch benchmarks, less a "
+            "margin for the estimate's uncertainty, until Artificial Analysis measures it."
         )
     elif inherited_from:
         quality = (
