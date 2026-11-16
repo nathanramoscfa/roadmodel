@@ -1926,11 +1926,11 @@
     }
   ],
   "context_policy": {
-    "baseline_revision": "f2a2f94e64edfd2240a8bec2c5ca0be60d084a36",
+    "baseline_revision": "9642a6bf19674a6c1939d7d334389996c8259c3c",
     "code_context_sha256": "d74d0eeb8a16a29aa38a3e0a938370c1eb923e5f65e7e42de70f1f5a4a4e620e",
     "date_policy": "catalog-utc-date-v1",
     "mode": "typed-catalog-v1",
-    "validator_sha256": "0859e4b4c548feabc1946147c50212cd956f5b08ac1cb7809a9a3d265c07d1b2"
+    "validator_sha256": "0c6be77814167bfa46f45e7b4af046d52a4d4808bd46d7e3e1afd1d196264592"
   },
   "schema": 1
 }
