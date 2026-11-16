@@ -61,8 +61,9 @@ export function RatingScale({ id, compact = false }: { id?: string; compact?: bo
         model&rsquo;s gap to the category leader ({BANDS} points, else D); {RANKED}.
         They refresh with the data and cannot be hand-edited. Every
         other letter is an estimate: {ESTIMATED.join(" and ")}, and a derived
-        category for a model outside its benchmark&rsquo;s measured set, where an
-        estimate stops at {ESTIMATE_CEILING} because S takes a measurement. The daily
+        category for a model outside its benchmark&rsquo;s measured set, which roadmodel
+        letters from that benchmark as the model&rsquo;s launch benchmarks place it, by the
+        same rule; where they do not place it, the estimate stops at {ESTIMATE_CEILING}. The daily
         catalog automation sets estimates from cited evidence one step at a time, and
         a new model starts from its predecessor&rsquo;s letters. The selection algorithm sets a minimum required rating from the
         prompt&rsquo;s complexity, then picks the highest-rated available model that

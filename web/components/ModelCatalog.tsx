@@ -1019,6 +1019,8 @@ export function ModelCatalog({
                               const leader = ev.sorted[ev.sorted.length - 1];
                               const gap = benchPoints(leader, col.unit) - benchPoints(v, col.unit);
                               basis = `Measured: derived from ${col.label} ${formatBench(v, col.unit)}, ${gap.toFixed(1)} points behind the category leader (${formatBench(leader, col.unit)}).`;
+                            } else if (ev && m.aa_estimated_categories?.includes(cat)) {
+                              basis = `Estimated by roadmodel: ${m.name}'s ${ev.label} as its launch benchmarks place it, lettered by the same rule as the measured letters, until Artificial Analysis measures it.`;
                             } else if (ev) {
                               basis = `${ESTIMATED_BASIS} In this category an estimate stops at ${ESTIMATE_CEILING}: S takes a measurement. Measured letters in this column come from ${ev.label}, which Artificial Analysis publishes for ${ev.sorted.length} of these models.`;
                             }
@@ -1365,7 +1367,7 @@ function CategoryHeader({
     : `derived from ${label} (Artificial Analysis) as the gap to the category leader: ${DERIVATION_BANDS.map((b) => `${b.letter} ≤ ${b.max}`).join(", ")} points, else D`;
   const definition =
     label && DERIVED_CATEGORIES.has(cat)
-      ? `${def.definition} A filled letter is MEASURED: ${measuredRule}. A dashed-outline letter is estimated by the daily catalog automation for a model outside ${label}'s measured set, at most ${ESTIMATE_CEILING}: S takes a measurement.`
+      ? `${def.definition} A filled letter is MEASURED: ${measuredRule}. A dashed-outline letter is estimated for a model outside ${label}'s measured set: by roadmodel, from ${label} as the model's launch benchmarks place it, by the same rule; where they do not place it, by the daily catalog automation, at most ${ESTIMATE_CEILING}.`
       : figure
         ? `${def.definition} Estimated by the daily catalog automation (dashed outline); the ${figure.label} column in the Benchmark scores view is first-party-endpoint throughput, shown for reference.`
         : `${def.definition} Estimated by the daily catalog automation from each provider's published results (dashed outline).`;

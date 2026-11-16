@@ -11,6 +11,7 @@
 #   deepseek      update-deepseek.yml     DeepSeek thinking modes
 #   defaults      update-default-efforts.yml  each vendor's default effort
 #   benchmarks    update-benchmarks.yml   Artificial Analysis numbers + derived ratings
+#   launch-tables update-launch-tables.yml  a new model's launch table, its AA Index estimate and letters
 #   availability  probe-availability.yml  which models answer (1-token probes)
 #   soak          recommend-soak.yml      production recommender smoke
 #   health        cron-health.yml         the cron alarm itself
@@ -61,6 +62,7 @@ workflow_for() {
     deepseek) echo update-deepseek.yml ;;
     defaults) echo update-default-efforts.yml ;;
     benchmarks) echo update-benchmarks.yml ;;
+    launch-tables) echo update-launch-tables.yml ;;
     availability) echo probe-availability.yml ;;
     soak) echo recommend-soak.yml ;;
     health) echo cron-health.yml ;;

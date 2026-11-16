@@ -8,15 +8,25 @@ table, every column, naming each column's model by its catalog or benchmark id.
 It finds them with web search and reads them with web fetch, which may open
 vendor domains only (VENDOR_DOMAINS); Artificial Analysis is blocked in both,
 and its rows are left out. The reply is data: it is kept only once
-roadmodel.estimate.check_launch_tables accepts it (ids from the roster, percent
+update/launch_data.check_launch_tables accepts it (ids from the roster, percent
 scores, the model's own column present). update/build_index_estimates.py then
 writes docs/index-estimates.json.
 
-Spend is bounded per model, not per month: a model is tried at most
-MAX_ATTEMPTS times, RETRY_DAYS apart, and a run tries at most
-MAX_MODELS_PER_RUN models. Each try is one Opus turn capped at
-SEARCH_USES searches and FETCH_USES fetches of FETCH_TOKENS each; the cost
-line opus_turn logs per turn is the ledger.
+Spend is capped in dollars, from the API's own usage figures (opus_turn.
+turn_cost): each entry's ``spent_usd`` is what its tries cost, and
+
+* a model is tried at most MAX_ATTEMPTS times, RETRY_DAYS apart, and never
+  again once it has cost MODEL_BUDGET_USD;
+* no try starts once the tries of the last RETRY_DAYS days cost
+  WEEKLY_BUDGET_USD (counted from each tried model's whole ledger, so the
+  count can only run high);
+* a run tries at most MAX_MODELS_PER_RUN models, newest first, and each try is
+  one Opus turn capped at SEARCH_USES searches and FETCH_USES fetches of
+  FETCH_TOKENS each.
+
+A model its own launch table already places is never tried again; one only
+later launches' tables place (estimate.from_other_tables) still is, since its
+own table places it more closely.
 
     python update/collect_launch_tables.py            # needs ANTHROPIC_API_KEY
     python update/collect_launch_tables.py --dry-run  # the models it would try
@@ -39,6 +49,8 @@ for path in (UPDATE, REPO / "src"):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
+import launch_data  # noqa: E402
+
 from roadmodel import estimate  # noqa: E402
 
 TABLES = UPDATE / "launch-tables.json"
@@ -49,10 +61,12 @@ BENCHMARKS = REPO / "docs" / "benchmarks.json"
 CATALOG = REPO / "docs" / "catalog.json"
 
 MAX_MODELS_PER_RUN = 2
-MAX_ATTEMPTS = 4
+MAX_ATTEMPTS = 3
 RETRY_DAYS = 7
-SEARCH_USES = 6
-FETCH_USES = 8
+MODEL_BUDGET_USD = 4.0
+WEEKLY_BUDGET_USD = 10.0
+SEARCH_USES = 5
+FETCH_USES = 6
 FETCH_TOKENS = 40_000
 MAX_TOKENS = 16_000
 
@@ -148,28 +162,57 @@ def roster(catalog: dict[str, Any], bench: dict[str, Any]) -> dict[str, str]:
     return dict(sorted(out.items()))
 
 
+def _spent(entry: Any) -> float:
+    value = entry.get("spent_usd") if isinstance(entry, dict) else None
+    return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else 0.0
+
+
+def weekly_spend(tables: dict[str, Any], today: dt.date) -> float:
+    """What the tries of the last RETRY_DAYS days cost, high side: each model
+    tried in that window counts its whole ledger (it can have been tried at
+    most once in it)."""
+    total = 0.0
+    for entry in tables.values():
+        checked = entry.get("checked_on") if isinstance(entry, dict) else None
+        if isinstance(checked, str) and (today - dt.date.fromisoformat(checked)).days < RETRY_DAYS:
+            total += _spent(entry)
+    return round(total, 3)
+
+
 def due(
     catalog: dict[str, Any], bench: dict[str, Any], tables: dict[str, Any], today: dt.date
 ) -> list[str]:
-    """The catalog models to try this run: AA has not measured them, and they
-    have no table yet, or their last try found none usable and is RETRY_DAYS
-    old, under MAX_ATTEMPTS tries."""
+    """The catalog models to try this run, newest first: AA has not measured
+    them, their own table does not place them yet, and they have no table, or
+    their last try is RETRY_DAYS old, under MAX_ATTEMPTS tries and
+    MODEL_BUDGET_USD."""
     estimates = estimate.estimate_all(tables, bench)
-    out = []
+    out: list[tuple[str, str]] = []
     for m in catalog.get("models", []):
         mid = str(m.get("id", "")) if isinstance(m, dict) else ""
-        if not mid or estimate.measured_index(bench, mid) is not None or mid in estimates:
+        if not mid or estimate.measured_index(bench, mid) is not None:
+            continue
+        if mid in estimates and estimates[mid].method != estimate.OTHER_METHOD:
             continue
         entry = tables.get(mid)
+        date = str(
+            (entry or {}).get("release_date")
+            or m.get("added_on")
+            or (bench.get(mid) or {}).get("release_date")
+            or ""
+        )
         if entry is None:
-            out.append(mid)
+            out.append((date, mid))
             continue
         attempts = int(entry.get("attempts") or 0)
         checked = entry.get("checked_on")
         stale = not checked or (today - dt.date.fromisoformat(checked)).days >= RETRY_DAYS
-        if attempts < MAX_ATTEMPTS and stale:
-            out.append(mid)
-    return out[:MAX_MODELS_PER_RUN]
+        if attempts < MAX_ATTEMPTS and stale and _spent(entry) < MODEL_BUDGET_USD:
+            out.append((date, mid))
+    # Newest first; a model with no date known goes last. sorted() is stable,
+    # so equal dates keep the catalog's order.
+    out = sorted(out, key=lambda pair: pair[0], reverse=True)
+    return [mid for _, mid in out][:MAX_MODELS_PER_RUN]
 
 
 def request(model_id: str, name: str, ids: dict[str, str]) -> str:
@@ -220,29 +263,40 @@ def parse(text: str) -> dict[str, Any]:
 
 
 def entry_from(
-    reply: dict[str, Any], previous: dict[str, Any] | None, today: dt.date
+    reply: dict[str, Any], previous: dict[str, Any] | None, today: dt.date, cost: float = 0.0
 ) -> dict[str, Any]:
-    """The launch-tables entry a reply makes: its tables (empty when none was
-    usable), the release date, and the try counted."""
+    """The launch-tables entry a reply makes: its tables (the previous ones
+    when it found none), the release date, the try counted and its cost added
+    to the ledger."""
     release = reply.get("release_date")
     if not isinstance(release, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", release):
         release = (previous or {}).get("release_date") or today.isoformat()
     tables = reply.get("tables")
-    return {
+    if not isinstance(tables, list) or not tables:
+        tables = list((previous or {}).get("tables") or [])
+    entry: dict[str, Any] = {
         "release_date": release,
-        "tables": tables if isinstance(tables, list) else [],
+        "tables": tables,
         "checked_on": today.isoformat(),
         "attempts": int((previous or {}).get("attempts") or 0) + 1,
     }
+    spent = round(_spent(previous) + cost, 3)
+    if spent:
+        entry["spent_usd"] = spent
+    return entry
 
 
 def collect(
     client: Any, model_id: str, name: str, ids: dict[str, str], previous: dict[str, Any] | None
 ) -> dict[str, Any]:
-    """One Opus turn for ``model_id``: the entry its reply makes. A turn that
-    ends unfinished or replies with no JSON counts as a try that found none."""
+    """One Opus turn for ``model_id``: the entry its reply makes, its cost in
+    the ledger. A turn that ends unfinished or replies with no JSON counts as a
+    try that found none; so does an API error after a response was billed. An
+    API error before any is raised: nothing was read, so it is no try."""
+    from anthropic import APIError
     from opus_turn import OPUS_MODEL, OpusTurnIncomplete, stream_until_complete
 
+    costs: list[float] = []
     try:
         text = stream_until_complete(
             client,
@@ -252,12 +306,18 @@ def collect(
             user_message=request(model_id, name, ids),
             tools=tools(),
             label=f"launch-table {model_id}",
+            on_cost=costs.append,
         )
         reply = parse(text)
     except (OpusTurnIncomplete, ValueError) as err:
         print(f"{model_id}: {err}; recorded as no table", file=sys.stderr)
         reply = {}
-    return entry_from(reply, previous, _today())
+    except APIError as err:
+        if not costs:
+            raise
+        print(f"{model_id}: {type(err).__name__} after a billed response; recorded as no table")
+        reply = {}
+    return entry_from(reply, previous, _today(), sum(costs))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -274,7 +334,11 @@ def main(argv: list[str] | None = None) -> int:
     for gone in sorted(set(tables) - set(names)):
         del tables[gone]
     targets = due(catalog, bench, tables, _today())
-    print(f"launch tables due: {', '.join(targets) or 'none'}")
+    print(
+        f"launch tables due: {', '.join(targets) or 'none'} "
+        f"(last {RETRY_DAYS} days: ${weekly_spend(tables, _today()):.2f} "
+        f"of ${WEEKLY_BUDGET_USD:.2f})"
+    )
     if args.dry_run or not targets:
         TABLES.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
         return 0
@@ -289,24 +353,30 @@ def main(argv: list[str] | None = None) -> int:
     client = Anthropic(api_key=api_key)
     errors: list[str] = []
     for mid in targets:
+        week = weekly_spend(tables, _today())
+        if week >= WEEKLY_BUDGET_USD:
+            print(f"weekly budget reached (${week:.2f}); {mid} and the rest wait")
+            break
+        previous = tables.get(mid)
         try:
-            entry = collect(client, mid, names[mid], ids, tables.get(mid))
+            entry = collect(client, mid, names[mid], ids, previous)
         except APIError as err:
-            # Not a try: nothing was read. The next run tries again.
+            # Not a try: nothing was read or billed. The next run tries again.
             errors.append(f"{mid}: {type(err).__name__}: {err}")
             continue
         try:
-            estimate.check_launch_tables(
+            launch_data.check_launch_tables(
                 {**doc, "models": {**tables, mid: entry}}, set(ids), set(names)
             )
         except ValueError as err:
             # Data this check refuses is a try that found nothing usable.
             print(f"{mid}: transcription refused ({err}); recorded as no table", file=sys.stderr)
-            entry = {**entry, "tables": []}
+            entry = {**entry, "tables": list((previous or {}).get("tables") or [])}
         tables[mid] = entry
         found = estimate.estimate(mid, entry, bench)
         print(
-            f"{mid}: {len(entry['tables'])} table(s); estimate {found.index if found else 'none'}"
+            f"{mid}: {len(entry['tables'])} table(s); estimate {found.index if found else 'none'}; "
+            f"ledger ${_spent(entry):.2f} over {entry['attempts']} tries"
         )
     TABLES.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
     ERRORS.parent.mkdir(parents=True, exist_ok=True)

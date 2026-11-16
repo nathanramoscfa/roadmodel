@@ -10,6 +10,12 @@
       ],
       "band": 4.0,
       "effort": "max",
+      "figures": {
+        "hle": 0.6114,
+        "lcr": 0.8658,
+        "scicode": 0.6956,
+        "terminalbench_v4_0": 0.6033
+      },
       "index": 56.8,
       "method": "anchors",
       "rows": 10
@@ -23,6 +29,12 @@
       ],
       "band": 4.0,
       "effort": "high",
+      "figures": {
+        "hle": 0.5877,
+        "lcr": 0.8485,
+        "scicode": 0.6615,
+        "terminalbench_v4_0": 0.5576
+      },
       "index": 54.3,
       "method": "anchors",
       "rows": 12
@@ -39,6 +51,12 @@
       ],
       "band": 4.0,
       "effort": "max",
+      "figures": {
+        "hle": 0.4353,
+        "lcr": 0.8237,
+        "scicode": 0.5317,
+        "terminalbench_v4_0": 0.3447
+      },
       "index": 44.3,
       "method": "anchors",
       "rows": 8

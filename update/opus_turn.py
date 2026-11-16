@@ -27,6 +27,7 @@ an exception naming why it didn't.
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable
 from typing import Any
 
 from anthropic.types import TextBlock
@@ -39,7 +40,8 @@ OPUS_MODEL = "claude-opus-5-5"
 # "medium". Pinned explicitly so a server-side default change can't move spend.
 OPUS_EFFORT = "medium"
 
-# Per-MTok USD rates for OPUS_MODEL, used only for the cost line each turn logs.
+# Per-MTok USD rates for OPUS_MODEL: the cost line each turn logs, and the
+# ledger update/collect_launch_tables.py enforces its spend caps with.
 _PRICE_INPUT = 4.00
 _PRICE_OUTPUT = 20.00
 _PRICE_CACHE_READ = 0.20
@@ -57,24 +59,36 @@ MAX_OUTPUT_TOKENS = 128000
 MAX_TURN_CONTINUATIONS = 4
 
 
-def _usage_line(usage: Any) -> str:
-    """Tokens and estimated USD for one turn — the per-call ledger the Sep 2026
-    budget investigation had to reconstruct from output_tokens alone."""
-
+def _counts(usage: Any) -> tuple[int, int, int, int, int]:
     def n(value: Any) -> int:
         return value if isinstance(value, int) else 0
 
-    inp = n(getattr(usage, "input_tokens", 0))
-    out = n(getattr(usage, "output_tokens", 0))
-    c_read = n(getattr(usage, "cache_read_input_tokens", 0))
-    c_write = n(getattr(usage, "cache_creation_input_tokens", 0))
-    searches = n(getattr(getattr(usage, "server_tool_use", None), "web_search_requests", 0))
-    usd = (
+    return (
+        n(getattr(usage, "input_tokens", 0)),
+        n(getattr(usage, "output_tokens", 0)),
+        n(getattr(usage, "cache_read_input_tokens", 0)),
+        n(getattr(usage, "cache_creation_input_tokens", 0)),
+        n(getattr(getattr(usage, "server_tool_use", None), "web_search_requests", 0)),
+    )
+
+
+def turn_cost(usage: Any) -> float:
+    """The estimated USD one response cost: its tokens at OPUS_MODEL's rates,
+    plus its web searches. Web fetches cost only the tokens they read."""
+    inp, out, c_read, c_write, searches = _counts(usage)
+    return (
         inp * _PRICE_INPUT
         + out * _PRICE_OUTPUT
         + c_read * _PRICE_CACHE_READ
         + c_write * _PRICE_CACHE_WRITE
     ) / 1e6 + searches * _PRICE_WEB_SEARCH
+
+
+def _usage_line(usage: Any) -> str:
+    """Tokens and estimated USD for one turn — the per-call ledger the Sep 2026
+    budget investigation had to reconstruct from output_tokens alone."""
+    inp, _, c_read, c_write, searches = _counts(usage)
+    usd = turn_cost(usage)
     return (
         f"input_tokens={inp} cache_read={c_read} cache_write={c_write} "
         f"web_searches={searches} est_usd={usd:.3f}"
@@ -99,8 +113,11 @@ def stream_until_complete(
     user_message: str,
     tools: list[dict[str, Any]] | None = None,
     label: str = "",
+    on_cost: Callable[[float], None] | None = None,
 ) -> str:
-    """Return the assistant text of a COMPLETED turn.
+    """Return the assistant text of a COMPLETED turn. ``on_cost`` hears each
+    response's estimated USD (:func:`turn_cost`) as it arrives, so a caller
+    keeps the ledger of a turn that then fails.
 
     Raises:
         OpusTurnIncomplete: the turn ended without a complete answer —
@@ -123,6 +140,8 @@ def stream_until_complete(
             kwargs["tools"] = tools
         with client.messages.stream(**kwargs) as stream:
             response = stream.get_final_message()
+        if on_cost is not None:
+            on_cost(turn_cost(response.usage))
 
         chunks.append(
             "".join(block.text for block in response.content if isinstance(block, TextBlock))

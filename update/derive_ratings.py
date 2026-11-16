@@ -46,12 +46,20 @@ letter was an editorial estimate that only an AI pass citing LMArena could
 move, and it disagreed with the index on 19 of 33 measured models (the
 GPT-6 family sat at a B placeholder while it ranked 4th, 5th and 9th of 54).
 
-S is the class the frontier shares, so in these five categories it takes a
-measurement: an unmeasured model's S drops to A (its estimate stands below S
-until AA measures it). Measured letters are bounded by their own rule.
+A model AA has not measured is lettered on roadmodel's estimate of each
+category's evidence, by the same rules among the same measured models
+(estimated_letters): the AA Index estimate and, from its own launch table, the
+HLE, AA-LCR, SciCode and Terminal-Bench 4.0 figures (docs/index-estimates.json,
+src/roadmodel/estimate.py). Tested by hiding the figures of the 35 measured
+models with a launch table, the estimate gives the exact letter 94 times in
+122 and is never more than one letter off in 120, where a placeholder B is
+exact 21 times; an estimated S is truly S 22 times in 29 and the rest are A,
+and 22 of the 29 true S models are estimated S. So an estimated S stands: a
+cap at A would mislabel every one of those 22. AA's measurement replaces the
+estimate once published.
 
-A model AA has not measured on a category's benchmark keeps its estimated
-letter, capped at A (the report says so). Multimodal and speed are never
+A model with no estimate for a category keeps its letter there, capped at A
+(the report says so): that letter has no evidence behind it. Multimodal and speed are never
 touched: AA runs no multimodal evaluation in this layer, and AA's tokens/s is measured on the provider's first-party endpoint at max
 effort (gpt-oss-20b reads 181 tok/s there and ~1,000 on Groq, which is what
 the catalog's speed letter reflects), so it is the wrong evidence for a
@@ -90,6 +98,8 @@ SELECTOR_PATH = REPO_ROOT / "docs" / "model-selector.txt"
 BENCHMARKS_PATH = REPO_ROOT / "docs" / "benchmarks.json"
 REPORT_PATH = REPO_ROOT / "update" / ".last-ratings-report.md"
 EFFORT_RATINGS_PATH = REPO_ROOT / "docs" / "effort-ratings.json"
+ESTIMATES_PATH = REPO_ROOT / "docs" / "index-estimates.json"
+INDEX_KEY = "artificial_analysis_intelligence_index"
 
 # category → (benchmarks.json evaluations key, multiplier to points, label);
 # a COMPOSITES key is computed by with_composites() before deriving.
@@ -124,7 +134,8 @@ COMPOSITES: dict[str, tuple[str, ...]] = {
     "coding_composite": ("scicode", "terminalbench_v4_0"),
 }
 
-# The highest letter an unmeasured model may hold in a derived category.
+# The highest letter an unmeasured model may hold in a derived category where
+# roadmodel has no estimate of its evidence (estimated_letters).
 ESTIMATE_CEILING = "A"
 
 _ID_RE = re.compile(r'\bid="([^"]+)"')
@@ -299,14 +310,70 @@ def live_ids(selector: str) -> set[str]:
     return out
 
 
+def load_estimates(path: Path = ESTIMATES_PATH) -> dict[str, dict[str, Any]]:
+    """roadmodel's estimates (docs/index-estimates.json) by model id; empty
+    when the file is missing or unreadable."""
+    try:
+        doc = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return {}
+    models = doc.get("models") if isinstance(doc, dict) else None
+    if not isinstance(models, dict):
+        return {}
+    return {str(k): v for k, v in models.items() if isinstance(v, dict)}
+
+
+def _figure(value: Any) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value)
+
+
+def estimated_letters(
+    benchmarks: dict[str, dict[str, Any]],
+    estimates: dict[str, dict[str, Any]],
+    live: set[str],
+) -> dict[str, dict[str, str]]:
+    """{model_id: {category: letter}} for each live model AA has not measured
+    that roadmodel estimates: its estimated evidence (the index and, from its
+    own launch table, the letter figures) lettered by :func:`derive`'s rules
+    among the live measured models. Each estimated model is placed alone, so no
+    estimate moves a measured model's letter or another estimate's. A category
+    whose evidence it has no estimate of is left out."""
+    field = {cid: row for cid, row in benchmarks.items() if cid in live}
+    out: dict[str, dict[str, str]] = {}
+    for mid, e in sorted(estimates.items()):
+        index = _figure(e.get("index"))
+        if mid not in live or index is None or points(field.get(mid, {}), "planning") is not None:
+            continue  # outside the catalog, no index, or AA has measured it
+        evaluations: dict[str, float] = {INDEX_KEY: index}
+        figures = e.get("figures")
+        for key, value in figures.items() if isinstance(figures, dict) else []:
+            if (v := _figure(value)) is not None:
+                evaluations[str(key)] = v
+        derived = derive({**field, mid: {"evaluations": evaluations}})
+        letters = {cat: rows[mid]["letter"] for cat, rows in derived.items() if mid in rows}
+        if letters:
+            out[mid] = letters
+    return out
+
+
 def plan_changes(
-    selector: str, benchmarks: dict[str, dict[str, Any]]
+    selector: str,
+    benchmarks: dict[str, dict[str, Any]],
+    estimates: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, list[str]]]:
     """Return (changes, unmeasured_by_category). Leaders and ranks are taken
     over the catalog's live models only — the population /models ranks — so a
-    retired model's lingering benchmark row never shifts a letter."""
+    retired model's lingering benchmark row never shifts a letter. A category
+    AA has not measured takes roadmodel's estimated letter (``estimates``,
+    docs/index-estimates.json by default); ``unmeasured`` lists the ones with
+    neither, whose letters stay, capped at ESTIMATE_CEILING."""
     live = live_ids(selector)
     derived = derive({cid: row for cid, row in benchmarks.items() if cid in live})
+    estimated = estimated_letters(
+        benchmarks, load_estimates() if estimates is None else estimates, live
+    )
     current = current_tiers(selector)
     changes: list[dict[str, Any]] = []
     unmeasured: dict[str, list[str]] = {cat: [] for cat in CATEGORY_EVIDENCE}
@@ -314,6 +381,18 @@ def plan_changes(
     for mid, tiers in current.items():
         for cat in CATEGORY_EVIDENCE:
             d = derived[cat].get(mid)
+            if d is None and (letter := estimated.get(mid, {}).get(cat)) is not None:
+                if tiers.get(cat, "") != letter:
+                    changes.append(
+                        {
+                            "id": mid,
+                            "category": cat,
+                            "from": tiers.get(cat, ""),
+                            "to": letter,
+                            "estimated": True,
+                        }
+                    )
+                continue
             if d is None:
                 unmeasured[cat].append(mid)
                 cur = tiers.get(cat, "")
@@ -411,7 +490,8 @@ def render_report(
 ) -> str:
     lines = ["## Derived ratings (Artificial Analysis layer)", ""]
     capped = [c for c in changes if c.get("capped")]
-    changes = [c for c in changes if not c.get("capped")]
+    estimated = [c for c in changes if c.get("estimated")]
+    changes = [c for c in changes if not c.get("capped") and not c.get("estimated")]
     if not changes:
         lines.append("No rating changes — the selector already matches the derivation.")
     else:
@@ -437,10 +517,21 @@ def render_report(
                 f"{ch['value']:.1f} | {ch['leader']:.1f} | {ch['gap']:.1f} | {rank} | "
                 f"{ch['from']} | **{ch['to']}** |"
             )
+    if estimated:
+        lines += [
+            "",
+            "Estimated from launch benchmarks (roadmodel's estimate of the category's evidence, "
+            "until Artificial Analysis measures the model):",
+            "",
+            *(
+                f"- {names.get(c['id'], c['id'])}: {c['category']} {c['from'] or '—'} → {c['to']}"
+                for c in sorted(estimated, key=lambda c: (c["category"], c["id"]))
+            ),
+        ]
     if capped:
         lines += [
             "",
-            f"Estimates capped at {ESTIMATE_CEILING} (S takes a measurement in a derived category):",
+            f"Capped at {ESTIMATE_CEILING} (no measurement and no estimate behind the letter):",
             "",
             *(
                 f"- {names.get(c['id'], c['id'])}: {c['category']} {c['from']} → {c['to']}"
@@ -449,7 +540,7 @@ def render_report(
         ]
     lines += [
         "",
-        f"Kept as estimates, at most {ESTIMATE_CEILING} (no AA measurement on the category's benchmark):",
+        f"Kept as they are, at most {ESTIMATE_CEILING} (no AA measurement and no estimate):",
         "",
     ]
     for cat, ids in unmeasured.items():

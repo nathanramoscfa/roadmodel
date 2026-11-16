@@ -37,12 +37,11 @@ and the scorer ranks on (scoring.with_estimates, less half the estimate's band).
 
 from __future__ import annotations
 
-import datetime
 import math
 import re
 import statistics
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Final
 
 INDEX_KEY: Final = "artificial_analysis_intelligence_index"
@@ -63,6 +62,16 @@ MIN_ROWS: Final = 3
 OTHER_OPTIMISM: Final = 1.0
 OTHER_BAND: Final = 5.0
 OTHER_METHOD: Final = "other-tables"
+# The four figures besides the index that update/derive_ratings.py letters a
+# model on (benchmarks.json keys), each with its launch-table optimism in
+# percentage points: the mean overshoot of the later measurement, leave-one-out
+# over the measured models' launch tables (2026-11; 26 tables, 22 for SciCode and
+# Terminal-Bench 4.0). Typical misses after it: HLE 3.9, AA-LCR 2.2, SciCode 3.3,
+# Terminal-Bench 4.0 7.8 points. Lettered with the derivation's own rules, the
+# estimates give the exact letter 94 times in 122 and an S to 22 of the 29 true
+# S models. Means and trimmed means of the rows tied the median on all four but
+# Terminal-Bench 4.0, where the median is clearly best (7.8 against 9.0).
+FIGURE_OPTIMISM: Final = {"hle": 3.6, "lcr": 0.9, "scicode": 2.4, "terminalbench_v4_0": 4.2}
 # The index components a launch table can report, by their benchmarks.json key.
 COMPONENTS: Final = ("hle", "terminalbench_v4_0")
 # Ridge strength for the component fit, on standardized inputs.
@@ -81,6 +90,9 @@ class Estimate:
     # The models whose launch tables placed it, when not its own
     # (from_other_tables), earliest first.
     via: tuple[str, ...] = ()
+    # Its estimated letter figures (FIGURE_OPTIMISM keys, as fractions like
+    # benchmarks.json), from its own launch table only.
+    figures: dict[str, float] = field(default_factory=dict)
 
     def as_json(self) -> dict[str, Any]:
         out: dict[str, Any] = {
@@ -92,6 +104,8 @@ class Estimate:
         }
         if self.via:
             out["via"] = list(self.via)
+        if self.figures:
+            out["figures"] = dict(sorted(self.figures.items()))
         return out
 
 
@@ -108,6 +122,18 @@ def _measured(bench: Mapping[str, Any], model_id: str) -> float | None:
     return float(value) if isinstance(value, (int, float)) else None
 
 
+def _value(bench: Mapping[str, Any], model_id: str, key: str) -> float | None:
+    """``key``'s measurement for ``model_id`` in points: the index as it is, a
+    benchmarks.json fraction times 100."""
+    row = bench.get(model_id)
+    if not isinstance(row, dict):
+        return None
+    v = _number((row.get("evaluations") or {}).get(key))
+    if v is None:
+        return None
+    return v if key == INDEX_KEY else v * 100
+
+
 def _release(bench: Mapping[str, Any], model_id: str) -> str | None:
     row = bench.get(model_id)
     date = row.get("release_date") if isinstance(row, dict) else None
@@ -119,14 +145,15 @@ def _number(value: Any) -> float | None:
 
 
 def anchor_rows(
-    model_id: str, entry: Mapping[str, Any], bench: Mapping[str, Any]
+    model_id: str, entry: Mapping[str, Any], bench: Mapping[str, Any], key: str = INDEX_KEY
 ) -> list[tuple[float, dict[str, float]]]:
     """Each usable row as (this model's score, {anchor: anchor's score}).
 
-    An anchor is a column for a model with a measured index, released before
-    this one: on launch day it is the only kind Artificial Analysis had
-    measured. Rows are percent scores; a lower-is-better row is negated so a
-    higher score always means a stronger model.
+    An anchor is a column for a model with ``key`` measured (the index unless
+    a letter figure is asked for), released before this one: on launch day it
+    is the only kind Artificial Analysis had measured. Rows are percent scores;
+    a lower-is-better row is negated so a higher score always means a stronger
+    model.
     """
     released = str(entry.get("release_date") or "")
     out: list[tuple[float, dict[str, float]]] = []
@@ -141,7 +168,7 @@ def anchor_rows(
             for i, col in enumerate(columns)
             if i != own
             and isinstance(col, str)
-            and _measured(bench, col) is not None
+            and _value(bench, col, key) is not None
             and (date := _release(bench, col)) is not None
             and date < released
         }
@@ -156,9 +183,9 @@ def anchor_rows(
             for i, anchor in usable.items():
                 if (v := _number(values[i])) is not None:
                     anchors[anchor] = max(anchors.get(anchor, -math.inf), sign * v)
-            key = (re.sub(r"\W+", "", str(row.get("benchmark", "")).lower()), score)
-            if len(anchors) >= 2 and key not in seen:
-                seen.add(key)
+            row_key = (re.sub(r"\W+", "", str(row.get("benchmark", "")).lower()), score)
+            if len(anchors) >= 2 and row_key not in seen:
+                seen.add(row_key)
                 out.append((sign * score, anchors))
     return out
 
@@ -199,6 +226,27 @@ def from_anchors(
     if len(estimates) < MIN_ROWS or len(names) < MIN_ANCHORS:
         return None
     return statistics.median(estimates) - OPTIMISM, names, len(estimates)
+
+
+def figures(model_id: str, entry: Mapping[str, Any], bench: Mapping[str, Any]) -> dict[str, float]:
+    """Each letter figure (FIGURE_OPTIMISM) the launch table places, as a
+    fraction: its rows mapped through the anchors' measurements of that figure,
+    as the index is, less the figure's optimism. A figure below the floors is
+    left out."""
+    out: dict[str, float] = {}
+    for key, optimism in FIGURE_OPTIMISM.items():
+        rows = anchor_rows(model_id, entry, bench, key)
+        values = {
+            a: v for _, anchors in rows for a in anchors if (v := _value(bench, a, key)) is not None
+        }
+        placed = [
+            e for score, anchors in rows if (e := row_estimate(score, anchors, values)) is not None
+        ]
+        names = {a for _, anchors in rows for a in anchors}
+        if len(placed) < MIN_ROWS or len(names) < MIN_ANCHORS:
+            continue
+        out[key] = round(min(1.0, max(0.0, (statistics.median(placed) - optimism) / 100)), 4)
+    return out
 
 
 def _years(date: str) -> float:
@@ -291,6 +339,7 @@ def estimate(model_id: str, entry: Mapping[str, Any], bench: Mapping[str, Any]) 
         method=method,
         anchors=anchored[1] if anchored else (),
         rows=anchored[2] if anchored else 0,
+        figures=figures(model_id, entry, bench),
     )
 
 
@@ -399,90 +448,3 @@ def estimate_all(tables: Mapping[str, Any], bench: Mapping[str, Any]) -> dict[st
         if est is not None:
             out[model_id] = est
     return out
-
-
-_ID = re.compile(r"[a-z0-9][a-z0-9.\-]{0,63}")
-_TEXT = re.compile(r"[^\x00-\x1f<>\"`\\]{1,120}")
-_URL = re.compile(r"https://[A-Za-z0-9.\-]+(?:/[^\s<>\"`\\]*)?")
-_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
-_ENTRY_KEYS = frozenset({"release_date", "tables", "checked_on", "attempts"})
-_TABLE_KEYS = frozenset({"source", "columns", "rows"})
-_ROW_KEYS = frozenset({"benchmark", "values", "higher_is_better", "component"})
-
-
-def _date(value: Any, what: str) -> None:
-    if not isinstance(value, str) or not _DATE.fullmatch(value):
-        raise ValueError(f"launch_tables_{what}")
-    datetime.date.fromisoformat(value)
-
-
-def check_launch_tables(doc: Any, roster: set[str], catalog_ids: set[str]) -> None:
-    """Raise ValueError unless ``doc`` is a well-formed update/launch-tables.json:
-    one entry per catalog model, each table's columns ids from ``roster`` (or
-    null) with the model's own among them, every value a percentage or null, and
-    no free text beyond short benchmark names and https sources. The collector
-    keeps a transcription only once this accepts it, and the refresh validator
-    (update/automation_integrity.py) holds every automated change to it."""
-    if not isinstance(doc, dict) or set(doc) != {"schema_version", "about", "models"}:
-        raise ValueError("launch_tables_structure")
-    if doc["schema_version"] != 1 or not isinstance(doc["about"], str):
-        raise ValueError("launch_tables_structure")
-    models = doc["models"]
-    if not isinstance(models, dict) or len(models) > 200:
-        raise ValueError("launch_tables_structure")
-    for mid, entry in models.items():
-        if not isinstance(mid, str) or mid not in catalog_ids:
-            raise ValueError("launch_tables_identity")
-        if not isinstance(entry, dict) or not set(entry) <= _ENTRY_KEYS:
-            raise ValueError("launch_tables_entry")
-        _date(entry.get("release_date"), "date")
-        if "checked_on" in entry:
-            _date(entry["checked_on"], "date")
-        attempts = entry.get("attempts", 0)
-        if type(attempts) is not int or not 0 <= attempts <= 20:
-            raise ValueError("launch_tables_entry")
-        tables = entry.get("tables")
-        if not isinstance(tables, list) or len(tables) > 8:
-            raise ValueError("launch_tables_entry")
-        for table in tables:
-            _check_table(mid, table, roster)
-
-
-def _check_table(model_id: str, table: Any, roster: set[str]) -> None:
-    if not isinstance(table, dict) or set(table) != _TABLE_KEYS:
-        raise ValueError("launch_tables_table")
-    source = table["source"]
-    if not isinstance(source, str) or len(source) > 300 or not _URL.fullmatch(source):
-        raise ValueError("launch_tables_source")
-    columns = table["columns"]
-    if not isinstance(columns, list) or not 1 <= len(columns) <= 16:
-        raise ValueError("launch_tables_table")
-    for col in columns:
-        if col is not None and (not isinstance(col, str) or not _ID.fullmatch(col)):
-            raise ValueError("launch_tables_column")
-        if col is not None and col not in roster and col != model_id:
-            raise ValueError("launch_tables_column")
-    if columns.count(model_id) != 1:
-        raise ValueError("launch_tables_own_column")
-    rows = table["rows"]
-    if not isinstance(rows, list) or len(rows) > 80:
-        raise ValueError("launch_tables_table")
-    for row in rows:
-        if (
-            not isinstance(row, dict)
-            or not set(row) <= _ROW_KEYS
-            or not {"benchmark", "values"} <= set(row)
-        ):
-            raise ValueError("launch_tables_row")
-        if not isinstance(row["benchmark"], str) or not _TEXT.fullmatch(row["benchmark"]):
-            raise ValueError("launch_tables_row")
-        values = row["values"]
-        if not isinstance(values, list) or len(values) != len(columns):
-            raise ValueError("launch_tables_row")
-        for v in values:
-            if v is not None and (_number(v) is None or not 0 <= v <= 100 or not math.isfinite(v)):
-                raise ValueError("launch_tables_value")
-        if "higher_is_better" in row and not isinstance(row["higher_is_better"], bool):
-            raise ValueError("launch_tables_row")
-        if "component" in row and row["component"] not in COMPONENTS:
-            raise ValueError("launch_tables_row")

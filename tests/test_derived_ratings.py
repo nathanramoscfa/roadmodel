@@ -348,3 +348,64 @@ def test_committed_effort_ratings_match_the_derivation() -> None:
     assert committed == dr.render_effort_ratings(dr.effort_letters(selector, bench)), (
         "docs/effort-ratings.json is stale — run: python update/derive_ratings.py --write"
     )
+
+
+def test_an_unmeasured_model_is_lettered_on_its_estimate_s_included() -> None:
+    """roadmodel's launch-table estimate of each category's evidence letters a
+    model AA has not measured, by the same rules (no cap: an estimated S is
+    truly S 22 times in 29 in the backtest). Each estimate is placed alone, so
+    it moves no measured model's letter."""
+    index = "artificial_analysis_intelligence_index"
+    bench = _bench(
+        **{
+            "leader": {
+                index: 60.0,
+                "hle": 0.50,
+                "lcr": 0.80,
+                "scicode": 0.60,
+                "terminalbench_v4_0": 0.60,
+            },
+            "cheap-one": {
+                index: 30.0,
+                "hle": 0.20,
+                "lcr": 0.50,
+                "scicode": 0.40,
+                "terminalbench_v4_0": 0.20,
+            },
+        }
+    )
+    estimates = {
+        "unmeasured": {
+            "index": 58.0,  # gap 2: S
+            "band": 4.0,
+            "method": "anchors",
+            "figures": {"hle": 0.25},  # gap 25: B
+        }
+    }
+    letters = dr.estimated_letters(bench, estimates, {"leader", "cheap-one", "unmeasured"})
+    assert letters == {"unmeasured": {"planning": "S", "knowledge": "B"}}
+    changes, unmeasured = dr.plan_changes(SELECTOR, bench, estimates)
+    by = {(c["id"], c["category"]): (c["from"], c["to"]) for c in changes}
+    # Its planning A becomes S: an estimated S stands.
+    assert by[("unmeasured", "planning")] == ("A", "S")
+    # Categories it has no estimate for keep their letter, capped at A.
+    assert by[("unmeasured", "coding")] == ("S", "A")
+    assert "unmeasured" in unmeasured["coding"] and "unmeasured" not in unmeasured["planning"]
+    # The measured models' letters are the same with and without it.
+    without = {
+        (c["id"], c["category"]): c["to"]
+        for c in dr.plan_changes(SELECTOR, bench, {})[0]
+        if c["id"] != "unmeasured"
+    }
+    assert {k: v for k, v in by.items() if k[0] != "unmeasured"} == {
+        k: (by[k][0], v) for k, v in without.items()
+    }
+    report = dr.render_report(changes, unmeasured, {"unmeasured": "Unmeasured"})
+    assert "- Unmeasured: planning A → S" in report
+
+
+def test_a_measured_model_ignores_an_estimate() -> None:
+    index = "artificial_analysis_intelligence_index"
+    bench = _bench(**{"leader": {index: 60.0}, "unmeasured": {index: 20.0}})
+    estimates = {"unmeasured": {"index": 59.0, "band": 4.0, "method": "anchors"}}
+    assert dr.estimated_letters(bench, estimates, {"leader", "unmeasured"}) == {}

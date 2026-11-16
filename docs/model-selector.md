@@ -863,10 +863,10 @@ Tier ratings:
 #### Fable 5.2 — `claude-fable-5.2`
 
 - **Pricing:** Input $8.00/M · Output $40.00/M
-- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **S** · Long-context **A** · Knowledge **A** · Speed **D**
+- **Tier ratings:** Coding **S** · Planning **S** · Agentic **S** · Multimodal **S** · Long-context **S** · Knowledge **S** · Speed **D**
 - **Headline benchmarks:** Artificial Analysis has not measured Fable 5.2 yet, so its letters are estimates
 - **Pricing notes:** Provider-direct Anthropic API per-token pricing (not via the Cursor pool)
-- **Best for:** Frontier-class multimodal input, plus strong coding, planning, agentic work, long context and knowledge, at a very high price. Weakest at speed (D).
+- **Best for:** Frontier-class coding, planning, agentic work, multimodal input, long context and knowledge at a very high price. Weakest at speed (D).
 
 #### GPT-5.5 — `gpt-5.5`
 
@@ -1046,15 +1046,15 @@ Tier ratings:
 - **Tier ratings:** Coding **S** · Planning **S** · Agentic **S** · Multimodal **B** · Long-context **A** · Knowledge **S** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 52.6 (high); HLE 57.1%; SciCode 61.8; Terminal-Bench 4.0 57.1; AA-LCR 0.797; 1M-token context
 - **Pricing notes:** -
-- **Best for:** Frontier-class coding, planning, agentic work and knowledge, plus strong long context, at a medium price. Its AA Intelligence Index of 52.6 ranks 5th of 35 measured models. It is the cheapest model in the catalog rated S for knowledge.
+- **Best for:** Frontier-class coding, planning, agentic work and knowledge, plus strong long context, at a medium price. Its AA Intelligence Index of 52.6 ranks 5th of 35 measured models.
 
 #### Gemini 4 Carbon — `gemini-4-carbon`
 
 - **Pricing:** Input $2.00/M · Output $10.00/M
-- **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **B** · Long-context **B** · Knowledge **B** · Speed **B**
+- **Tier ratings:** Coding **S** · Planning **S** · Agentic **S** · Multimodal **B** · Long-context **S** · Knowledge **S** · Speed **B**
 - **Headline benchmarks:** Artificial Analysis has not measured Gemini 4 Carbon yet, so its letters are estimates
 - **Pricing notes:** Provider-direct Google API per-token pricing (not via the Cursor pool)
-- **Best for:** Competent coding, planning, agentic work, multimodal input, long context and knowledge at a medium price.
+- **Best for:** Frontier-class coding, planning, agentic work, long context and knowledge at a medium price.
 
 ### Low Cost Tier
 
@@ -1679,7 +1679,7 @@ Guardrails:
     context (opus-4.7 1M, opus-4.8 1M, claude-opus-5 1M, claude-opus-5-5 1M, gemini-3.1-pro 1M, gemini-3.5-flash-lite 1M) over forcing
     a smaller-context model into Max Mode truncation.
   - For PRIMARY = `coding` at S-tier requirement, the candidate set is
-    claude-sonnet-5-5, gemini-4-argon, claude-opus-5-5, muse-wonder, claude-fable-5.1; cost tie-breaker favors
+    claude-sonnet-5-5, gemini-4-argon, gemini-4-carbon, claude-opus-5-5, muse-wonder, claude-fable-5.2, claude-fable-5.1; cost tie-breaker favors
     claude-sonnet-5-5 when the ratings are equivalent for the prompt.
   - Default to composer-2.5 for routine multi-file implementation when a
     coding-A rating suffices; escalate only on a concrete capability

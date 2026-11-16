@@ -243,3 +243,86 @@ def test_a_model_its_own_table_places_ignores_other_tables() -> None:
 def test_too_few_rows_from_other_tables_give_no_estimate() -> None:
     later = {**LATER, "tables": [{**LATER["tables"][0], "rows": LATER["tables"][0]["rows"][:2]}]}
     assert "thin" not in estimate.estimate_all({"thin": THIN, "later": later}, BENCH)
+
+
+# --------------------------------------------------------------------------- #
+# Letter figures, and the typed check on the estimates file.
+
+import sys  # noqa: E402
+
+sys.path.insert(0, str(REPO / "update"))
+import launch_data  # noqa: E402
+
+FIGURE_BENCH = {
+    mid: {
+        "release_date": date,
+        "evaluations": {INDEX: index, "hle": hle, "terminalbench_v4_0": tb4},
+    }
+    for mid, date, index, hle, tb4 in (
+        ("old-a", "2026-01-01", 40.0, 0.30, 0.20),
+        ("old-b", "2026-02-01", 50.0, 0.40, 0.40),
+        ("old-c", "2026-03-01", 60.0, 0.50, 0.60),
+    )
+}
+
+
+def test_letter_figures_come_from_the_rows_as_the_index_does() -> None:
+    # Scores 40/50/60 put HLE at 30/40/50 and Terminal-Bench 4.0 at 20/40/60;
+    # the new model scores 55 on each row.
+    rows = [[55 + i, 40 + i, 50 + i, 60 + i] for i in range(3)]
+    entry = _entry(rows, COLS)
+    est = estimate.estimate("new", entry, FIGURE_BENCH)
+    assert est is not None
+    assert est.figures["hle"] == pytest.approx((45 - estimate.FIGURE_OPTIMISM["hle"]) / 100)
+    opt = estimate.FIGURE_OPTIMISM["terminalbench_v4_0"]
+    assert est.figures["terminalbench_v4_0"] == pytest.approx((50 - opt) / 100)
+    # No anchor has AA-LCR or SciCode measured: those figures are left out.
+    assert set(est.figures) == {"hle", "terminalbench_v4_0"}
+    assert est.as_json()["figures"] == dict(sorted(est.figures.items()))
+    # The index is unchanged by them.
+    assert est.index == pytest.approx(55 - estimate.OPTIMISM, abs=0.05)
+
+
+def test_every_table_of_a_launch_keeps_its_anchors() -> None:
+    # Two tables: the second's anchors count as fully as the first's.
+    first = _entry([[45 + i, 40 + i, 50 + i] for i in range(2)], ["new", "old-a", "old-b"])
+    second = _entry([[55 + i, 50 + i, 60 + i] for i in range(2)], ["new", "old-b", "old-c"])
+    for i, row in enumerate(second["tables"][0]["rows"]):
+        row["benchmark"] = f"C{i}"
+    entry = {**first, "tables": first["tables"] + second["tables"]}
+    assert len(estimate.anchor_rows("new", entry, BENCH)) == 4
+    assert len(estimate.anchor_rows("new", entry, FIGURE_BENCH, "hle")) == 4
+
+
+def test_the_committed_estimates_pass_the_typed_check() -> None:
+    doc = json.loads((REPO / "docs" / "index-estimates.json").read_text())
+    catalog = {m["id"] for m in json.loads((REPO / "docs" / "catalog.json").read_text())["models"]}
+    bench = json.loads((REPO / "docs" / "benchmarks.json").read_text())["models"]
+    launch_data.check_index_estimates(doc, catalog | set(bench), catalog)
+
+
+@pytest.mark.parametrize(
+    ("change", "error"),
+    [
+        (lambda e: e.__setitem__("index", 140), "index_estimates_value"),
+        (lambda e: e.__setitem__("band", 0), "index_estimates_value"),
+        (lambda e: e.__setitem__("method", "vibes"), "index_estimates_entry"),
+        (lambda e: e.__setitem__("anchors", ["<b>x</b>"]), "index_estimates_identity"),
+        (lambda e: e.__setitem__("via", ["made-up-id"]), "index_estimates_identity"),
+        (lambda e: e.__setitem__("effort", "Max effort!"), "index_estimates_entry"),
+        (lambda e: e.__setitem__("figures", {"hle": 2}), "index_estimates_value"),
+        (lambda e: e.__setitem__("figures", {"mmlu": 0.5}), "index_estimates_entry"),
+        (lambda e: e.__setitem__("note", "extra"), "index_estimates_entry"),
+    ],
+)
+def test_the_estimates_check_refuses_anything_but_typed_data(change: Any, error: str) -> None:
+    entry = {"index": 50.0, "band": 4.0, "method": "anchors", "anchors": ["old-a"], "rows": 3}
+    change(entry)
+    doc = {
+        "schema_version": 1,
+        "about": "x",
+        "launch_tables_sha256": "0" * 64,
+        "models": {"new": entry},
+    }
+    with pytest.raises(ValueError, match=error):
+        launch_data.check_index_estimates(doc, {"old-a", "new"}, {"new"})

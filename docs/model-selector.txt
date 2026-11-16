@@ -1058,13 +1058,13 @@
              input-price-per-1m="$8.00" output-price-per-1m="$40.00"
              jurisdiction="us"
              always-thinks="yes"
-             tier-coding="A" tier-planning="A" tier-agentic="A"
-             tier-multimodal="S" tier-long-context="A" tier-knowledge="A"
+             tier-coding="S" tier-planning="S" tier-agentic="S"
+             tier-multimodal="S" tier-long-context="S" tier-knowledge="S"
              tier-speed="D"
              headline-benchmarks="Artificial Analysis has not measured Fable 5.2 yet, so its letters are estimates"
              pricing-notes="Provider-direct Anthropic API per-token pricing (not via the Cursor pool)"
              prose-generated="best-for headline-benchmarks"
-             best-for="Frontier-class multimodal input, plus strong coding, planning, agentic work, long context and knowledge, at a very high price. Weakest at speed (D)." added-on="2026-11-12"/>
+             best-for="Frontier-class coding, planning, agentic work, multimodal input, long context and knowledge at a very high price. Weakest at speed (D)." added-on="2026-11-12"/>
       <model id="gpt-5.5" name="GPT-5.5"
              input-price-per-1m="$5.00" output-price-per-1m="$30.00"
              jurisdiction="us"
@@ -1288,17 +1288,17 @@
              headline-benchmarks="AA Intelligence Index 52.6 (high); HLE 57.1%; SciCode 61.8; Terminal-Bench 4.0 57.1; AA-LCR 0.797; 1M-token context"
              pricing-notes="-"
              prose-generated="best-for headline-benchmarks"
-             best-for="Frontier-class coding, planning, agentic work and knowledge, plus strong long context, at a medium price. Its AA Intelligence Index of 52.6 ranks 5th of 35 measured models. It is the cheapest model in the catalog rated S for knowledge." added-on="2026-10-20"/>
+             best-for="Frontier-class coding, planning, agentic work and knowledge, plus strong long context, at a medium price. Its AA Intelligence Index of 52.6 ranks 5th of 35 measured models." added-on="2026-10-20"/>
       <model id="gemini-4-carbon" name="Gemini 4 Carbon"
              input-price-per-1m="$2.00" output-price-per-1m="$10.00"
              jurisdiction="us"
-             tier-coding="B" tier-planning="B" tier-agentic="B"
-             tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
+             tier-coding="S" tier-planning="S" tier-agentic="S"
+             tier-multimodal="B" tier-long-context="S" tier-knowledge="S"
              tier-speed="B"
              headline-benchmarks="Artificial Analysis has not measured Gemini 4 Carbon yet, so its letters are estimates"
              pricing-notes="Provider-direct Google API per-token pricing (not via the Cursor pool)"
              prose-generated="best-for headline-benchmarks"
-             best-for="Competent coding, planning, agentic work, multimodal input, long context and knowledge at a medium price." added-on="2026-11-12"/>
+             best-for="Frontier-class coding, planning, agentic work, long context and knowledge at a medium price." added-on="2026-11-12"/>
     </tier>
     <tier cost="low">
       <model id="gemini-3.5-flash" name="Gemini 3.5 Flash"
@@ -1990,7 +1990,7 @@
         context (opus-4.7 1M, opus-4.8 1M, claude-opus-5 1M, claude-opus-5-5 1M, gemini-3.1-pro 1M, gemini-3.5-flash-lite 1M) over forcing
         a smaller-context model into Max Mode truncation.
       - For PRIMARY = `coding` at S-tier requirement, the candidate set is
-        claude-sonnet-5-5, gemini-4-argon, claude-opus-5-5, muse-wonder, claude-fable-5.1; cost tie-breaker favors
+        claude-sonnet-5-5, gemini-4-argon, gemini-4-carbon, claude-opus-5-5, muse-wonder, claude-fable-5.2, claude-fable-5.1; cost tie-breaker favors
         claude-sonnet-5-5 when the ratings are equivalent for the prompt.
       - Default to composer-2.5 for routine multi-file implementation when a
         coding-A rating suffices; escalate only on a concrete capability
