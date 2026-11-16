@@ -234,6 +234,14 @@ BASELINE_JURISDICTIONS: Final[tuple[str, ...]] = ("us", "eu", "uk", "ca", "au", 
 BUNDLED_BENCHMARKS_PATH = _data.data_file("benchmarks.json")
 BUNDLED_CONTEXT_PATH = _data.data_file("context-windows.json")
 BUNDLED_EFFORT_TOKENS_PATH = _data.data_file("effort-tokens.json")
+BUNDLED_ESTIMATES_PATH = _data.data_file("index-estimates.json")
+# Index points a model AA has not measured is ranked below roadmodel's estimate
+# of its AA Index (roadmodel.estimate, docs/index-estimates.json): about half
+# the estimate's error band (estimate.BAND, 4 points). A new model then wins a
+# pick only by clearing a measured one by more than that, and loses a near tie,
+# where the estimate could as easily be high as low. Its printed index stays
+# the estimate itself.
+ESTIMATE_PENALTY: Final[float] = 2.0
 # A context window must hold the task's material plus the instructions and the
 # answer: 10% above the material's own size.
 CONTEXT_HEADROOM: Final[float] = 1.1
@@ -298,6 +306,9 @@ class Candidate:
     # The earlier version whose AA row stands for this model until AA
     # measures it (inherit_unmeasured); None for AA's own measurement.
     aa_inherited_from: str | None = None
+    # Whether its AA Index is roadmodel's estimate (with_estimates), ranked
+    # ESTIMATE_PENALTY below the figure it prints.
+    aa_estimated: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -359,7 +370,7 @@ def inherit_unmeasured(bench: dict[str, Any], catalog: dict[str, Any]) -> dict[s
     version and stays unmeasured. The copies are figures for their own model
     only: composites, evidence scales, the market line and effort shifts are
     read over the rows AA measured."""
-    measured = [m for m, row in bench.items() if isinstance(row, dict) and not _inherited_from(row)]
+    measured = [m for m, row in bench.items() if isinstance(row, dict) and not _unmeasured(row)]
     out = dict(bench)
     for model in catalog.get("models", []):
         mid = str(model.get("id", "")) if isinstance(model, dict) else ""
@@ -370,6 +381,130 @@ def inherit_unmeasured(bench: dict[str, Any], catalog: dict[str, Any]) -> dict[s
             source = max(older, key=lambda m: (_series.version(m), m))
             out[mid] = {**bench[source], "inherited_from": source}
     return out
+
+
+def _estimated(row: Any) -> bool:
+    """Whether ``row`` stands on roadmodel's estimate (:func:`with_estimates`)."""
+    return isinstance(row, dict) and isinstance(row.get("estimated"), dict)
+
+
+def _unmeasured(row: Any) -> bool:
+    """Whether ``row`` is anything but AA's own measurement: a copy of an
+    earlier version's row or an estimate. Every scale and fit over the measured
+    models leaves such rows out."""
+    return _inherited_from(row) is not None or _estimated(row)
+
+
+def _load_estimates() -> dict[str, Any]:
+    try:
+        raw = json.loads(BUNDLED_ESTIMATES_PATH.read_text(encoding="utf-8"))
+    except (FileNotFoundError, OSError, ValueError):
+        return {}
+    models = raw.get("models") if isinstance(raw, dict) else None
+    return models if isinstance(models, dict) else {}
+
+
+def _headline_index(row: dict[str, Any]) -> float | None:
+    evals = row.get("evaluations")
+    v = evals.get(FRONTIER_INDEX) if isinstance(evals, dict) else None
+    return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+
+def _shifted(row: dict[str, Any], delta: float) -> dict[str, Any]:
+    """``row`` with its AA Index moved by ``delta`` on the headline row and at
+    every effort it carries; its other figures as they were."""
+    out = dict(row)
+    evals = row.get("evaluations")
+    if isinstance(evals, dict) and isinstance(evals.get(FRONTIER_INDEX), (int, float)):
+        out["evaluations"] = {**evals, FRONTIER_INDEX: round(evals[FRONTIER_INDEX] + delta, 1)}
+    variants = row.get("effort_variants")
+    if isinstance(variants, dict):
+        moved: dict[str, Any] = {}
+        for level, v in variants.items():
+            ev = v.get("evaluations") if isinstance(v, dict) else None
+            if isinstance(ev, dict) and isinstance(ev.get(FRONTIER_INDEX), (int, float)):
+                v = {
+                    **v,
+                    "evaluations": {**ev, FRONTIER_INDEX: round(ev[FRONTIER_INDEX] + delta, 1)},
+                }
+            moved[level] = v
+        out["effort_variants"] = moved
+    return out
+
+
+def _top_level(model_id: str, catalog: dict[str, Any]) -> str | None:
+    """The highest scorer level any of the catalog's effort dials offers
+    ``model_id``: the effort a vendor's launch table reports it at. None when
+    no surface documents a dial for it."""
+    best: str | None = None
+    for method in catalog.get("access_methods", []):
+        if not isinstance(method, dict) or model_id not in (method.get("supports_models") or []):
+            continue
+        levels = native_levels(str(method.get("id", "")), model_id, catalog=catalog)
+        for native in levels or []:
+            lv = _scorer_level(native)
+            if best is None or EFFORT_LADDER.index(lv) > EFFORT_LADDER.index(best):
+                best = lv
+    return best
+
+
+def _estimated_row(
+    model_id: str, index: float, bench: dict[str, Any], catalog: dict[str, Any]
+) -> dict[str, Any]:
+    """A row for a new series AA has not measured: ``index`` at the top effort
+    its dials offer, and at each lower effort that index moved by the median
+    shift between the two efforts across the models AA measured at both (the
+    rule :func:`estimated_aa_index` reads an unmeasured effort by)."""
+    top = _top_level(model_id, catalog)
+    row: dict[str, Any] = {"evaluations": {FRONTIER_INDEX: round(index, 1)}, "aa_effort": top}
+    if top is None:
+        return row
+    measured = {m: _aa_by_level(bench, m) for m, r in bench.items() if not _unmeasured(r)}
+    variants: dict[str, Any] = {}
+    for level in EFFORT_LADDER[: EFFORT_LADDER.index(top)]:
+        shifts = [by[level] - by[top] for by in measured.values() if level in by and top in by]
+        if shifts:
+            moved = round(index + statistics.median(shifts), 1)
+            variants[level] = {"evaluations": {FRONTIER_INDEX: moved}}
+    row["effort_variants"] = variants
+    return row
+
+
+def with_estimates(
+    bench: dict[str, Any], catalog: dict[str, Any], estimates: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """``bench`` with each catalog model AA has not measured that roadmodel
+    estimates (roadmodel.estimate: its launch table placed against the measured
+    models the vendor compares it with) standing at that estimate less
+    ``ESTIMATE_PENALTY``, marked ``estimated``. A later version keeps the row
+    :func:`inherit_unmeasured` copied from its previous version, its AA Index
+    moved to the estimate at every effort; a new series gets a row of the index
+    alone (:func:`_estimated_row`). Like the copies, the estimates are figures
+    for their own model only: every scale and fit reads the measured rows."""
+    est = estimates if estimates is not None else _load_estimates()
+    ids = {str(m.get("id", "")) for m in catalog.get("models", []) if isinstance(m, dict)}
+    out = dict(bench)
+    for mid, e in est.items():
+        row = bench.get(mid)
+        value = e.get("index") if isinstance(e, dict) else None
+        if mid not in ids or not isinstance(value, (int, float)) or isinstance(value, bool):
+            continue
+        if isinstance(row, dict) and not _inherited_from(row):
+            continue  # AA has measured it: its own figure stands
+        ranked = float(value) - ESTIMATE_PENALTY
+        meta = {"index": float(value), "band": e.get("band"), "penalty": ESTIMATE_PENALTY}
+        if isinstance(row, dict) and (head := _headline_index(row)) is not None:
+            out[mid] = {**_shifted(row, ranked - head), "estimated": meta}
+        else:
+            out[mid] = {**_estimated_row(mid, ranked, bench, catalog), "estimated": meta}
+    return out
+
+
+def with_unmeasured(bench: dict[str, Any], catalog: dict[str, Any]) -> dict[str, Any]:
+    """The rows the scorer ranks on: AA's measurements, then for each catalog
+    model AA has not measured, roadmodel's estimate (:func:`with_estimates`)
+    or, without one, its previous version's row (:func:`inherit_unmeasured`)."""
+    return with_estimates(inherit_unmeasured(bench, catalog), catalog)
 
 
 def context_windows() -> dict[str, int]:
@@ -512,9 +647,21 @@ def with_composites(bench: dict[str, Any]) -> dict[str, Any]:
     earlier version (:func:`inherit_unmeasured`) is not ranked: it takes that
     version's composites."""
     copies = {mid: source for mid, row in bench.items() if (source := _inherited_from(row))}
-    out = _measured_composites({m: row for m, row in bench.items() if m not in copies})
+    alone = {mid for mid, row in bench.items() if _estimated(row) and mid not in copies}
+    out = _measured_composites(
+        {m: row for m, row in bench.items() if m not in copies and m not in alone}
+    )
     for mid, source in copies.items():
-        out[mid] = {**out.get(source, bench[mid]), "inherited_from": source}
+        merged = {**out.get(source, bench[mid]), "inherited_from": source}
+        if _estimated(bench[mid]):
+            # An estimate takes its source's composites and keeps its own index.
+            own, theirs = _headline_index(bench[mid]), _headline_index(merged)
+            if own is not None and theirs is not None:
+                merged = _shifted(merged, own - theirs)
+            merged["estimated"] = bench[mid]["estimated"]
+        out[mid] = merged
+    for mid in alone:
+        out[mid] = bench[mid]
     return out
 
 
@@ -660,7 +807,7 @@ def market_exchange_rate(
     xs: list[float] = []
     ys: list[float] = []
     for m in catalog.get("models", []):
-        if not isinstance(m, dict) or _inherited_from(bench.get(str(m.get("id", "")))):
+        if not isinstance(m, dict) or _unmeasured(bench.get(str(m.get("id", "")))):
             continue
         price = blended_price(m)
         if price <= 0:
@@ -1083,7 +1230,7 @@ def _evidence_scale(
     vals = [
         v
         for m in catalog.get("models", [])
-        if isinstance(m, dict) and not _inherited_from(bench.get(str(m.get("id", ""))))
+        if isinstance(m, dict) and not _unmeasured(bench.get(str(m.get("id", ""))))
         for v in [_evidence(bench, str(m.get("id", "")), key)]
         if v is not None
     ]
@@ -1212,9 +1359,7 @@ def rank(
     every model stands on its headline row at its posture's effort: the pool
     :func:`ladder` expands itself."""
     cat = catalog if catalog is not None else _cost._load_catalog()
-    raw_bench = (
-        benchmarks if benchmarks is not None else inherit_unmeasured(_load_benchmarks(), cat)
-    )
+    raw_bench = benchmarks if benchmarks is not None else with_unmeasured(_load_benchmarks(), cat)
     bench = with_composites(raw_bench)
     text = user_context_text or ""
     headroom = consumption_headroom(text)
@@ -1354,6 +1499,7 @@ def rank(
                 notes=notes,
                 evidence_points=None if points is None else round(points, 2),
                 aa_inherited_from=_inherited_from(bench.get(model_id)),
+                aa_estimated=_estimated(bench.get(model_id)),
             )
             # One row per model: its best reachable platform. A funded platform
             # always beats an unfunded one regardless of score; equal scores go
@@ -1896,7 +2042,7 @@ def ladder(
 
     None when no pool model carries an AA Index (no frontier to read)."""
     cat = catalog if catalog is not None else _cost._load_catalog()
-    bench = benchmarks if benchmarks is not None else inherit_unmeasured(_load_benchmarks(), cat)
+    bench = benchmarks if benchmarks is not None else with_unmeasured(_load_benchmarks(), cat)
     base = Task(task.category, task.complexity, task.novel, "balanced")
     ranking = rank(
         base,
@@ -2264,7 +2410,7 @@ def _pick(
     run on, so it can be backed up and replaced. ValueError when the model
     is not one this user-context can reach."""
     cat = catalog if catalog is not None else _cost._load_catalog()
-    bench = benchmarks if benchmarks is not None else inherit_unmeasured(_load_benchmarks(), cat)
+    bench = benchmarks if benchmarks is not None else with_unmeasured(_load_benchmarks(), cat)
     model_id = _model_ref_id(model, cat)
     base = Task(task.category, task.complexity, task.novel, "balanced")
 
@@ -2508,7 +2654,7 @@ def estimated_aa_index(bench: dict[str, Any], model_id: str, level: str) -> floa
     a = max(anchors, key=EFFORT_LADDER.index) if lo else min(anchors, key=EFFORT_LADDER.index)
     shifts = []
     for other in bench:
-        if other == model_id or _inherited_from(bench[other]):
+        if other == model_id or _unmeasured(bench[other]):
             continue
         row = _aa_by_level(bench, other)
         if want in row and a in row:
@@ -2527,17 +2673,25 @@ def ladder_aa(
     only on a surface with no dial for it (``dial`` false): where the
     operator sets a level, that row's effort is unknown, so it is no figure
     for ``level`` (Gemini 3 Flash's row on the Google API's dial). A row
-    copied from an earlier version (:func:`inherit_unmeasured`) is an estimate
-    too. None when AA has not measured the model at all."""
-    inherited = _inherited_from(bench.get(model_id)) is not None
+    copied from an earlier version (:func:`inherit_unmeasured`) or estimated by
+    roadmodel (:func:`with_estimates`) is an estimate too; roadmodel's estimate
+    prints its own figure, not the one it is ranked at. None when AA has not
+    measured the model at all."""
+    row = bench.get(model_id)
+    inherited = _unmeasured(row)
+    back = ESTIMATE_PENALTY if _estimated(row) else 0.0
+
+    def shown(v: float | None) -> float | None:
+        return None if v is None else round(v + back, 1)
+
     if measured_levels(bench, model_id):
         measured = _evidence(bench, model_id, FRONTIER_INDEX, normalize_level(level))
         if measured is not None:
-            return measured, inherited
+            return shown(measured), inherited
         estimate = estimated_aa_index(bench, model_id, level)
-        return estimate, estimate is not None
+        return shown(estimate), estimate is not None
     value = None if dial else _evidence(bench, model_id, FRONTIER_INDEX)
-    return value, inherited and value is not None
+    return shown(value), inherited and value is not None
 
 
 def ladder_aa_index(
@@ -2705,7 +2859,7 @@ def settings_ladder(
     (:mod:`roadmodel.ladder_layout`); None when no pool model carries an AA
     Index."""
     cat = catalog if catalog is not None else _cost._load_catalog()
-    bench = benchmarks if benchmarks is not None else inherit_unmeasured(_load_benchmarks(), cat)
+    bench = benchmarks if benchmarks is not None else with_unmeasured(_load_benchmarks(), cat)
     off = list(unavailable_models or [])
     seen: dict[frozenset[str], Ladder | None] = {}
 
@@ -2838,7 +2992,7 @@ def ladder_table(
     """The ladder for every classification in :func:`table_keys`, keyed by
     :func:`table_key`; a classification with no frontier is left out."""
     cat = catalog if catalog is not None else _cost._load_catalog()
-    bench = benchmarks if benchmarks is not None else inherit_unmeasured(_load_benchmarks(), cat)
+    bench = benchmarks if benchmarks is not None else with_unmeasured(_load_benchmarks(), cat)
     out: dict[str, Ladder] = {}
     for category, complexity, novel in table_keys():
         lad = ladder(
@@ -2853,10 +3007,15 @@ def ladder_table(
     return out
 
 
-def _aa_text(p: FrontierPoint) -> str:
+def aa_text(p: FrontierPoint) -> str:
+    """A frontier point's AA Index as a pick prints it: AA's figure, else ≈ and
+    the copied figure or roadmodel's estimate (not the figure it is ranked at)."""
     if p.aa_index is None:
         return "not measured"
-    return f"{_layout.ESTIMATE_MARK if p.candidate.aa_inherited_from else ''}{p.aa_index:g}"
+    c = p.candidate
+    value = round(p.aa_index + ESTIMATE_PENALTY, 1) if c.aa_estimated else p.aa_index
+    mark = _layout.ESTIMATE_MARK if (c.aa_inherited_from or c.aa_estimated) else ""
+    return f"{mark}{value:g}"
 
 
 def render_ladder_table(table: dict[str, Ladder]) -> str:
@@ -2871,7 +3030,7 @@ def render_ladder_table(table: dict[str, Ladder]) -> str:
         "the AA Intelligence Index than any they can run for less), cheapest first:",
         "  "
         + " < ".join(
-            f"{p.candidate.model_name} (AA {_aa_text(p)}, ${p.candidate.blended_price_usd:.2f}/1M list)"
+            f"{p.candidate.model_name} (AA {aa_text(p)}, ${p.candidate.blended_price_usd:.2f}/1M list)"
             for p in any_ladder.frontier
         ),
         "Rows: <category>/<complexity>[/novel]: COST | BALANCED | QUALITY, each "

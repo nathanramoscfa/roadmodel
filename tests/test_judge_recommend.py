@@ -335,7 +335,7 @@ def test_the_soak_workflow_runs_the_judge_on_the_subscription_token() -> None:
     install = steps["Install the roadmodel production runs"]["run"]
     assert "healthz" in install and "roadmodel==" in install
     # Production runs the release on main's data files (service/app/live_data.py),
-    # and so does the judge: the same six files, as ROADMODEL_DATA_DIR. Read
+    # and so does the judge: the same files, as ROADMODEL_DATA_DIR. Read
     # FILES from the source, not an import: the service's deps are not here.
     import ast
 
