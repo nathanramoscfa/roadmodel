@@ -59,7 +59,7 @@ dev = [
 # mcp.shared.memory.create_connected_server_and_client_session test helper.
 # Migrating to the 2.x MCPServer API is tracked as a separate follow-up; until
 # then this cap keeps the server and its tests on the 1.x API they target.
-mcp = ["mcp>=1.0,<2", "roadmodel[recommend]"]
+mcp = ["mcp>=1.0,<3", "roadmodel[recommend]"]
 
 [project.scripts]
 roadmodel = "roadmodel.cli:main"
