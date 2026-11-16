@@ -9,17 +9,19 @@ model on the index's scale. Two methods, averaged when both apply:
 * Launch-table anchors. Each benchmark row with two or more anchors (measured
   models released before this one) maps that row's scores onto the index: a
   least-squares line across three or more anchors, the line through their
-  spread otherwise. The median over the rows, less the launch-table optimism
-  (vendors lead with the benchmarks their new model wins), is the estimate.
+  spread otherwise. The median over the rows is this method's figure.
 * Index components. When the launch table reports Humanity's Last Exam without
   tools or Terminal-Bench 4.0, two of the index's own components, a fit of the
   index on Artificial Analysis's measurements of those components and the
   release date places the model.
 
-Calibrated by leave-one-out over the launch tables of the 27 models Artificial
-Analysis has measured whose tables carry two or more anchors (2026-11): a
-typical miss of 2.6 index points, a root-mean-square miss of 3.8, and 23 of the
-27 within 5 points. ``BAND`` is that error, rounded.
+Their average, less the launch-table optimism of the model's maker (vendors
+lead with the benchmarks their new model wins, and some lead harder than
+others: ``MAKER_OPTIMISM``), is the estimate. Calibrated by leave-one-out over
+the 26 models Artificial Analysis has measured whose launch tables place them
+(2026-11): a typical miss of 2.4 index points and a root-mean-square miss of
+3.5, against 2.5 and 3.8 when every maker takes the same correction. ``BAND``
+is that error.
 
 When a model's own table names too few measured models to place it (Gemini 4
 Hydrogen's sets it beside one), later launch tables that list it as a
@@ -46,11 +48,59 @@ from typing import Any, Final
 
 INDEX_KEY: Final = "artificial_analysis_intelligence_index"
 
-# Mean amount a launch table's anchor estimate overshoots Artificial Analysis's
-# later measurement: vendors choose the benchmarks they lead with.
-OPTIMISM: Final = 1.5
-# Leave-one-out error of the combined estimate (RMSE, index points).
-BAND: Final = 4.0
+# Mean amount a launch table's estimate overshoots Artificial Analysis's later
+# measurement, over every maker: vendors choose the benchmarks they lead with.
+# The correction for a maker with no measured launch table behind it yet.
+OPTIMISM: Final = 1.6
+# Makers' launch tables do not overshoot alike: each maker's own record
+# corrects its estimates, trusted in proportion to how much of it there is
+# (empirical-Bayes partial pooling toward the all-maker figure: a maker with n
+# measured launches keeps n / (n + k) of its own mean overshoot, where k is the
+# within-maker variance over the between-maker variance, never below 3, so one
+# launch counts a quarter and three count half). Index points for the index,
+# percentage points for a letter figure; keyed by maker(). Leave-one-out over
+# the measured models' launch tables (2026-11), root-mean-square miss against
+# one correction for every maker: index 3.49 against 3.77, HLE 4.45 against
+# 4.75, AA-LCR 3.18 against 3.46; trained only on the launches released before
+# each model, 3.90 against 4.00, 4.82 against 4.82 and 3.17 against 3.35.
+# SciCode shows no difference between makers and Terminal-Bench 4.0 none that
+# predicts (10.00 against 9.63), so both keep FIGURE_OPTIMISM alone.
+MAKER_OPTIMISM: Final = {
+    INDEX_KEY: {
+        "anthropic": 0.9,
+        "deepseek": 3.5,
+        "google": 2.2,
+        "meta": 1.9,
+        "moonshot": 3.1,
+        "openai": -0.9,
+        "xai": 2.4,
+        "zai": 1.0,
+    },
+    "hle": {
+        "anthropic": 2.2,
+        "deepseek": 5.8,
+        "google": 2.4,
+        "meta": 4.9,
+        "moonshot": 4.5,
+        "openai": 1.4,
+        "xai": 5.7,
+        "zai": 4.7,
+    },
+    "lcr": {
+        "anthropic": 0.5,
+        "deepseek": 0.9,
+        "google": 1.5,
+        "meta": 1.2,
+        "moonshot": -2.3,
+        "openai": 1.2,
+        "xai": 2.8,
+        "zai": 1.5,
+    },
+}
+# Leave-one-out error of the maker-corrected estimate (RMSE, index points);
+# neither the maker, the row count nor the rows' spread predicted a model's
+# miss well enough to widen or narrow it (Gaussian log score, leave-one-out).
+BAND: Final = 3.5
 # An estimate needs this many distinct anchors and benchmark rows.
 MIN_ANCHORS: Final = 2
 MIN_ROWS: Final = 3
@@ -67,15 +117,47 @@ OTHER_METHOD: Final = "other-tables"
 # percentage points: the mean overshoot of the later measurement, leave-one-out
 # over the measured models' launch tables (2026-11; 26 tables, 22 for SciCode and
 # Terminal-Bench 4.0). Typical misses after it: HLE 3.9, AA-LCR 2.2, SciCode 3.3,
-# Terminal-Bench 4.0 7.8 points. Lettered with the derivation's own rules, the
-# estimates give the exact letter 94 times in 122 and an S to 22 of the 29 true
-# S models. Means and trimmed means of the rows tied the median on all four but
-# Terminal-Bench 4.0, where the median is clearly best (7.8 against 9.0).
+# Terminal-Bench 4.0 7.8 points. Means and trimmed means of the rows tied the
+# median on all four but Terminal-Bench 4.0, where the median is clearly best
+# (7.8 against 9.0). The all-maker correction: MAKER_OPTIMISM refines HLE and
+# AA-LCR by maker. Lettered with the derivation's own rules, the estimates give
+# the exact letter 96 times in 122 and an S to 22 of the 29 true S models.
 FIGURE_OPTIMISM: Final = {"hle": 3.6, "lcr": 0.9, "scicode": 2.4, "terminalbench_v4_0": 4.2}
 # The index components a launch table can report, by their benchmarks.json key.
 COMPONENTS: Final = ("hle", "terminalbench_v4_0")
 # Ridge strength for the component fit, on standardized inputs.
 _RIDGE: Final = 0.1
+# Who makes a model, from its id (update/stale_claims.py maker_of's rules, which
+# a test holds this to). Order matters: gpt-oss is OpenAI's before "gpt" is.
+_MAKER_RULES: Final = (
+    (re.compile(r"gpt-oss"), "openai"),
+    (re.compile(r"claude|opus|sonnet|haiku|fable"), "anthropic"),
+    (re.compile(r"gpt"), "openai"),
+    (re.compile(r"gemini"), "google"),
+    (re.compile(r"grok"), "xai"),
+    (re.compile(r"deepseek"), "deepseek"),
+    (re.compile(r"mistral|codestral"), "mistral"),
+    (re.compile(r"glm"), "zai"),
+    (re.compile(r"composer"), "cursor"),
+    (re.compile(r"kimi"), "moonshot"),
+    (re.compile(r"muse"), "meta"),
+)
+
+
+def maker(model_id: str) -> str | None:
+    """The company that makes ``model_id``, or None when no rule names it."""
+    s = model_id.lower()
+    return next((name for rx, name in _MAKER_RULES if rx.search(s)), None)
+
+
+def optimism(key: str, model_id: str) -> float:
+    """The launch-table optimism taken off ``model_id``'s estimate of ``key``:
+    its maker's (MAKER_OPTIMISM), else the all-maker figure."""
+    by_maker = MAKER_OPTIMISM.get(key, {})
+    who = maker(model_id)
+    if who is not None and who in by_maker:
+        return by_maker[who]
+    return OPTIMISM if key == INDEX_KEY else FIGURE_OPTIMISM[key]
 
 
 @dataclass(frozen=True)
@@ -216,7 +298,8 @@ def row_estimate(
 def from_anchors(
     model_id: str, entry: Mapping[str, Any], bench: Mapping[str, Any]
 ) -> tuple[float, tuple[str, ...], int] | None:
-    """The anchor estimate, its anchors and its row count; None below the floor."""
+    """The anchor method's figure (before the optimism correction), its anchors
+    and its row count; None below the floor."""
     rows = anchor_rows(model_id, entry, bench)
     index = {a: v for _, anchors in rows for a in anchors if (v := _measured(bench, a)) is not None}
     estimates = [
@@ -225,16 +308,16 @@ def from_anchors(
     names = tuple(sorted({a for _, anchors in rows for a in anchors}))
     if len(estimates) < MIN_ROWS or len(names) < MIN_ANCHORS:
         return None
-    return statistics.median(estimates) - OPTIMISM, names, len(estimates)
+    return statistics.median(estimates), names, len(estimates)
 
 
 def figures(model_id: str, entry: Mapping[str, Any], bench: Mapping[str, Any]) -> dict[str, float]:
     """Each letter figure (FIGURE_OPTIMISM) the launch table places, as a
     fraction: its rows mapped through the anchors' measurements of that figure,
-    as the index is, less the figure's optimism. A figure below the floors is
-    left out."""
+    as the index is, less the figure's optimism for the model's maker
+    (:func:`optimism`). A figure below the floors is left out."""
     out: dict[str, float] = {}
-    for key, optimism in FIGURE_OPTIMISM.items():
+    for key in FIGURE_OPTIMISM:
         rows = anchor_rows(model_id, entry, bench, key)
         values = {
             a: v for _, anchors in rows for a in anchors if (v := _value(bench, a, key)) is not None
@@ -245,7 +328,8 @@ def figures(model_id: str, entry: Mapping[str, Any], bench: Mapping[str, Any]) -
         names = {a for _, anchors in rows for a in anchors}
         if len(placed) < MIN_ROWS or len(names) < MIN_ANCHORS:
             continue
-        out[key] = round(min(1.0, max(0.0, (statistics.median(placed) - optimism) / 100)), 4)
+        value = statistics.median(placed) - optimism(key, model_id)
+        out[key] = round(min(1.0, max(0.0, value / 100)), 4)
     return out
 
 
@@ -333,8 +417,11 @@ def estimate(model_id: str, entry: Mapping[str, Any], bench: Mapping[str, Any]) 
         for name, part in (("anchors", anchored), ("components", component))
         if part is not None
     )
+    # The optimism was measured on estimates the anchors take part in; the
+    # component fit alone keeps the vendor's reported components as they are.
+    correction = optimism(INDEX_KEY, model_id) if anchored else 0.0
     return Estimate(
-        index=round(statistics.fmean(parts), 1),
+        index=round(statistics.fmean(parts) - correction, 1),
         band=BAND,
         method=method,
         anchors=anchored[1] if anchored else (),

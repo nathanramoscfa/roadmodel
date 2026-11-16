@@ -326,3 +326,71 @@ def test_the_estimates_check_refuses_anything_but_typed_data(change: Any, error:
     }
     with pytest.raises(ValueError, match=error):
         launch_data.check_index_estimates(doc, {"old-a", "new"}, {"new"})
+
+
+# --------------------------------------------------------------------------
+# Each maker's launch tables take their own optimism (MAKER_OPTIMISM).
+# --------------------------------------------------------------------------
+
+
+def _figure_rows(model_id: str) -> dict[str, Any]:
+    rows = [[55 + i, 40 + i, 50 + i, 60 + i] for i in range(3)]
+    return _entry(rows, [model_id, "old-a", "old-b", "old-c"])
+
+
+def test_a_makers_record_corrects_its_index_and_figures() -> None:
+    # The same table under an OpenAI id and an id no rule names: the index and
+    # HLE take OpenAI's own correction, Terminal-Bench 4.0 the all-maker one.
+    openai = estimate.estimate("gpt-9-nova", _figure_rows("gpt-9-nova"), FIGURE_BENCH)
+    nobody = estimate.estimate("new", _figure_rows("new"), FIGURE_BENCH)
+    assert openai is not None and nobody is not None
+    by_maker = estimate.MAKER_OPTIMISM
+    assert openai.index == pytest.approx(55 - by_maker[INDEX]["openai"], abs=0.05)
+    assert nobody.index == pytest.approx(55 - estimate.OPTIMISM, abs=0.05)
+    assert openai.figures["hle"] == pytest.approx((45 - by_maker["hle"]["openai"]) / 100)
+    assert nobody.figures["hle"] == pytest.approx((45 - estimate.FIGURE_OPTIMISM["hle"]) / 100)
+    tb4 = estimate.FIGURE_OPTIMISM["terminalbench_v4_0"]
+    assert openai.figures["terminalbench_v4_0"] == pytest.approx((50 - tb4) / 100)
+    assert openai.band == nobody.band == estimate.BAND
+
+
+def test_optimism_falls_back_to_the_all_maker_figure() -> None:
+    # A maker with no measured launch table behind it (Mistral, Cursor) and a
+    # figure that does not differ by maker (SciCode, Terminal-Bench 4.0).
+    assert estimate.optimism(INDEX, "codestral") == estimate.OPTIMISM
+    assert estimate.optimism(INDEX, "composer-2.5") == estimate.OPTIMISM
+    assert estimate.optimism(INDEX, "unknown-model") == estimate.OPTIMISM
+    for key in ("scicode", "terminalbench_v4_0"):
+        assert estimate.optimism(key, "gemini-4-carbon") == estimate.FIGURE_OPTIMISM[key]
+    assert estimate.optimism(INDEX, "gemini-4-carbon") == estimate.MAKER_OPTIMISM[INDEX]["google"]
+    assert estimate.optimism("lcr", "kimi-k4") == estimate.MAKER_OPTIMISM["lcr"]["moonshot"]
+
+
+def test_maker_corrections_cover_known_figures_and_lean_toward_the_pool() -> None:
+    # Only the index and letter figures are corrected, every maker named is
+    # one maker() can return, and partial pooling keeps each maker's figure
+    # nearer the all-maker one than any single launch was (within 8 points).
+    makers = {name for _, name in estimate._MAKER_RULES}
+    assert set(estimate.MAKER_OPTIMISM) <= {INDEX, *estimate.FIGURE_OPTIMISM}
+    for key, by_maker in estimate.MAKER_OPTIMISM.items():
+        pooled = estimate.OPTIMISM if key == INDEX else estimate.FIGURE_OPTIMISM[key]
+        assert set(by_maker) <= makers
+        assert all(abs(v - pooled) < 8 for v in by_maker.values())
+
+
+def test_maker_matches_the_selector_prose_rules() -> None:
+    # update/stale_claims.py maker_of names makers in the selector's prose; the
+    # estimator must agree with it on every model it could estimate.
+    import sys
+
+    sys.path.insert(0, str(REPO / "update"))
+    import stale_claims
+
+    catalog = json.loads((REPO / "docs" / "catalog.json").read_text())["models"]
+    tables = json.loads((REPO / "update" / "launch-tables.json").read_text())["models"]
+    ids = {m["id"] for m in catalog} | set(tables)
+    ids |= {"gpt-oss-120b", "sonnet-4.6", "kimi-k3", "muse-wonder", "glm-5.3", "grok-4.7"}
+    for mid in sorted(ids):
+        assert estimate.maker(mid) == stale_claims.maker_of(mid), mid
+    rules = [(rx.pattern, name) for rx, name in estimate._MAKER_RULES]
+    assert rules == [(rx.pattern, name) for rx, name in stale_claims._MAKER_RULES]
