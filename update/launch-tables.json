@@ -531,6 +531,54 @@
       "checked_on": "2026-11-16",
       "attempts": 1,
       "spent_usd": 0.482
+    },
+    "composer-2.5": {
+      "release_date": "2026-05-18",
+      "tables": [],
+      "checked_on": "2026-11-16",
+      "attempts": 1,
+      "spent_usd": 0.552
+    },
+    "gpt-5.1-codex-max": {
+      "release_date": "2025-11-19",
+      "tables": [
+        {
+          "source": "https://openai.com/index/gpt-5-1-codex-max/",
+          "columns": [
+            "gpt-5.1-codex",
+            "gpt-5.1-codex-max"
+          ],
+          "rows": [
+            {
+              "benchmark": "SWE-bench Verified (n=500)",
+              "values": [
+                73.7,
+                77.9
+              ],
+              "higher_is_better": true
+            },
+            {
+              "benchmark": "SWE-Lancer IC SWE",
+              "values": [
+                66.3,
+                79.9
+              ],
+              "higher_is_better": true
+            },
+            {
+              "benchmark": "Terminal-Bench 2.0",
+              "values": [
+                52.8,
+                58.1
+              ],
+              "higher_is_better": true
+            }
+          ]
+        }
+      ],
+      "checked_on": "2026-11-16",
+      "attempts": 1,
+      "spent_usd": 0.279
     }
   }
 }
