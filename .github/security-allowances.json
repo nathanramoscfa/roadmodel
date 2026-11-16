@@ -357,7 +357,7 @@
           "line_sha256": "3cbd6a172697fb03a783976466f250e19856a530f6c47837e1791b1b52e7f8e4",
           "mode": "100644",
           "path": "tests/test_judge_recommend.py",
-          "sha256": "83abb365c9697a40f112740a0416da3ee5656d76f13ab8d0d4607a5ba604f44e"
+          "sha256": "ec98e062c6c21fc067cb9e0e9c0d80b50813486566f806f7836f3184239baad9"
         },
         "tool_sha256": "b5f770098b08ef955113cbaad49a37810ed7222552ca595369abb28f283d5659"
       },
@@ -385,7 +385,7 @@
           "line_sha256": "fe92193f628b0e24f2c5abeac63540750959b929998c715c215d5e63ea0e374b",
           "mode": "100644",
           "path": "tests/test_packaging.py",
-          "sha256": "c028d5b397f3bd03dce7cdbe978254bdf47dd296b12252f06764b55715b0232e"
+          "sha256": "9c00a28439adae03b0059918cfed23c6245b94b89b416e61ecf4c4135aedd455"
         },
         "tool_sha256": "b5f770098b08ef955113cbaad49a37810ed7222552ca595369abb28f283d5659"
       },
@@ -460,7 +460,7 @@
         "language": "python",
         "rule_id": "py/clear-text-storage-sensitive-data",
         "rule_sha256": "6d2da207d4dd612a0dd14e77e1ec851e5136fe8f9481a5523ac94e9d438b6282",
-        "run_configuration_sha256": "fe9c7d6d0ff265d5f650b3c28498372073a238ca28338f55392c24518e9b173c",
+        "run_configuration_sha256": "32043fdb257b863e9b8e8f0b9b02889c14c077c708778a31a46e312416722490",
         "sources": [
           {
             "mode": "100644",
@@ -650,7 +650,7 @@
         "language": "python",
         "rule_id": "py/clear-text-storage-sensitive-data",
         "rule_sha256": "6d2da207d4dd612a0dd14e77e1ec851e5136fe8f9481a5523ac94e9d438b6282",
-        "run_configuration_sha256": "fe9c7d6d0ff265d5f650b3c28498372073a238ca28338f55392c24518e9b173c",
+        "run_configuration_sha256": "32043fdb257b863e9b8e8f0b9b02889c14c077c708778a31a46e312416722490",
         "sources": [
           {
             "mode": "100644",
@@ -829,7 +829,7 @@
         "language": "python",
         "rule_id": "py/clear-text-storage-sensitive-data",
         "rule_sha256": "6d2da207d4dd612a0dd14e77e1ec851e5136fe8f9481a5523ac94e9d438b6282",
-        "run_configuration_sha256": "fe9c7d6d0ff265d5f650b3c28498372073a238ca28338f55392c24518e9b173c",
+        "run_configuration_sha256": "32043fdb257b863e9b8e8f0b9b02889c14c077c708778a31a46e312416722490",
         "sources": [
           {
             "mode": "100644",
@@ -1008,7 +1008,7 @@
         "language": "python",
         "rule_id": "py/log-injection",
         "rule_sha256": "05c52d6c72cc5e2355ba2cc20d8a2d11c8ed1c2bce0627105bde1b370d9483f6",
-        "run_configuration_sha256": "fe9c7d6d0ff265d5f650b3c28498372073a238ca28338f55392c24518e9b173c",
+        "run_configuration_sha256": "32043fdb257b863e9b8e8f0b9b02889c14c077c708778a31a46e312416722490",
         "sources": [
           {
             "mode": "100644",
@@ -1157,7 +1157,7 @@
         "language": "python",
         "rule_id": "py/log-injection",
         "rule_sha256": "05c52d6c72cc5e2355ba2cc20d8a2d11c8ed1c2bce0627105bde1b370d9483f6",
-        "run_configuration_sha256": "fe9c7d6d0ff265d5f650b3c28498372073a238ca28338f55392c24518e9b173c",
+        "run_configuration_sha256": "32043fdb257b863e9b8e8f0b9b02889c14c077c708778a31a46e312416722490",
         "sources": [
           {
             "mode": "100644",
