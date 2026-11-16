@@ -33,7 +33,7 @@ import {
   type BenchRow,
 } from "../lib/benchmark-grid";
 import { modelProvider } from "../lib/catalog-fields";
-import { getModelRows, inheritedSource, pastLeaveDate } from "../lib/catalog-models";
+import { estimateFor, getModelRows, inheritedSource, pastLeaveDate } from "../lib/catalog-models";
 import { isNewer } from "../lib/series";
 import { liveCatalog } from "./fixtures/live-catalog";
 
@@ -109,15 +109,24 @@ function aaIndexFor(m: ScoredModel): number | null {
   return scoresFor(m.headline_benchmarks ?? "").aaIndex;
 }
 
-// The figure the AA Index column shows: AA's own (or the cited one), else, for
-// a later version AA has not measured, its newest measured earlier version's
-// index, marked ≈. Only AA's own figures enter the Score fit.
+// The figure the AA Index column shows: AA's own (or the cited one), else
+// roadmodel's estimate from the launch table (docs/index-estimates.json), else,
+// for a later version AA has not measured, its newest measured earlier
+// version's index; both marked ≈. Only AA's own figures enter the Score fit.
 function shownIndexFor(m: ScoredModel): number | null {
   const own = aaIndexFor(m);
   if (own !== null) return own;
+  const est = estimateFor(m.id);
+  if (est) return est.index;
   const source = inheritedSource(m.id);
   const copied = source ? benchmarks.models[source]?.evaluations.artificial_analysis_intelligence_index : null;
   return typeof copied === "number" ? copied : null;
+}
+
+// The index a model's Score is read from: AA's own, else the estimate. An
+// earlier version's copy has no Score.
+function scoreIndexFor(m: ScoredModel): number | null {
+  return aaIndexFor(m) ?? estimateFor(m.id)?.index ?? null;
 }
 
 const WITH_AA = scored.find((m) => aaIndexFor(m) !== null)!;
@@ -603,7 +612,7 @@ test("rating cells are letters only; the Score column is the cost-adjusted score
   expect(fit!.slope).toBeGreaterThan(0); // pricier models do score higher, on average
   expect(fit!.sigma).toBeGreaterThan(0);
   const scoreOf = (m: ScoredModel) =>
-    scoreFor(fit, m.tier_cost, blendedPrice(m.input_price_per_1m, m.output_price_per_1m), aaIndexFor(m));
+    scoreFor(fit, m.tier_cost, blendedPrice(m.input_price_per_1m, m.output_price_per_1m), scoreIndexFor(m));
   for (const m of scored) {
     // Match on the id: a name filter for "Fable 5" would also hit "Fable 5.1".
     const row = page.locator(`[data-testid="model-row"][data-model-id="${m.id}"]`);
@@ -611,9 +620,14 @@ test("rating cells are letters only; the Score column is the cost-adjusted score
     await expect(row.getByTestId("value-cell")).toContainText(sc === null ? "—" : formatScore(sc));
   }
   // Least-squares residuals sum to ~0 WITHIN EVERY TIER: each tier is centred
-  // on its own peers, not a ratio that crowns the cheapest model overall.
+  // on its own peers, not a ratio that crowns the cheapest model overall. The
+  // fit's own points only: an estimated model is scored against the line, not
+  // part of it.
   for (const tier of Object.keys(fit!.tiers)) {
-    const residuals = scored.filter((m) => m.tier_cost === tier).map(scoreOf).filter((v): v is number => v !== null);
+    const residuals = scored
+      .filter((m) => m.tier_cost === tier && aaIndexFor(m) !== null)
+      .map(scoreOf)
+      .filter((v): v is number => v !== null);
     expect(residuals.length).toBe(fit!.tiers[tier].n);
     const mean = residuals.reduce((a, b) => a + b, 0) / residuals.length;
     expect(Math.abs(mean)).toBeLessThan(1e-6);
@@ -654,7 +668,9 @@ test("rating cells are letters only; the Score column is the cost-adjusted score
     const firstBlank = group.findIndex((c) => c.value === "");
     if (firstBlank !== -1) expect(group.slice(firstBlank).every((c) => c.value === "")).toBe(true);
   }
-  expect(measuredSeen).toBe(fit!.n);
+  // Every fitted model has a Score, and so does every estimated one.
+  const estimated = scored.filter((m) => aaIndexFor(m) === null && estimateFor(m.id) !== null).length;
+  expect(measuredSeen).toBe(fit!.n + estimated);
 });
 
 test("measured letters match the published bands; every other letter is marked estimated", async ({ page }) => {
@@ -839,7 +855,7 @@ test("every model off the frontier names the model that beats it, from any cost 
   // model that beats it; a frontier model's cards say it is on the frontier.
   const fit = fitScoreModel(FITTED.map((o) => ({ price: o.price, index: o.index, tier: o.m.tier_cost })));
   const scoreOf = (o: (typeof measured)[number]) =>
-    (aaIndexFor(o.m) === null ? null : scoreFor(fit, o.m.tier_cost, o.price, o.index)) ?? -Infinity;
+    (scoreIndexFor(o.m) === null ? null : scoreFor(fit, o.m.tier_cost, o.price, o.index)) ?? -Infinity;
   const beaten = measured.filter((r) => leaderOf(r) !== r).sort((a, b) => scoreOf(b) - scoreOf(a))[0];
   const lead = leaderOf(beaten);
   const row = page.locator(`[data-testid="model-row"][data-model-id="${beaten.m.id}"]`);
@@ -889,7 +905,7 @@ test("Group by Quality is the default: AA Index bands, highest Score first in ea
   const rowsIn = scored.map((m) => ({
     m,
     band: bandOf(shownIndexFor(m)),
-    score: scoreFor(fit, m.tier_cost, blendedPrice(m.input_price_per_1m, m.output_price_per_1m), aaIndexFor(m)),
+    score: scoreFor(fit, m.tier_cost, blendedPrice(m.input_price_per_1m, m.output_price_per_1m), scoreIndexFor(m)),
   }));
   const bands = [...new Set(rowsIn.map((r) => r.band).filter((b): b is number => b !== null))].sort((a, b) => b - a);
   const groups = await page.getByTestId("quality-group").evaluateAll((els) => els.map((e) => e.getAttribute("data-band")));
@@ -1547,8 +1563,8 @@ test("the series rule matches the recommender's (src/roadmodel/series.py)", () =
 });
 
 test("a later version AA has not measured shows its earlier version's index, marked as an estimate", async ({ page }) => {
-  const heir = scored.find((m) => aaIndexFor(m) === null && shownIndexFor(m) !== null);
-  test.skip(!heir, "every later version in today's catalog is measured");
+  const heir = scored.find((m) => aaIndexFor(m) === null && !estimateFor(m.id) && shownIndexFor(m) !== null);
+  test.skip(!heir, "every unmeasured later version in today's catalog carries an estimate");
   const source = inheritedSource(heir!.id)!;
   const sourceName = RAW_MODELS.find((m) => m.id === source)?.name ?? benchmarks.models[source].aa_name;
   await page.goto("/models");
@@ -1559,4 +1575,34 @@ test("a later version AA has not measured shows its earlier version's index, mar
   await expect(row.getByTestId("value-cell")).toHaveAttribute("data-value", "");
   await row.getByTestId("aa-index-trigger").hover();
   await expect(page.getByTestId("aa-index-card")).toContainText(`An estimate: ${sourceName}'s index`);
+});
+
+test("a model AA has not measured shows roadmodel's estimate, marked ≈, with a Score and a quality band", async ({ page }) => {
+  const est = scored.find((m) => aaIndexFor(m) === null && estimateFor(m.id));
+  test.skip(!est, "no unmeasured catalog model has an estimate today");
+  const e = estimateFor(est!.id)!;
+  await page.goto("/models");
+  const row = page.locator(`[data-testid="model-row"][data-model-id="${est!.id}"]`);
+  await expect(row.getByTestId("aa-index")).toHaveText(`≈${e.index}`);
+  const mark = row.getByTestId("aa-index-estimate");
+  await expect(mark).toHaveAttribute("data-source", "estimated");
+  await expect(mark).toHaveAttribute(
+    "title",
+    `Estimated by roadmodel from ${est!.name}'s launch benchmarks (±${e.band}), until Artificial Analysis measures it`,
+  );
+  // A Score, read from the estimate against AA's price line, marked ≈ as well.
+  await expect(row.getByTestId("value-cell")).not.toHaveAttribute("data-value", "");
+  await expect(row.getByTestId("score-estimate")).toHaveText("≈");
+  await row.getByTestId("aa-index-trigger").hover();
+  const card = page.getByTestId("aa-index-card");
+  await expect(card).toContainText("roadmodel's estimate, within about");
+  const anchor = e.anchors[0];
+  const anchorName = RAW_MODELS.find((m) => m.id === anchor)?.name ?? benchmarks.models[anchor].aa_name;
+  await expect(card).toContainText(anchorName);
+  // Grouped by quality (the default), it sits in its estimate's band, not "Not measured".
+  const band = String(Math.floor(e.index / 10) * 10);
+  const header = row.locator(
+    `xpath=preceding-sibling::tr[@data-testid="quality-group"][1]`,
+  );
+  await expect(header).toHaveAttribute("data-band", band);
 });

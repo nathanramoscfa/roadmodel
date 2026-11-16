@@ -1,0 +1,511 @@
+{
+  "schema_version": 1,
+  "about": "Launch-day benchmark tables for catalog models Artificial Analysis has not measured, as each vendor published them. Columns are model ids (null: a model outside the catalog and the benchmark snapshot). Only percent scores; a row tagged with an index component reports that component. Read by roadmodel.estimate; regenerate docs/index-estimates.json with update/build_index_estimates.py after an edit.",
+  "models": {
+    "claude-fable-5.2": {
+      "release_date": "2026-11-09",
+      "tables": [
+        {
+          "source": "https://www.anthropic.com/claude-fable-and-mythos-5-2",
+          "columns": [
+            "claude-fable-5.2",
+            null,
+            "claude-fable-5.1",
+            null,
+            "claude-opus-5-5",
+            null,
+            "gpt-6-astra",
+            null,
+            "gemini-4-carbon"
+          ],
+          "rows": [
+            {
+              "benchmark": "FrontierCode 2.0",
+              "values": [
+                49.1,
+                null,
+                32.4,
+                null,
+                45.5,
+                null,
+                42.8,
+                null,
+                41.1
+              ]
+            },
+            {
+              "benchmark": "FrontierSWE v2",
+              "values": [
+                69.9,
+                null,
+                56.3,
+                null,
+                62.3,
+                null,
+                65.5,
+                null,
+                61.2
+              ]
+            },
+            {
+              "benchmark": "AutomationBench",
+              "values": [
+                51.4,
+                null,
+                31.4,
+                null,
+                42.5,
+                null,
+                41.4,
+                null,
+                53.9
+              ]
+            },
+            {
+              "benchmark": "Terminal-Bench-Science 0.1",
+              "values": [
+                74.6,
+                75.3,
+                52.6,
+                null,
+                58.7,
+                null,
+                68.1,
+                null,
+                64.8
+              ]
+            },
+            {
+              "benchmark": "WANDR (relaxed score)",
+              "values": [
+                82.1,
+                null,
+                68.7,
+                null,
+                72.3,
+                null,
+                null,
+                null,
+                null
+              ]
+            },
+            {
+              "benchmark": "OSWorld 2.1 (offline set, partial)",
+              "values": [
+                89.3,
+                null,
+                83.5,
+                null,
+                87.2,
+                null,
+                79.5,
+                null,
+                81.5
+              ]
+            },
+            {
+              "benchmark": "RoboDojo Sim",
+              "values": [
+                64.9,
+                null,
+                27.6,
+                null,
+                39.4,
+                null,
+                29.8,
+                null,
+                null
+              ]
+            },
+            {
+              "benchmark": "Remote Labor Index (RLI)",
+              "values": [
+                41.3,
+                null,
+                17.9,
+                null,
+                21.3,
+                null,
+                20.8,
+                null,
+                null
+              ]
+            },
+            {
+              "benchmark": "Humanity's Last Exam (with tools)",
+              "values": [
+                74.2,
+                null,
+                65.6,
+                null,
+                67.7,
+                null,
+                57.2,
+                null,
+                null
+              ]
+            },
+            {
+              "benchmark": "Chartography (no tools)",
+              "values": [
+                73.4,
+                null,
+                44.8,
+                null,
+                64.4,
+                null,
+                71.0,
+                null,
+                72.5
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "gemini-4-carbon": {
+      "release_date": "2026-11-10",
+      "tables": [
+        {
+          "source": "https://deepmind.google/models/model-cards/gemini-4-carbon/",
+          "columns": [
+            "gemini-4-carbon",
+            "gemini-4-argon",
+            "gpt-6-astra",
+            "claude-opus-5-5",
+            "claude-fable-5.1"
+          ],
+          "rows": [
+            {
+              "benchmark": "Vals Index v2.2",
+              "values": [
+                70.4,
+                69.2,
+                65.0,
+                70.2,
+                null
+              ]
+            },
+            {
+              "benchmark": "SWE-sweep",
+              "values": [
+                9.6,
+                4.3,
+                9.5,
+                3.6,
+                2.9
+              ]
+            },
+            {
+              "benchmark": "FrontierSWE 2",
+              "values": [
+                61.2,
+                55.0,
+                65.5,
+                62.3,
+                56.3
+              ]
+            },
+            {
+              "benchmark": "Agents' Last Exam v1.1",
+              "values": [
+                77.4,
+                69.0,
+                73.1,
+                71.6,
+                null
+              ]
+            },
+            {
+              "benchmark": "OSWorld-2.1",
+              "values": [
+                81.5,
+                74.7,
+                80.9,
+                87.2,
+                76.8
+              ]
+            },
+            {
+              "benchmark": "AutomationBench",
+              "values": [
+                53.9,
+                51.3,
+                41.4,
+                42.5,
+                31.4
+              ]
+            },
+            {
+              "benchmark": "Chartography",
+              "values": [
+                72.5,
+                71.6,
+                71.0,
+                66.3,
+                46.2
+              ]
+            },
+            {
+              "benchmark": "Blueprint-Bench 2",
+              "values": [
+                58.6,
+                54.4,
+                49.7,
+                51.2,
+                41.9
+              ]
+            },
+            {
+              "benchmark": "GraphWalks",
+              "values": [
+                96.2,
+                84.2,
+                71.8,
+                66.8,
+                65.0
+              ]
+            },
+            {
+              "benchmark": "RiemannBench",
+              "values": [
+                80.0,
+                76.0,
+                72.0,
+                69.6,
+                65.6
+              ]
+            },
+            {
+              "benchmark": "ExploitGym",
+              "values": [
+                54.8,
+                42.0,
+                42.4,
+                34.5,
+                null
+              ]
+            },
+            {
+              "benchmark": "SEC-bench Pro",
+              "values": [
+                88.2,
+                83.4,
+                85.4,
+                null,
+                null
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "gemini-4-hydrogen": {
+      "release_date": "2026-11-12",
+      "tables": [
+        {
+          "source": "https://deepmind.google/models/model-cards/gemini-4-hydrogen/",
+          "columns": [
+            "gemini-4-hydrogen",
+            "claude-sonnet-5-5",
+            "gpt-6.1-terra"
+          ],
+          "rows": [
+            {
+              "benchmark": "SWE-sweep",
+              "values": [
+                13.5,
+                3.1,
+                5.8
+              ]
+            },
+            {
+              "benchmark": "Terminal-Bench 4.1",
+              "values": [
+                57.0,
+                63.9,
+                null
+              ]
+            },
+            {
+              "benchmark": "Agents' Last Exam v1.1",
+              "values": [
+                71.6,
+                60.4,
+                69.8
+              ]
+            },
+            {
+              "benchmark": "OSWorld-2.1",
+              "values": [
+                77.6,
+                83.9,
+                74.2
+              ]
+            },
+            {
+              "benchmark": "Chartography",
+              "values": [
+                66.6,
+                61.6,
+                63.2
+              ]
+            },
+            {
+              "benchmark": "Terminal-Bench-Science 0.1",
+              "values": [
+                51.4,
+                59.9,
+                58.3
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "gpt-6.1-terra": {
+      "release_date": "2026-10-26",
+      "tables": [
+        {
+          "source": "https://deploymentsafety.openai.com/gpt-6-1-terra",
+          "columns": [
+            null,
+            "gpt-5.6-sol",
+            "gpt-5.6-terra",
+            "gpt-5.6-luna",
+            "gpt-6-astra",
+            "gpt-6-sol",
+            "gpt-6-luna",
+            "gpt-6.1-sol",
+            "gpt-6.1-terra"
+          ],
+          "rows": [
+            {
+              "benchmark": "HealthBench Professional length-adjusted",
+              "values": [
+                51.8,
+                60.5,
+                57.7,
+                55.7,
+                64.7,
+                60.8,
+                60.8,
+                64.2,
+                62.7
+              ]
+            },
+            {
+              "benchmark": "HealthBench length-adjusted",
+              "values": [
+                56.5,
+                57.0,
+                57.0,
+                55.8,
+                58.3,
+                53.2,
+                54.5,
+                58.5,
+                55.1
+              ]
+            },
+            {
+              "benchmark": "HealthBench Hard length-adjusted",
+              "values": [
+                31.5,
+                33.1,
+                32.7,
+                32.0,
+                36.6,
+                30.1,
+                31.4,
+                36.2,
+                31.4
+              ]
+            },
+            {
+              "benchmark": "HealthBench Consensus length-adjusted",
+              "values": [
+                95.6,
+                95.5,
+                95.1,
+                95.1,
+                95.5,
+                96.2,
+                95.9,
+                96.0,
+                95.1
+              ]
+            }
+          ]
+        },
+        {
+          "source": "https://deploymentsafety.openai.com/gpt-6-1-terra",
+          "columns": [
+            "gpt-5.6-luna",
+            "gpt-5.6-sol",
+            "gpt-5.6-terra",
+            "gpt-6-luna",
+            "gpt-6-sol",
+            "gpt-6-astra",
+            "gpt-6.1-sol",
+            "gpt-6.1-terra"
+          ],
+          "rows": [
+            {
+              "benchmark": "MentalHealthBench (overall)",
+              "values": [
+                44.4,
+                46.7,
+                46.2,
+                51.7,
+                54.2,
+                58.7,
+                57.9,
+                55.5
+              ]
+            },
+            {
+              "benchmark": "MentalHealthBench (non-acute)",
+              "values": [
+                40.4,
+                42.5,
+                41.8,
+                49.3,
+                53.5,
+                58.5,
+                57.3,
+                56.5
+              ]
+            },
+            {
+              "benchmark": "MentalHealthBench (high acuity)",
+              "values": [
+                48.4,
+                51.8,
+                51.3,
+                54.7,
+                55.3,
+                59.8,
+                59.1,
+                56.5
+              ]
+            },
+            {
+              "benchmark": "MentalHealthBench (emergent)",
+              "values": [
+                49.4,
+                51.2,
+                51.1,
+                54.3,
+                54.9,
+                58.5,
+                58.0,
+                52.9
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

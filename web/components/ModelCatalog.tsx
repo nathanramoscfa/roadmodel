@@ -889,7 +889,7 @@ export function ModelCatalog({
                           </span>
                         ) : (
                           <HoverCard
-                            label={`${m.name}: AA Index ${m.aa_index_source === "inherited" ? `about ${m.aa_index}, ${m.aa_inherited_from}'s until Artificial Analysis measures it` : m.aa_index}${m.aa_index_effort ? ` at ${effortWord(m.aa_index_effort)}` : ""}${m.value_frontier ? ", on the cost/quality frontier" : ""}. Show where it stands across every cost tier`}
+                            label={`${m.name}: AA Index ${m.aa_index_source === "inherited" ? `about ${m.aa_index}, ${m.aa_inherited_from}'s until Artificial Analysis measures it` : m.aa_index_source === "estimated" ? `about ${m.aa_index} (±${m.aa_index_band}), roadmodel's estimate from its launch benchmarks until Artificial Analysis measures it` : m.aa_index}${m.aa_index_effort ? ` at ${effortWord(m.aa_index_effort)}` : ""}${m.value_frontier ? ", on the cost/quality frontier" : ""}. Show where it stands across every cost tier`}
                             card={
                               <IndexCard
                                 model={m}
@@ -912,7 +912,17 @@ export function ModelCatalog({
                             {m.aa_index_source === "inherited" && (
                               <span
                                 data-testid="aa-index-estimate"
+                                data-source="inherited"
                                 title={`Estimated: ${m.aa_inherited_from}'s AA Index, until Artificial Analysis measures ${m.name}`}
+                              >
+                                ≈
+                              </span>
+                            )}
+                            {m.aa_index_source === "estimated" && (
+                              <span
+                                data-testid="aa-index-estimate"
+                                data-source="estimated"
+                                title={`Estimated by roadmodel from ${m.name}'s launch benchmarks (±${m.aa_index_band}), until Artificial Analysis measures it`}
                               >
                                 ≈
                               </span>
@@ -966,6 +976,14 @@ export function ModelCatalog({
                             cardTestId="score-card"
                             className="tabular-nums"
                           >
+                            {m.aa_index_source === "estimated" && (
+                              <span
+                                data-testid="score-estimate"
+                                title={`From ${m.name}'s estimated AA Index, until Artificial Analysis measures it`}
+                              >
+                                ≈
+                              </span>
+                            )}
                             {formatScore(m.value_score)}
                           </HoverCard>
                         )}

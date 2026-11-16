@@ -54,6 +54,11 @@ const EFFORT_TOKENS_DEST = path.join(DEST_DIR, "effort-tokens.json");
 // derive_ratings.py). Required: the /recommend matrix rates a pick at its effort.
 const EFFORT_RATINGS_SOURCE = path.join(repoRoot, "docs", "effort-ratings.json");
 const EFFORT_RATINGS_DEST = path.join(DEST_DIR, "effort-ratings.json");
+// roadmodel's estimate of each unmeasured model's AA Index, from its launch
+// table (update/build_index_estimates.py). Optional: without it, an unmeasured
+// model shows its earlier version's index, or no index.
+const ESTIMATES_SOURCE = path.join(repoRoot, "docs", "index-estimates.json");
+const ESTIMATES_DEST = path.join(DEST_DIR, "index-estimates.json");
 
 async function main() {
   let raw;
@@ -227,6 +232,21 @@ async function main() {
   }
   await writeFile(EFFORT_RATINGS_DEST, ratingsRaw, "utf8");
   console.log(`[sync-catalog] copied the per-effort ratings → ${path.relative(webRoot, EFFORT_RATINGS_DEST)}`);
+
+  let estimatesRaw = '{"models": {}}\n';
+  try {
+    estimatesRaw = await readFile(ESTIMATES_SOURCE, "utf8");
+    const record = JSON.parse(estimatesRaw);
+    if (!record || typeof record.models !== "object" || record.models === null) {
+      throw new Error("no models object");
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`[sync-catalog] no usable ${path.relative(repoRoot, ESTIMATES_SOURCE)} (${msg}); no index estimates`);
+    estimatesRaw = '{"models": {}}\n';
+  }
+  await writeFile(ESTIMATES_DEST, estimatesRaw, "utf8");
+  console.log(`[sync-catalog] copied the index estimates → ${path.relative(webRoot, ESTIMATES_DEST)}`);
 }
 
 await main();

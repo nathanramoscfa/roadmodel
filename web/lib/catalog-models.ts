@@ -8,6 +8,7 @@ import catalog from "@/data/catalog.json";
 import benchmarks from "@/data/benchmarks.json";
 import effortTokens from "@/data/effort-tokens.json";
 import effortRatings from "@/data/effort-ratings.json";
+import indexEstimates from "@/data/index-estimates.json";
 
 import {
   CATEGORY_ORDER,
@@ -93,6 +94,23 @@ const BENCH = (benchmarks as { models?: Record<string, RawBench> }).models ?? {}
 
 const INDEX_KEY = "artificial_analysis_intelligence_index";
 
+// roadmodel's day-one estimate of an unmeasured model's AA Index, from its
+// launch table (docs/index-estimates.json, src/roadmodel/estimate.py).
+interface RawEstimate {
+  index: number;
+  band: number;
+  anchors: string[];
+}
+const ESTIMATES = (indexEstimates as { models?: Record<string, RawEstimate> }).models ?? {};
+
+// The estimate for a model AA has not measured, rounded to a whole point (its
+// band is about four), or null when its launch table is too thin.
+export function estimateFor(id: string): { index: number; band: number; anchors: string[] } | null {
+  const e = ESTIMATES[id];
+  if (!e || typeof e.index !== "number" || !Number.isFinite(e.index)) return null;
+  return { index: Math.round(e.index), band: e.band, anchors: e.anchors ?? [] };
+}
+
 // Each effort's output-token multiplier (docs/effort-tokens.json,
 // update/measure_effort_tokens.py): measured, else derived from the model's
 // measured efforts; undefined when it has neither.
@@ -177,10 +195,12 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
     const bench = benchRowFor(m.id);
     const measured = bench?.values.artificial_analysis_intelligence_index ?? null;
     const cited = measured === null ? extractAaIndex(prose) : null;
-    // Only the index carries over, shown ≈: the grid columns, the effort rows
-    // and the Score stay AA's measurements of this model.
+    // Unmeasured: roadmodel's estimate from the launch table, else the earlier
+    // version's index. Either is shown ≈; the grid columns and the effort rows
+    // stay AA's measurements of this model.
     const source = measured === null && cited === null ? inheritedSource(m.id) : null;
-    const inheritedIndex = source ? BENCH[source].evaluations[INDEX_KEY] : null;
+    const estimate = measured === null && cited === null ? estimateFor(m.id) : null;
+    const inheritedIndex = source && !estimate ? BENCH[source].evaluations[INDEX_KEY] : null;
     const inherited = typeof inheritedIndex === "number" && Number.isFinite(inheritedIndex) ? inheritedIndex : null;
     return {
       id: m.id,
@@ -196,10 +216,20 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
       headline_benchmarks: prose,
       pricing_notes: m.pricing_notes ?? "",
       best_for: m.best_for ?? "",
-      aa_index: measured ?? cited ?? inherited,
+      aa_index: measured ?? cited ?? estimate?.index ?? inherited,
       aa_index_source:
-        measured !== null ? "snapshot" : cited !== null ? "cited" : inherited !== null ? "inherited" : null,
-      aa_inherited_from: inherited !== null && source ? nameOf(source) : null,
+        measured !== null
+          ? "snapshot"
+          : cited !== null
+            ? "cited"
+            : estimate
+              ? "estimated"
+              : inherited !== null
+                ? "inherited"
+                : null,
+      aa_inherited_from: (inherited !== null || estimate) && source ? nameOf(source) : null,
+      aa_index_band: estimate?.band ?? null,
+      aa_estimate_anchors: estimate ? estimate.anchors.map(nameOf) : null,
       aa_index_by_effort: indexByEffort(m.id),
       aa_index_effort: measured !== null ? (BENCH[m.id]?.aa_effort ?? null) : null,
       token_multiplier_by_effort: multiplierByEffort(m.id),
@@ -234,14 +264,16 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
 }
 
 // The market fit behind the Score column, over the rows given (the page passes
-// the same rows it renders so the header stats match the cells). An inherited
-// index is a copy of another model's point, so the fit leaves it out.
+// the same rows it renders so the header stats match the cells). The fit is
+// drawn through AA's own figures: an inherited index copies another model's
+// point and an estimate is not a measurement, so it leaves both out. An
+// estimated model still gets a Score against that line.
 export function getScoreFit(
   rows: readonly (Pick<ModelRow, "input_price_per_1m" | "output_price_per_1m" | "aa_index" | "tier_cost"> &
     Partial<Pick<ModelRow, "aa_index_source">>)[],
 ): ScoreFit | null {
   return fitScoreModel(
-    rows.filter((r) => r.aa_index_source !== "inherited").map((r) => ({
+    rows.filter((r) => r.aa_index_source !== "inherited" && r.aa_index_source !== "estimated").map((r) => ({
       price: blendedPrice(r.input_price_per_1m, r.output_price_per_1m),
       index: r.aa_index,
       tier: r.tier_cost,
