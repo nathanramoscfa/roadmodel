@@ -204,8 +204,12 @@ frontier, in code (`scoring.ladder`):
    (`with_estimates`): its launch benchmarks placed against the measured
    models the vendor compares it with (`roadmodel.estimate`, written to
    `docs/index-estimates.json` by `update/build_index_estimates.py`), within
-   about 4 index points. The scorer ranks it `ESTIMATE_PENALTY` (2 points)
-   below the estimate, so it takes a pick only by clearing a measured model
+   about 4 index points. Where its own table names too few measured models,
+   later launch tables that list it as a competitor place it the same way
+   (`estimate.from_other_tables`, within about 5 points); the table's own
+   model never anchors it. The scorer ranks it half the estimate's band
+   below the estimate (`estimate_penalty`: 2 points, or 2.5 from other
+   launches' tables), so it takes a pick only by clearing a measured model
    by more than that, and prints the estimate itself, ≈. A later version
    keeps its previous version's other figures with its index moved to the
    estimate at every effort; a new series gets the index alone, at the top

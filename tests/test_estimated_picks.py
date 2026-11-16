@@ -135,3 +135,18 @@ def test_the_estimates_change_no_statistic_over_the_measured_models() -> None:
         assert scoring.estimated_aa_index(both, model_id, "low") == (
             scoring.estimated_aa_index(bench, model_id, "low")
         )
+
+
+def test_a_wider_band_ranks_the_estimate_further_below_it() -> None:
+    # From later launches' tables (band 5): ranked 2.5 below, printed as is.
+    assert scoring.estimate_penalty(5.0) == 2.5 and scoring.estimate_penalty(4.0) == P
+    assert scoring.estimate_penalty(None) == P
+    out = _rows({"gemini-9-nova": {"index": 60.0, "band": 5.0}})
+    assert out["gemini-9-nova"]["evaluations"] == {INDEX: 57.5}
+    assert out["gemini-9-nova"]["estimated"]["penalty"] == 2.5
+    assert scoring.ladder_aa(out, "gemini-9-nova", "max") == (60.0, True)
+    lad = scoring.ladder(PLANNING, CONTEXT, catalog=WITH_NOVA, benchmarks=out)
+    assert lad is not None
+    nova = next(p for p in lad.frontier if p.candidate.model_id == "gemini-9-nova")
+    assert nova.candidate.aa_estimate_penalty == 2.5 and nova.aa_index == 57.5
+    assert scoring.aa_text(nova) == "≈60"

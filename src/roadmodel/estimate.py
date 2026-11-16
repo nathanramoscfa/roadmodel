@@ -19,10 +19,20 @@ model on the index's scale. Two methods, averaged when both apply:
 Calibrated by leave-one-out over the launch tables of the 27 models Artificial
 Analysis has measured whose tables carry two or more anchors (2026-11): a
 typical miss of 2.6 index points, a root-mean-square miss of 3.8, and 23 of the
-27 within 5 points. ``BAND`` is that error, rounded. The inputs live
-in update/launch-tables.json; update/build_index_estimates.py writes the
-estimates to docs/index-estimates.json, which the /models page shows and the
-scorer ranks on (scoring.with_estimates, less ESTIMATE_PENALTY).
+27 within 5 points. ``BAND`` is that error, rounded.
+
+When a model's own table names too few measured models to place it (Gemini 4
+Hydrogen's sets it beside one), later launch tables that list it as a
+competitor can (``from_other_tables``): their other measured columns anchor it
+the same way. Leave-one-out over the 17 measured models later tables list
+(2026-11): a typical miss of 3.9 points, root-mean-square 4.5; on the 8 whose
+own table could not place them, 4.3 and 5.1, 5 of the 8 within 5 points. So it
+stands in only where the model's own table cannot, with the wider
+``OTHER_BAND``.
+
+The inputs live in update/launch-tables.json; update/build_index_estimates.py
+writes the estimates to docs/index-estimates.json, which the /models page shows
+and the scorer ranks on (scoring.with_estimates, less half the estimate's band).
 """
 
 from __future__ import annotations
@@ -45,6 +55,14 @@ BAND: Final = 4.0
 # An estimate needs this many distinct anchors and benchmark rows.
 MIN_ANCHORS: Final = 2
 MIN_ROWS: Final = 3
+# The fallback from other models' launch tables (from_other_tables): their mean
+# overshoot of the later measurement, and their leave-one-out error (RMSE 5.1 on
+# the models their own table could not place, rounded down to the half point).
+# A competitor's table flatters its own model, not the one it lists, so the
+# overshoot is smaller than OPTIMISM.
+OTHER_OPTIMISM: Final = 1.0
+OTHER_BAND: Final = 5.0
+OTHER_METHOD: Final = "other-tables"
 # The index components a launch table can report, by their benchmarks.json key.
 COMPONENTS: Final = ("hle", "terminalbench_v4_0")
 # Ridge strength for the component fit, on standardized inputs.
@@ -60,15 +78,21 @@ class Estimate:
     method: str
     anchors: tuple[str, ...]
     rows: int
+    # The models whose launch tables placed it, when not its own
+    # (from_other_tables), earliest first.
+    via: tuple[str, ...] = ()
 
     def as_json(self) -> dict[str, Any]:
-        return {
+        out: dict[str, Any] = {
             "index": self.index,
             "band": self.band,
             "method": self.method,
             "anchors": list(self.anchors),
             "rows": self.rows,
         }
+        if self.via:
+            out["via"] = list(self.via)
+        return out
 
 
 def measured_index(bench: Mapping[str, Any], model_id: str) -> float | None:
@@ -270,13 +294,109 @@ def estimate(model_id: str, entry: Mapping[str, Any], bench: Mapping[str, Any]) 
     )
 
 
+def other_rows(
+    model_id: str, tables: Mapping[str, Any], bench: Mapping[str, Any]
+) -> list[tuple[float, dict[str, float], str]]:
+    """Each usable row of another model's launch table that lists ``model_id``,
+    as (its score, {anchor: anchor's score}, the table's own model).
+
+    An anchor is a measured column released before the table's own model. That
+    model never anchors, nor one launched with it: its column is its vendor's
+    own figures, and anchoring on it widened the backtest's misses (RMSE 4.9
+    against 4.5). Where the table lists ``model_id`` at several settings, its
+    best stands for it, as Artificial Analysis runs a model at its top effort.
+    """
+    out: list[tuple[float, dict[str, float], str]] = []
+    seen: set[tuple[str, float]] = set()
+    owners = sorted(
+        (o for o in tables if o != model_id and isinstance(tables[o], Mapping)),
+        key=lambda o: (str(tables[o].get("release_date") or ""), o),
+    )
+    for owner in owners:
+        released = str(tables[owner].get("release_date") or "")
+        for table in tables[owner].get("tables") or []:
+            columns = list(table.get("columns") or [])
+            mine = [i for i, col in enumerate(columns) if col == model_id]
+            if not mine:
+                continue
+            usable = {
+                i: str(col)
+                for i, col in enumerate(columns)
+                if isinstance(col, str)
+                and col not in (model_id, owner)
+                and _measured(bench, col) is not None
+                and (date := _release(bench, col)) is not None
+                and date < released
+            }
+            for row in table.get("rows") or []:
+                values = list(row.get("values") or [])
+                if len(values) != len(columns):
+                    continue
+                if any((v := _number(x)) is not None and not 0 <= v <= 100 for x in values):
+                    continue
+                sign = 1.0 if row.get("higher_is_better", True) else -1.0
+                own = [sign * v for i in mine if (v := _number(values[i])) is not None]
+                if not own:
+                    continue
+                anchors: dict[str, float] = {}
+                for i, anchor in usable.items():
+                    if (v := _number(values[i])) is not None:
+                        anchors[anchor] = max(anchors.get(anchor, -math.inf), sign * v)
+                key = (re.sub(r"\W+", "", str(row.get("benchmark", "")).lower()), max(own))
+                if len(anchors) >= 2 and key not in seen:
+                    seen.add(key)
+                    out.append((max(own), anchors, owner))
+    return out
+
+
+def from_other_tables(
+    model_id: str, tables: Mapping[str, Any], bench: Mapping[str, Any]
+) -> Estimate | None:
+    """The estimate from other models' launch tables that list ``model_id``
+    (:func:`other_rows`), by the anchor method and its floors; None below them."""
+    rows = other_rows(model_id, tables, bench)
+    index = {
+        a: v for _, anchors, _ in rows for a in anchors if (v := _measured(bench, a)) is not None
+    }
+    placed = [
+        (e, owner)
+        for score, anchors, owner in rows
+        if (e := row_estimate(score, anchors, index)) is not None
+    ]
+    names = tuple(sorted({a for _, anchors, _ in rows for a in anchors}))
+    if len(placed) < MIN_ROWS or len(names) < MIN_ANCHORS:
+        return None
+    via: list[str] = []
+    for _, owner in placed:
+        if owner not in via:
+            via.append(owner)
+    return Estimate(
+        index=round(statistics.median(e for e, _ in placed) - OTHER_OPTIMISM, 1),
+        band=OTHER_BAND,
+        method=OTHER_METHOD,
+        anchors=names,
+        rows=len(placed),
+        via=tuple(via),
+    )
+
+
 def estimate_all(tables: Mapping[str, Any], bench: Mapping[str, Any]) -> dict[str, Estimate]:
-    """An estimate for every launch-table model Artificial Analysis has not measured."""
+    """An estimate for every model Artificial Analysis has not measured that a
+    launch table names: from its own table, else from the others that list it
+    (:func:`from_other_tables`)."""
+    named = set(tables)
+    for entry in tables.values():
+        for table in (entry.get("tables") or []) if isinstance(entry, Mapping) else []:
+            named |= {c for c in table.get("columns") or [] if isinstance(c, str)}
     out: dict[str, Estimate] = {}
-    for model_id in sorted(tables):
+    for model_id in sorted(named):
         if _measured(bench, model_id) is not None:
             continue
-        if (est := estimate(model_id, tables[model_id], bench)) is not None:
+        entry = tables.get(model_id)
+        est = estimate(model_id, entry, bench) if isinstance(entry, Mapping) else None
+        if est is None:
+            est = from_other_tables(model_id, tables, bench)
+        if est is not None:
             out[model_id] = est
     return out
 

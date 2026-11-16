@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Write docs/index-estimates.json: a day-one AA Index estimate for each catalog
-model Artificial Analysis has not measured, from its launch table.
+model Artificial Analysis has not measured, from its launch table (or, when
+that table is too thin, from later launch tables that list it).
 
 Inputs: update/launch-tables.json (each vendor's launch-day benchmark table,
 columns as model ids) and docs/benchmarks.json (the anchors' measured index).
 The method and its measured accuracy are in src/roadmodel/estimate.py. The
 /models page shows each estimate, marked ≈ with its band, until Artificial
-Analysis measures the model, and the scorer ranks the model on it, less
-scoring.ESTIMATE_PENALTY (scoring.with_estimates). The package bundles the
+Analysis measures the model, and the scorer ranks the model on it, less half
+its band (scoring.with_estimates). The package bundles the
 file, and the hosted service reads main's copy (service/app/live_data.py).
 
     python update/build_index_estimates.py          # write
@@ -40,12 +41,13 @@ def build(tables_raw: bytes, bench: dict[str, Any], catalog: dict[str, Any]) -> 
     vendor's launch table reports and the one the scorer places it at."""
     tables = json.loads(tables_raw)["models"]
     catalog_ids = {str(m["id"]) for m in catalog.get("models", []) if isinstance(m, dict)}
-    estimates = estimate.estimate_all({m: t for m, t in tables.items() if m in catalog_ids}, bench)
+    estimates = {m: e for m, e in estimate.estimate_all(tables, bench).items() if m in catalog_ids}
     return {
         "schema_version": 1,
         "about": (
             "roadmodel's estimate of each unmeasured catalog model's AA Intelligence Index, "
-            "from its launch table (src/roadmodel/estimate.py). Shown ≈ on /models until "
+            "from its launch table, or from later launch tables that list it when its own is "
+            "too thin (src/roadmodel/estimate.py). Shown ≈ on /models until "
             "Artificial Analysis measures the model. Regenerate with "
             "update/build_index_estimates.py."
         ),
@@ -78,7 +80,9 @@ def main(argv: list[str] | None = None) -> int:
     for mid, e in doc["models"].items():
         print(
             f"{mid}: ≈{e['index']} ±{e['band']} at {e['effort']} ({e['method']}; "
-            f"{len(e['anchors'])} anchors, {e['rows']} rows)"
+            f"{len(e['anchors'])} anchors, {e['rows']} rows"
+            + (f"; from {', '.join(e['via'])}'s tables" if e.get("via") else "")
+            + ")"
         )
     return 0
 
