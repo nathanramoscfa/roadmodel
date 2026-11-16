@@ -317,31 +317,44 @@
                 13.5,
                 3.1,
                 5.8
-              ]
+              ],
+              "higher_is_better": true
             },
             {
-              "benchmark": "Terminal-Bench 4.1",
+              "benchmark": "Terminal-Bench 4.1 (Cheating-adjusted)",
               "values": [
                 57.0,
                 63.9,
                 null
-              ]
+              ],
+              "higher_is_better": true
             },
             {
-              "benchmark": "Agents' Last Exam v1.1",
+              "benchmark": "Agents' Last Exam v1.1 (Score)",
               "values": [
                 71.6,
                 60.4,
                 69.8
-              ]
+              ],
+              "higher_is_better": true
             },
             {
-              "benchmark": "OSWorld-2.1",
+              "benchmark": "OSWorld-2.1 (Offline subset)",
               "values": [
                 77.6,
                 83.9,
                 74.2
-              ]
+              ],
+              "higher_is_better": true
+            },
+            {
+              "benchmark": "MKA (Climb WSR accuracy)",
+              "values": [
+                53.4,
+                null,
+                null
+              ],
+              "higher_is_better": true
             },
             {
               "benchmark": "Chartography",
@@ -349,7 +362,8 @@
                 66.6,
                 61.6,
                 63.2
-              ]
+              ],
+              "higher_is_better": true
             },
             {
               "benchmark": "Terminal-Bench-Science 0.1",
@@ -357,11 +371,15 @@
                 51.4,
                 59.9,
                 58.3
-              ]
+              ],
+              "higher_is_better": true
             }
           ]
         }
-      ]
+      ],
+      "checked_on": "2026-11-16",
+      "attempts": 1,
+      "spent_usd": 0.936
     },
     "gpt-6.1-terra": {
       "release_date": "2026-10-26",
@@ -506,6 +524,13 @@
           ]
         }
       ]
+    },
+    "codestral": {
+      "release_date": "2024-05-29",
+      "tables": [],
+      "checked_on": "2026-11-16",
+      "attempts": 1,
+      "spent_usd": 0.482
     }
   }
 }
