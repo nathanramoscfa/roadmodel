@@ -34,6 +34,7 @@ import {
 } from "../lib/benchmark-grid";
 import { modelProvider } from "../lib/catalog-fields";
 import { estimateFor, getModelRows, inheritedSource, pastLeaveDate } from "../lib/catalog-models";
+import { effortWord } from "../lib/pick-effort";
 import { isNewer } from "../lib/series";
 import { liveCatalog } from "./fixtures/live-catalog";
 
@@ -1583,7 +1584,15 @@ test("a model AA has not measured shows roadmodel's estimate, marked ≈, with a
   const e = estimateFor(est!.id)!;
   await page.goto("/models");
   const row = page.locator(`[data-testid="model-row"][data-model-id="${est!.id}"]`);
-  await expect(row.getByTestId("aa-index")).toHaveText(`≈${e.index}`);
+  await expect(row.getByTestId("aa-index")).toHaveText(
+    `≈${e.index}${e.effort ? effortWord(e.effort) : ""}`,
+  );
+  if (e.effort) {
+    await expect(row.getByTestId("aa-index-effort")).toHaveAttribute(
+      "title",
+      `Estimated at ${effortWord(e.effort)} effort, the top setting ${est!.name} offers and the one its launch benchmarks report`,
+    );
+  }
   const mark = row.getByTestId("aa-index-estimate");
   await expect(mark).toHaveAttribute("data-source", "estimated");
   await expect(mark).toHaveAttribute(

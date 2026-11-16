@@ -66,7 +66,9 @@ export interface ModelRow {
   // The measured models an estimate is placed against, by display name.
   aa_estimate_anchors?: string[] | null;
   // The effort AA ran the headline figure at: the model's top measured effort
-  // ("max", "xhigh", …), or null when AA names none or the figure is cited.
+  // ("max", "xhigh", …); for an estimate, the top effort its dials offer, the
+  // setting its launch table reports; null when AA names none or the figure
+  // is cited or copied.
   aa_index_effort?: string | null;
   // The AA Intelligence Index at each effort AA measured the model at (its
   // headline row's level included), keyed by level ("low" … "max"). A pick
