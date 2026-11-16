@@ -51,12 +51,20 @@ export interface ModelRow {
   // else from the catalog prose (the cron's citation) as a fallback.
   aa_index: number | null;
   // Where aa_index came from: the structured Artificial Analysis snapshot, the
-  // figure the catalog cites for a model not yet mapped into it, or, for a
-  // later version AA has not measured, its newest measured earlier version's
-  // index (an estimate, shown ≈; lib/catalog-models.ts inheritedSource).
-  aa_index_source: "snapshot" | "cited" | "inherited" | null;
-  // The earlier version an inherited index is copied from, by display name.
+  // figure the catalog cites for a model not yet mapped into it, roadmodel's
+  // estimate from the model's launch table (docs/index-estimates.json, shown ≈
+  // with its band), or, for a later version AA has not measured and no
+  // estimate covers, its newest measured earlier version's index (shown ≈;
+  // lib/catalog-models.ts inheritedSource).
+  aa_index_source: "snapshot" | "cited" | "estimated" | "inherited" | null;
+  // The earlier version an unmeasured model stands on in the recommender
+  // (src/roadmodel/scoring.py inherit_unmeasured), by display name: the
+  // source of an inherited index, and named beside an estimate too.
   aa_inherited_from?: string | null;
+  // An estimated index's error band, in index points (± this).
+  aa_index_band?: number | null;
+  // The measured models an estimate is placed against, by display name.
+  aa_estimate_anchors?: string[] | null;
   // The effort AA ran the headline figure at: the model's top measured effort
   // ("max", "xhigh", …), or null when AA names none or the figure is cited.
   aa_index_effort?: string | null;
@@ -232,7 +240,7 @@ export const FIELD_DEFS: Record<FieldKey, FieldDef> = {
     label: "AA Index",
     fullName: "Artificial Analysis Intelligence Index",
     definition:
-      "The one published composite number: Artificial Analysis's index over its evaluation suite, independently measured on a 0–100 scale. The closest thing to a single numeric rating — use it to separate models that share a letter. '—' means AA has not measured the model. '≈' marks a later version AA has not measured yet, shown at its newest measured earlier version's index until AA publishes its own; it has no Score. Index versions are not comparable with each other; the snapshot this page carries is named below. A green ring beside the figure marks the cost/quality frontier: a model that scores higher than every other model at its price or less (blended price). Hover a figure for the top score at its price.",
+      "The one published composite number: Artificial Analysis's index over its evaluation suite, independently measured on a 0–100 scale. The closest thing to a single numeric rating — use it to separate models that share a letter. '—' means AA has not measured the model. '≈' marks a model AA has not measured yet: roadmodel's estimate, placing the model's launch benchmarks beside those of models AA has measured (accurate to about 4 points, with a Score from it), or, where the launch table is too thin, its newest measured earlier version's index (no Score). AA's own figure replaces either once published. Index versions are not comparable with each other; the snapshot this page carries is named below. A green ring beside the figure marks the cost/quality frontier: a model that scores higher than every other model at its price or less (blended price). Hover a figure for the top score at its price.",
     url: "https://artificialanalysis.ai/",
   },
   value: {

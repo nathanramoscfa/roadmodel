@@ -199,7 +199,12 @@ frontier, in code (`scoring.ladder`):
    series would leave the frontier, since `rank` drops the older version
    wherever the newer one runs. A new series has no previous version and
    waits for AA. The copies are figures for their own model only: every
-   scale and fit over the measured models leaves them out.
+   scale and fit over the measured models leaves them out. The /models page
+   shows a day-one estimate instead where the model's launch table supports
+   one (`roadmodel.estimate`, written to `docs/index-estimates.json` by
+   `update/build_index_estimates.py`): its launch benchmarks placed against
+   the measured models the vendor compares it with, within about 4 index
+   points. The scorer does not read the estimates.
 3. **Efforts as points.** AA measures a reasoning model at several efforts,
    one row each, and its figures move with the effort: GPT-6 Luna reads
    21.5 on the AA Index at low and 38.1 at max. `docs/benchmarks.json` keeps

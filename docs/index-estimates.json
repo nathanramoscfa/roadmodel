@@ -1,0 +1,45 @@
+{
+  "about": "roadmodel's estimate of each unmeasured catalog model's AA Intelligence Index, from its launch table (src/roadmodel/estimate.py). Shown \u2248 on /models until Artificial Analysis measures the model. Regenerate with update/build_index_estimates.py.",
+  "launch_tables_sha256": "ad662c998e7fffd2590d057e91af388cfa7d2aed47eb6b1b93c534067daed4cd",
+  "models": {
+    "claude-fable-5.2": {
+      "anchors": [
+        "claude-fable-5.1",
+        "claude-opus-5-5",
+        "gpt-6-astra"
+      ],
+      "band": 4.0,
+      "index": 56.8,
+      "method": "anchors",
+      "rows": 10
+    },
+    "gemini-4-carbon": {
+      "anchors": [
+        "claude-fable-5.1",
+        "claude-opus-5-5",
+        "gemini-4-argon",
+        "gpt-6-astra"
+      ],
+      "band": 4.0,
+      "index": 54.3,
+      "method": "anchors",
+      "rows": 12
+    },
+    "gpt-6.1-terra": {
+      "anchors": [
+        "gpt-5.6-luna",
+        "gpt-5.6-sol",
+        "gpt-5.6-terra",
+        "gpt-6-astra",
+        "gpt-6-luna",
+        "gpt-6-sol",
+        "gpt-6.1-sol"
+      ],
+      "band": 4.0,
+      "index": 44.3,
+      "method": "anchors",
+      "rows": 8
+    }
+  },
+  "schema_version": 1
+}

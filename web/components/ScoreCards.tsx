@@ -53,9 +53,29 @@ const RULE = "border-brand-slate-200 dark:border-brand-slate-600";
 const usd = (v: number) => `$${v.toFixed(2)}`;
 
 // One decimal, typographic minus, no sign for positives: "57.6", "−5.2".
+// "≈" before an index AA has not measured: an earlier version's copy or
+// roadmodel's estimate from the launch table.
+function approx(m: Pick<ModelRow, "aa_index_source">): string {
+  return m.aa_index_source === "inherited" || m.aa_index_source === "estimated" ? "≈" : "";
+}
+
+// "A", "A and B", "A, B and C".
+function listNames(names: readonly string[]): string {
+  if (names.length <= 1) return names.join("");
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
 function num(v: number): string {
   const r = Math.round(v * 10) / 10;
   return (r < 0 ? "−" : "") + Math.abs(r).toFixed(1);
+}
+
+// A model's index as the cards print it: AA's to one decimal; an estimate, good
+// to about four points, as the whole number the table shows; either marked ≈
+// when AA has not measured it.
+function indexText(m: Pick<ModelRow, "aa_index" | "aa_index_source">): string {
+  if (m.aa_index === null) return "—";
+  return `${approx(m)}${m.aa_index_source === "estimated" ? String(Math.round(m.aa_index)) : num(m.aa_index)}`;
 }
 
 // The table's colour rule for a Score: clearly above the line reads green,
@@ -166,7 +186,7 @@ export function FrontierStatus({
       <Row
         className="mt-1"
         label="AA Index"
-        value={`${leader.aa_index_source === "inherited" ? "≈" : ""}${num(leader.aa_index)}${leader.aa_index_source === "cited" ? " (cited)" : ""} vs ${m.aa_index_source === "inherited" ? "≈" : ""}${num(m.aa_index)}`}
+        value={`${indexText(leader)}${leader.aa_index_source === "cited" ? " (cited)" : ""} vs ${indexText(m)}`}
         valueClass={STRONG}
       />
       <Row label="Blended price" value={`${usd(leaderPrice)} vs ${usd(price)}`} valueClass={STRONG} />
@@ -183,7 +203,7 @@ export function FrontierPointCard({ model: m, leader }: { model: ModelRow; leade
     <div className="w-[19rem] max-w-full" data-testid="frontier-point-card">
       <CardHeader name={m.name} tier={m.tier_cost} />
       <div className="mt-2 space-y-0.5">
-        <Row label="AA Index" value={`${m.aa_index_source === "inherited" ? "≈" : ""}${num(m.aa_index)}`} valueClass={"font-semibold " + STRONG} />
+        <Row label="AA Index" value={`${indexText(m)}`} valueClass={"font-semibold " + STRONG} />
         <Row label="Blended price" value={`${usd(price)} per 1M tokens`} valueClass={STRONG} />
         <p className={"text-right text-xs tabular-nums " + MUTED}>
           (3 × {formatUsd(m.input_price_per_1m)} input + {formatUsd(m.output_price_per_1m)} output) ÷ 4
@@ -207,7 +227,7 @@ export function FrontierStepCard({ atPrice, model: m }: { atPrice: number; model
       <div className="mt-2 rounded-md border border-emerald-500/40 bg-emerald-50 px-3 py-2 dark:bg-emerald-500/10">
         <CardHeader name={m.name} tier={m.tier_cost} />
         <div className="mt-1.5 space-y-0.5 text-xs">
-          <Row label="AA Index" value={`${m.aa_index_source === "inherited" ? "≈" : ""}${num(m.aa_index)}`} valueClass={"font-semibold " + STRONG} />
+          <Row label="AA Index" value={`${indexText(m)}`} valueClass={"font-semibold " + STRONG} />
           <Row label="Blended price" value={`${usd(price)} per 1M tokens`} valueClass={STRONG} />
         </div>
       </div>
@@ -234,7 +254,7 @@ export function SupersededCard({ model: m, successor }: { model: ModelRow; succe
         maker, costs the same or less, scores higher on the AA Index, rates at least as high in
         every category, and runs on every platform that offers {m.name}.
       </p>
-      {successor && successor.aa_index !== null && successor.aa_index_source !== "inherited" && m.aa_index !== null && successorPrice !== null && (
+      {successor && successor.aa_index !== null && successor.aa_index_source !== "inherited" && successor.aa_index_source !== "estimated" && m.aa_index !== null && successorPrice !== null && (
         <div className="mt-2 space-y-0.5 text-xs">
           <Row label="AA Index" value={`${num(successor.aa_index)} vs ${num(m.aa_index)}`} valueClass={STRONG} />
           <Row label="Blended price" value={`${usd(successorPrice)} vs ${usd(price)}`} valueClass={STRONG} />
@@ -269,7 +289,7 @@ export function IndexCard({
       <div className="mt-2">
         <Row
           label={<span className={"font-semibold " + STRONG}>AA Intelligence Index</span>}
-          value={`${m.aa_index_source === "inherited" ? "≈" : ""}${num(m.aa_index)}${m.aa_index_effort ? ` at ${effortWord(m.aa_index_effort)}` : ""}`}
+          value={`${indexText(m)}${m.aa_index_effort ? ` at ${effortWord(m.aa_index_effort)}` : ""}`}
           valueClass={"text-sm font-bold " + STRONG}
         />
       </div>
@@ -279,7 +299,9 @@ export function IndexCard({
           ? "As cited in the catalog; this model is not in the Artificial Analysis data snapshot yet."
           : m.aa_index_source === "inherited"
             ? `An estimate: ${m.aa_inherited_from}'s index from the snapshot of ${snapshot}, which ${m.name} stands on until Artificial Analysis measures it. The recommender ranks it the same way.`
-            : `From the snapshot of ${snapshot}.`}
+            : m.aa_index_source === "estimated"
+              ? `roadmodel's estimate, within about ${m.aa_index_band} points: ${m.name}'s launch benchmarks set beside ${listNames(m.aa_estimate_anchors ?? [])}, which Artificial Analysis has measured, until it measures ${m.name} too. ${m.aa_inherited_from ? `The recommender ranks it on ${m.aa_inherited_from}'s index for now.` : "The recommender ranks it once Artificial Analysis measures it."}`
+              : `From the snapshot of ${snapshot}.`}
       </p>
       {m.bench && (
         <p className={"mt-1 text-xs leading-[1.125rem] " + MUTED} data-testid="index-measured-as">
@@ -423,7 +445,11 @@ export function ScoreBreakdownCard({
         <p className={"mb-1.5 text-[11px] font-semibold uppercase tracking-wide " + MUTED}>
           How the score adds up
         </p>
-        <Row label="AA Intelligence Index" value={num(s.index)} valueClass={STRONG} />
+        <Row
+          label="AA Intelligence Index"
+          value={m.aa_index_source === "estimated" ? indexText(m) : num(s.index)}
+          valueClass={STRONG}
+        />
         <Row
           label={`${tier}-cost average (${b.tierN} models)`}
           value={`− ${num(s.tierMean)}`}
@@ -483,7 +509,9 @@ export function ScoreBreakdownCard({
             ? "AA Index as cited in the catalog; this model is not in the Artificial Analysis data snapshot yet."
             : m.aa_index_source === "inherited"
               ? `AA Index estimated from ${m.aa_inherited_from}'s in the Artificial Analysis snapshot of ${snapshot}.`
-              : `AA Index from the Artificial Analysis snapshot of ${snapshot}.`}
+              : m.aa_index_source === "estimated"
+                ? `AA Index estimated by roadmodel from ${m.name}'s launch benchmarks (±${m.aa_index_band}), so this Score is an estimate too.`
+                : `AA Index from the Artificial Analysis snapshot of ${snapshot}.`}
         </p>
       </div>
 
