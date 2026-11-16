@@ -26,7 +26,7 @@ from typing import Any
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
 
-from roadmodel import estimate  # noqa: E402
+from roadmodel import estimate, scoring  # noqa: E402
 
 TABLES = REPO / "update" / "launch-tables.json"
 BENCHMARKS = REPO / "docs" / "benchmarks.json"
@@ -34,8 +34,12 @@ CATALOG = REPO / "docs" / "catalog.json"
 OUT = REPO / "docs" / "index-estimates.json"
 
 
-def build(tables_raw: bytes, bench: dict[str, Any], catalog_ids: set[str]) -> dict[str, Any]:
+def build(tables_raw: bytes, bench: dict[str, Any], catalog: dict[str, Any]) -> dict[str, Any]:
+    """The estimates document. Each estimate names its ``effort``: the top
+    level the model's effort dials offer (scoring.top_level), the setting a
+    vendor's launch table reports and the one the scorer places it at."""
     tables = json.loads(tables_raw)["models"]
+    catalog_ids = {str(m["id"]) for m in catalog.get("models", []) if isinstance(m, dict)}
     estimates = estimate.estimate_all({m: t for m, t in tables.items() if m in catalog_ids}, bench)
     return {
         "schema_version": 1,
@@ -46,7 +50,10 @@ def build(tables_raw: bytes, bench: dict[str, Any], catalog_ids: set[str]) -> di
             "update/build_index_estimates.py."
         ),
         "launch_tables_sha256": hashlib.sha256(tables_raw).hexdigest(),
-        "models": {m: e.as_json() for m, e in estimates.items()},
+        "models": {
+            m: {**e.as_json(), "effort": scoring.top_level(m, catalog)}
+            for m, e in estimates.items()
+        },
     }
 
 
@@ -59,8 +66,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--check", action="store_true", help="exit 1 if the file is stale")
     args = parser.parse_args(argv)
     bench = json.loads(BENCHMARKS.read_text())["models"]
-    catalog_ids = {str(m["id"]) for m in json.loads(CATALOG.read_text())["models"]}
-    text = render(build(TABLES.read_bytes(), bench, catalog_ids))
+    catalog = json.loads(CATALOG.read_text())
+    text = render(build(TABLES.read_bytes(), bench, catalog))
     if args.check:
         if not OUT.exists() or OUT.read_text() != text:
             print(f"{OUT.relative_to(REPO)} is stale: run python update/build_index_estimates.py")
@@ -70,7 +77,8 @@ def main(argv: list[str] | None = None) -> int:
     doc = json.loads(text)
     for mid, e in doc["models"].items():
         print(
-            f"{mid}: ≈{e['index']} ±{e['band']} ({e['method']}; {len(e['anchors'])} anchors, {e['rows']} rows)"
+            f"{mid}: ≈{e['index']} ±{e['band']} at {e['effort']} ({e['method']}; "
+            f"{len(e['anchors'])} anchors, {e['rows']} rows)"
         )
     return 0
 

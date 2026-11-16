@@ -9,6 +9,7 @@
         "gpt-6-astra"
       ],
       "band": 4.0,
+      "effort": "max",
       "index": 56.8,
       "method": "anchors",
       "rows": 10
@@ -21,6 +22,7 @@
         "gpt-6-astra"
       ],
       "band": 4.0,
+      "effort": "high",
       "index": 54.3,
       "method": "anchors",
       "rows": 12
@@ -36,6 +38,7 @@
         "gpt-6.1-sol"
       ],
       "band": 4.0,
+      "effort": "max",
       "index": 44.3,
       "method": "anchors",
       "rows": 8

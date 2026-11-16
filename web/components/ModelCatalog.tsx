@@ -931,7 +931,11 @@ export function ModelCatalog({
                             {m.aa_index_effort && (
                               <span
                                 data-testid="aa-index-effort"
-                                title={`Measured at ${effortWord(m.aa_index_effort)} effort, the top one Artificial Analysis ran it at`}
+                                title={
+                                  m.aa_index_source === "estimated"
+                                    ? `Estimated at ${effortWord(m.aa_index_effort)} effort, the top setting ${m.name} offers and the one its launch benchmarks report`
+                                    : `Measured at ${effortWord(m.aa_index_effort)} effort, the top one Artificial Analysis ran it at`
+                                }
                                 className="ml-1 text-[11px] font-normal text-brand-slate-400 dark:text-brand-slate-500"
                               >
                                 {effortWord(m.aa_index_effort)}

@@ -432,7 +432,7 @@ def _shifted(row: dict[str, Any], delta: float) -> dict[str, Any]:
     return out
 
 
-def _top_level(model_id: str, catalog: dict[str, Any]) -> str | None:
+def top_level(model_id: str, catalog: dict[str, Any]) -> str | None:
     """The highest scorer level any of the catalog's effort dials offers
     ``model_id``: the effort a vendor's launch table reports it at. None when
     no surface documents a dial for it."""
@@ -455,7 +455,7 @@ def _estimated_row(
     its dials offer, and at each lower effort that index moved by the median
     shift between the two efforts across the models AA measured at both (the
     rule :func:`estimated_aa_index` reads an unmeasured effort by)."""
-    top = _top_level(model_id, catalog)
+    top = top_level(model_id, catalog)
     row: dict[str, Any] = {"evaluations": {FRONTIER_INDEX: round(index, 1)}, "aa_effort": top}
     if top is None:
         return row

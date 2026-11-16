@@ -100,15 +100,20 @@ interface RawEstimate {
   index: number;
   band: number;
   anchors: string[];
+  // The top level the model's effort dials offer: the setting a vendor's
+  // launch table reports, and the one the recommender places it at.
+  effort?: string | null;
 }
 const ESTIMATES = (indexEstimates as { models?: Record<string, RawEstimate> }).models ?? {};
 
 // The estimate for a model AA has not measured, rounded to a whole point (its
 // band is about four), or null when its launch table is too thin.
-export function estimateFor(id: string): { index: number; band: number; anchors: string[] } | null {
+export function estimateFor(
+  id: string,
+): { index: number; band: number; anchors: string[]; effort: string | null } | null {
   const e = ESTIMATES[id];
   if (!e || typeof e.index !== "number" || !Number.isFinite(e.index)) return null;
-  return { index: Math.round(e.index), band: e.band, anchors: e.anchors ?? [] };
+  return { index: Math.round(e.index), band: e.band, anchors: e.anchors ?? [], effort: e.effort ?? null };
 }
 
 // Each effort's output-token multiplier (docs/effort-tokens.json,
@@ -231,7 +236,7 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
       aa_index_band: estimate?.band ?? null,
       aa_estimate_anchors: estimate ? estimate.anchors.map(nameOf) : null,
       aa_index_by_effort: indexByEffort(m.id),
-      aa_index_effort: measured !== null ? (BENCH[m.id]?.aa_effort ?? null) : null,
+      aa_index_effort: measured !== null ? (BENCH[m.id]?.aa_effort ?? null) : (estimate?.effort ?? null),
       token_multiplier_by_effort: multiplierByEffort(m.id),
       tiers_by_effort: EFFORT_RATINGS[m.id],
       bench,
