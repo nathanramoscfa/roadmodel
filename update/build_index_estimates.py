@@ -6,7 +6,9 @@ Inputs: update/launch-tables.json (each vendor's launch-day benchmark table,
 columns as model ids) and docs/benchmarks.json (the anchors' measured index).
 The method and its measured accuracy are in src/roadmodel/estimate.py. The
 /models page shows each estimate, marked ≈ with its band, until Artificial
-Analysis measures the model; the recommender does not read this file.
+Analysis measures the model, and the scorer ranks the model on it, less
+scoring.ESTIMATE_PENALTY (scoring.with_estimates). The package bundles the
+file, and the hosted service reads main's copy (service/app/live_data.py).
 
     python update/build_index_estimates.py          # write
     python update/build_index_estimates.py --check  # exit 1 if the file is stale

@@ -21,7 +21,8 @@ Analysis has measured whose tables carry two or more anchors (2026-11): a
 typical miss of 2.6 index points, a root-mean-square miss of 3.8, and 23 of the
 27 within 5 points. ``BAND`` is that error, rounded. The inputs live
 in update/launch-tables.json; update/build_index_estimates.py writes the
-estimates to docs/index-estimates.json, which the /models page reads.
+estimates to docs/index-estimates.json, which the /models page shows and the
+scorer ranks on (scoring.with_estimates, less ESTIMATE_PENALTY).
 """
 
 from __future__ import annotations

@@ -340,3 +340,28 @@ def test_the_rationale_names_the_version_an_inherited_figure_measured() -> None:
     )
     why = score._why(candidate, scoring.Task("knowledge", "medium"))
     assert "measurements of the version before it (gpt-6-sol)" in why.quality
+
+
+def test_the_rationale_says_when_the_index_is_roadmodels_estimate() -> None:
+    """A model AA has not measured ranks on roadmodel's estimate of its index
+    (roadmodel.scoring.with_estimates); the sentence says so."""
+    from types import SimpleNamespace
+
+    from app import score
+
+    candidate = SimpleNamespace(
+        model_name="Gemini 4 Carbon",
+        quality=70.0,
+        quality_source="aa:artificial_analysis_intelligence_index",
+        letter="B",
+        aa_inherited_from=None,
+        aa_estimated=True,
+        requirement=60.0,
+        requirement_penalty=0.0,
+        cost_penalty=0.0,
+        effective_cost_usd=0.0,
+        blended_price_usd=4.0,
+        platform_name="Google AI Studio API",
+    )
+    why = score._why(candidate, scoring.Task("planning", "medium"))
+    assert "roadmodel's estimate of its Artificial Analysis Intelligence Index" in why.quality

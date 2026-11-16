@@ -37,6 +37,7 @@ SET = (
     "benchmarks.json",
     "context-windows.json",
     "effort-tokens.json",
+    "index-estimates.json",
 )
 
 

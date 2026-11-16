@@ -164,13 +164,13 @@ jobs:
           python -m pip install --quiet "roadmodel==$V"
           # Claude Code, pinned, for the judge (claude -p).
           npm install -g --no-fund --no-audit @anthropic-ai/claude-code@2.1.293
-          # The six files production fetches from main, so the fact sheet holds
+          # The files production fetches from main, so the fact sheet holds
           # what production picked from. The release's bundle predates them: on
           # 2026-11-12 it lacked Fable 5.2 on Claude Code, and the judge rejected
           # four correct picks for routing it there.
           LIVE="$RUNNER_TEMP/roadmodel-live-data"
           mkdir -p "$LIVE"
-          for name in catalog.json model-selector.txt model-tier-cost-scale.md benchmarks.json context-windows.json effort-tokens.json; do
+          for name in catalog.json model-selector.txt model-tier-cost-scale.md benchmarks.json context-windows.json effort-tokens.json index-estimates.json; do
             cp "docs/$name" "$LIVE/$name"
           done
           echo "ROADMODEL_DATA_DIR=$LIVE" >> "$GITHUB_ENV"

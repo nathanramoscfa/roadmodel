@@ -52,9 +52,12 @@ FILES: dict[str, tuple[int, int]] = {
     "benchmarks.json": (1_000, 4_000_000),
     "context-windows.json": (100, 1_000_000),
     "effort-tokens.json": (100, 4_000_000),
+    # roadmodel's AA Index estimates for models AA has not measured
+    # (update/build_index_estimates.py), which the scorer ranks them on.
+    "index-estimates.json": (20, 1_000_000),
 }
 # The JSON files and the top-level member each must hold as an object.
-_MODELS_OBJECT = ("benchmarks.json", "context-windows.json")
+_MODELS_OBJECT = ("benchmarks.json", "context-windows.json", "index-estimates.json")
 # The files catalog.json records the SHA-256 of (source_doc_sha256), which
 # proves the selector and the catalog came from one commit.
 _HASHED = ("model-selector.txt", "model-tier-cost-scale.md")

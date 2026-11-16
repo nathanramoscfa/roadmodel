@@ -30,7 +30,7 @@ BUNDLED_DOCS = (
     "benchmarks.json",
     "context-windows.json",
     "effort-tokens.json",
-)
+) + ("index-estimates.json",)
 
 
 def test_pyproject_parses() -> None:
