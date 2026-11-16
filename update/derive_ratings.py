@@ -51,9 +51,9 @@ category's evidence, by the same rules among the same measured models
 (estimated_letters): the AA Index estimate and, from its own launch table, the
 HLE, AA-LCR, SciCode and Terminal-Bench 4.0 figures (docs/index-estimates.json,
 src/roadmodel/estimate.py). Tested by hiding the figures of the 35 measured
-models with a launch table, the estimate gives the exact letter 96 times in
+models with a launch table, the estimate gives the exact letter 94 times in
 122 and is never more than one letter off in 120, where a placeholder B is
-exact 21 times; an estimated S is truly S 22 times in 28 and the rest are A,
+exact 21 times; an estimated S is truly S 22 times in 29 and the rest are A,
 and 22 of the 29 true S models are estimated S. So an estimated S stands: a
 cap at A would mislabel every one of those 22. AA's measurement replaces the
 estimate once published.
