@@ -105,6 +105,9 @@ interface RawEstimate {
   effort?: string | null;
   // The models whose launch tables placed it, when its own table is too thin.
   via?: string[];
+  // Its estimated letter figures (benchmarks.json keys, as fractions), from its
+  // own launch table.
+  figures?: Record<string, number>;
 }
 const ESTIMATES = (indexEstimates as { models?: Record<string, RawEstimate> }).models ?? {};
 
@@ -122,6 +125,26 @@ export function estimateFor(
     effort: e.effort ?? null,
     via: e.via ?? [],
   };
+}
+
+// The derived categories a launch-table estimate letters (update/derive_ratings.py
+// estimated_letters): planning on the index, the others where the model's own
+// launch table places the category's benchmark.
+const ESTIMATED_FIGURES: [Category, string[]][] = [
+  ["coding", ["scicode", "terminalbench_v4_0"]],
+  ["planning", []],
+  ["agentic", ["terminalbench_v4_0"]],
+  ["long-context", ["lcr"]],
+  ["knowledge", ["hle"]],
+];
+
+export function estimatedCategories(id: string): Category[] {
+  const e = ESTIMATES[id];
+  if (!e || typeof e.index !== "number" || !Number.isFinite(e.index)) return [];
+  const figures = e.figures ?? {};
+  return ESTIMATED_FIGURES.filter(([, keys]) => keys.every((k) => typeof figures[k] === "number")).map(
+    ([cat]) => cat,
+  );
 }
 
 // Each effort's output-token multiplier (docs/effort-tokens.json,
@@ -244,6 +267,7 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
       aa_index_band: estimate?.band ?? null,
       aa_estimate_anchors: estimate ? estimate.anchors.map(nameOf) : null,
       aa_estimate_via: estimate && estimate.via.length ? estimate.via.map(nameOf) : null,
+      aa_estimated_categories: estimate ? estimatedCategories(m.id) : null,
       aa_index_by_effort: indexByEffort(m.id),
       aa_index_effort: measured !== null ? (BENCH[m.id]?.aa_effort ?? null) : (estimate?.effort ?? null),
       token_multiplier_by_effort: multiplierByEffort(m.id),

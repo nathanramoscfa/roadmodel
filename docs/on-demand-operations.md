@@ -18,6 +18,7 @@ can merge that PR once its checks pass.
 |---|---|---|---|
 | `catalog` | `update-models.yml` | prices, models, tiers (Opus + web search) | ~$1–2 |
 | `benchmarks` | `update-benchmarks.yml` | Artificial Analysis numbers + derived ratings | free |
+| `launch-tables` | `update-launch-tables.yml` | a new model's launch-day table, its AA Index estimate and the letters derived from it | per try, capped at $4 a model and $10 a week (the ledger in `update/launch-tables.json`) |
 | `claude-code` | `update-claude-code.yml` | Claude Code effort/thinking surface | ~$0.30–0.60 |
 | `codex` | `update-codex.yml` | Codex reasoning levels | ~$0.30 |
 | `gemini` | `update-gemini.yml` | Gemini thinking levels | ~$0.30 |

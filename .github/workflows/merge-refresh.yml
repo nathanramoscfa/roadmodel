@@ -11,6 +11,7 @@ on:
       - Update vendor default efforts
       - Update benchmark layer (Artificial Analysis)
       - probe-availability
+      - Update launch tables
     types: [completed]
   schedule:
     - cron: "50 */3 * * *"

@@ -225,8 +225,9 @@ export const COMPOSITE_DERIVATION: Partial<
   coding: { label: "SciCode + Terminal-Bench 4.0", parts: ["scicode", "terminalbench_v4_0"] },
 };
 
-// The highest letter an unmeasured model holds in a derived category: S
-// takes a measurement (update/derive_ratings.py ESTIMATE_CEILING).
+// The highest letter an unmeasured model holds in a derived category when
+// roadmodel's launch-table estimate does not place that category's benchmark
+// (update/derive_ratings.py ESTIMATE_CEILING); an estimated letter can be S.
 export const ESTIMATE_CEILING: Rating = "A";
 
 // The evidence a derived category's letter reads, by name.

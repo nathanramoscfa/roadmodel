@@ -61,6 +61,10 @@ POLICIES: dict[str, tuple[str, set[str]]] = {
         "auto/availability-",
         COMMON | {"infra/model-availability.json"},
     ),
+    "update-launch-tables.yml": (
+        "chore/launch-tables-refresh-",
+        COMMON | {"update/launch-tables.json", "docs/index-estimates.json"},
+    ),
 }
 
 

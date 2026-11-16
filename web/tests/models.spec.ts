@@ -33,7 +33,7 @@ import {
   type BenchRow,
 } from "../lib/benchmark-grid";
 import { modelProvider } from "../lib/catalog-fields";
-import { estimateFor, getModelRows, inheritedSource, pastLeaveDate } from "../lib/catalog-models";
+import { estimateFor, estimatedCategories, getModelRows, inheritedSource, pastLeaveDate } from "../lib/catalog-models";
 import { effortWord } from "../lib/pick-effort";
 import { isNewer } from "../lib/series";
 import { liveCatalog } from "./fixtures/live-catalog";
@@ -714,11 +714,14 @@ test("measured letters match the published bands; every other letter is marked e
       );
       derivedSeen += 1;
     } else {
-      // An estimate in a derived category names the benchmark that would measure it.
+      // An estimate in a derived category names the benchmark: roadmodel's
+      // launch-table estimate of it, or the one that would measure it.
       await expect(cell).toHaveAttribute("data-basis", "estimated");
       await expect(cell).toHaveAttribute(
         "title",
-        /Estimated: set by the daily catalog automation.*Measured letters in this column come from Humanity's Last Exam/,
+        estimatedCategories(model.id).includes("knowledge")
+          ? /Estimated by roadmodel: .*Humanity's Last Exam as its launch benchmarks place it/
+          : /Estimated: set by the daily catalog automation.*Measured letters in this column come from Humanity's Last Exam/,
       );
       estimatedSeen += 1;
     }
@@ -789,7 +792,7 @@ test("agentic letters are each model's rank on Terminal-Bench 4.0, with the lett
   test.info().annotations.push({ type: "agentic spread", description: JSON.stringify(seen) });
 });
 
-test("coding letters are each model's rank on SciCode + Terminal-Bench 4.0, and no estimate in a measured category reaches S", async ({ page }) => {
+test("coding letters are each model's rank on SciCode + Terminal-Bench 4.0, and only a launch-table estimate reaches S in a measured category", async ({ page }) => {
   await page.goto("/models");
   // Column order: chevron, model, provider, juris, input, output, AA index,
   // value, then coding, planning, agentic, multimodal, long-context, knowledge, …
@@ -818,10 +821,15 @@ test("coding letters are each model's rank on SciCode + Terminal-Bench 4.0, and 
         /Measured: (?:ranked #\d+|tied for #\d+–\d+) of \d+ on SciCode \+ Terminal-Bench 4\.0 \(SciCode .*of every 40 measured models, the top 8 are S/,
       );
     }
-    // In a derived category an estimate stops at A: S takes a measurement.
-    for (const td of Object.values(TD)) {
+    // In a derived category an estimate stops at A, except where roadmodel's
+    // launch-table estimate places the category's benchmark: that letter can be S.
+    const launchEstimated = new Set<string>(estimatedCategories(id));
+    for (const [cat, td] of Object.entries(TD)) {
       const cell = r.locator("td").nth(td).getByTestId("rating-cell");
-      if ((await cell.getAttribute("data-basis")) === "estimated") {
+      if ((await cell.getAttribute("data-basis")) !== "estimated") continue;
+      if (launchEstimated.has(cat)) {
+        await expect(cell).toHaveAttribute("title", /Estimated by roadmodel: .* as its launch benchmarks place it/);
+      } else {
         await expect(cell).not.toHaveText("S");
         await expect(cell).toHaveAttribute("title", /an estimate stops at A: S takes a measurement/);
       }

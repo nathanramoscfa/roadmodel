@@ -300,7 +300,7 @@ export function IndexCard({
           : m.aa_index_source === "inherited"
             ? `An estimate: ${m.aa_inherited_from}'s index from the snapshot of ${snapshot}, which ${m.name} stands on until Artificial Analysis measures it. The recommender ranks it the same way.`
             : m.aa_index_source === "estimated"
-              ? `roadmodel's estimate, within about ${m.aa_index_band} points: ${m.aa_estimate_via ? `${m.name}'s scores in the launch benchmarks of ${listNames(m.aa_estimate_via)}` : `${m.name}'s launch benchmarks`} set beside ${listNames(m.aa_estimate_anchors ?? [])}, which Artificial Analysis has measured, until it measures ${m.name} too. ${m.aa_inherited_from ? `The recommender ranks it on ${m.aa_inherited_from}'s index for now.` : "The recommender ranks it once Artificial Analysis measures it."}`
+              ? `roadmodel's estimate, within about ${m.aa_index_band} points: ${m.aa_estimate_via ? `${m.name}'s scores in the launch benchmarks of ${listNames(m.aa_estimate_via)}` : `${m.name}'s launch benchmarks`} set beside ${listNames(m.aa_estimate_anchors ?? [])}, which Artificial Analysis has measured, until it measures ${m.name} too. The recommender ranks it on this estimate, ${(m.aa_index_band ?? 4) / 2} points lower for its uncertainty.`
               : `From the snapshot of ${snapshot}.`}
       </p>
       {m.bench && (

@@ -2,10 +2,11 @@
 
 For a catalog model Artificial Analysis has not measured, Opus reads the
 vendor's own launch materials and transcribes its comparison table; the reply
-is kept only once roadmodel.estimate.check_launch_tables accepts it. Spend is
-bounded per model: MAX_ATTEMPTS tries, RETRY_DAYS apart, MAX_MODELS_PER_RUN a
-run. The fake client answers with real SDK Message objects, so the replies it
-returns keep the shape the API sends.
+is kept only once update/launch_data.check_launch_tables accepts it. Spend is
+capped in dollars from the API's usage figures: MAX_ATTEMPTS tries and
+MODEL_BUDGET_USD a model, WEEKLY_BUDGET_USD a week, MAX_MODELS_PER_RUN a run,
+newest first. The fake client answers with real SDK Message objects, so the
+replies it returns keep the shape the API sends.
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "update"))
 
 import collect_launch_tables as collector  # noqa: E402
+import launch_data  # noqa: E402
 
 from roadmodel import estimate  # noqa: E402
 
@@ -119,7 +121,8 @@ def test_only_unmeasured_models_without_a_usable_table_are_due() -> None:
     }
     assert collector.due(catalog, bench, tables, TODAY) == ["new-x"]
     tables["new-z"]["checked_on"] = "2026-11-09"  # a week on, it is tried again
-    assert collector.due(catalog, bench, tables, TODAY) == ["new-x", "new-z"]
+    # Newest first: new-z's release date is known, new-x's is not.
+    assert collector.due(catalog, bench, tables, TODAY) == ["new-z", "new-x"]
     many = _catalog(*[f"new-{i}" for i in range(5)])
     assert len(collector.due(many, bench, {}, TODAY)) == collector.MAX_MODELS_PER_RUN
 
@@ -202,7 +205,10 @@ def test_a_run_keeps_a_good_table_and_records_a_refused_one_as_none(
         "tables": [],
         "checked_on": "2026-11-16",
         "attempts": 1,
+        # The ledger: 1,000 input tokens at $4/M plus 200 output at $20/M.
+        "spent_usd": 0.008,
     }
+    assert models["new-x"]["spent_usd"] == 0.008
     assert (tmp_path / "errors.txt").read_text() == ""
 
 
@@ -263,11 +269,77 @@ def test_the_table_check_refuses_anything_but_typed_data(change: Any, error: str
         "models": {"new-x": {"release_date": "2026-11-09", "tables": [table]}},
     }
     with pytest.raises(ValueError, match=error):
-        estimate.check_launch_tables(doc, {"old-a", "old-b", "old-c", "new-x"}, {"new-x"})
+        launch_data.check_launch_tables(doc, {"old-a", "old-b", "old-c", "new-x"}, {"new-x"})
 
 
 def test_the_committed_launch_tables_pass_the_check() -> None:
     doc = json.loads((REPO / "update" / "launch-tables.json").read_text())
     catalog = {m["id"] for m in json.loads((REPO / "docs" / "catalog.json").read_text())["models"]}
     bench = json.loads((REPO / "docs" / "benchmarks.json").read_text())["models"]
-    estimate.check_launch_tables(doc, catalog | set(bench), catalog)
+    launch_data.check_launch_tables(doc, catalog | set(bench), catalog)
+
+
+def test_newest_first_and_a_model_over_its_budget_is_not_tried() -> None:
+    bench = _bench()
+    catalog = _catalog("new-old", "new-x", "new-new")
+    catalog["models"][0]["added_on"] = "2026-10-01"
+    catalog["models"][2]["added_on"] = "2026-11-12"
+    # No date known: last.
+    assert collector.due(catalog, bench, {}, TODAY) == ["new-new", "new-old"]
+    spent = {
+        "release_date": "2026-11-12",
+        "tables": [],
+        "checked_on": "2026-11-01",
+        "attempts": 1,
+        "spent_usd": collector.MODEL_BUDGET_USD,
+    }
+    assert collector.due(catalog, bench, {"new-new": spent}, TODAY) == ["new-old", "new-x"]
+
+
+def test_a_model_only_later_launches_place_is_still_tried() -> None:
+    # "new-y"'s table lists "new-x" beside three measured models: new-x is
+    # placed from it (estimate.from_other_tables), but its own table places it
+    # more closely, so it stays due.
+    bench = _bench()
+    later = {"release_date": "2026-11-01", "tables": [_table("new-y")]}
+    later["tables"][0]["columns"] = ["new-y", "old-a", "old-b", "old-c", "new-x"]
+    assert estimate.estimate_all({"new-y": later}, bench)["new-x"].via == ("new-y",)
+    assert "new-x" in collector.due(_catalog("new-x", "new-y"), bench, {"new-y": later}, TODAY)
+
+
+def test_the_week_budget_stops_a_run_before_its_next_try(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(collector, "WEEKLY_BUDGET_USD", 0.005)
+    good = {"release_date": "2026-11-09", "tables": [_table("new-x")]}
+    client = FakeClient(_message(json.dumps(good)))
+    models = _run(tmp_path, monkeypatch, client, _catalog("new-x", "new-y"))
+    # One try (0.008) spent the week: the second model waits, unbilled.
+    assert list(models) == ["new-x"] and client.replies == []
+    assert collector.weekly_spend(models, TODAY) == 0.008
+    # Outside the window it no longer counts.
+    assert collector.weekly_spend(models, TODAY + dt.timedelta(days=7)) == 0.0
+
+
+def test_a_retry_that_finds_nothing_keeps_the_table_it_had() -> None:
+    ids = collector.roster(_catalog("new-x"), _bench())
+    prior = {
+        "release_date": "2026-11-01",
+        "tables": [_table()],
+        "checked_on": "2026-11-01",
+        "attempts": 1,
+        "spent_usd": 0.5,
+    }
+    entry = collector.collect(FakeClient(_message("nothing new")), "new-x", "New X", ids, prior)
+    assert entry["tables"] == [_table()] and entry["attempts"] == 2
+    assert entry["spent_usd"] == 0.508
+
+
+def test_an_api_error_after_a_billed_response_is_a_try() -> None:
+    error = APIConnectionError(
+        request=httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+    )
+    paused = _message("", "pause_turn")
+    ids = collector.roster(_catalog("new-x"), _bench())
+    entry = collector.collect(FakeClient(paused, error), "new-x", "New X", ids, None)
+    assert entry["attempts"] == 1 and entry["spent_usd"] == 0.008 and entry["tables"] == []

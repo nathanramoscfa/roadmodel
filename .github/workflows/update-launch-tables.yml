@@ -1,0 +1,156 @@
+# .github/workflows/update-launch-tables.yml
+name: Update launch tables
+
+# For each catalog model Artificial Analysis has not measured, collect the
+# vendor's launch-day comparison table (update/collect_launch_tables.py: one
+# Opus turn per model, newest first) and rebuild roadmodel's AA Index
+# estimates (update/build_index_estimates.py) and the letters derived from them
+# (update/derive_ratings.py). Spend is capped in dollars from the API's own
+# usage figures: at most 3 tries and $4 a model, $10 a week across all of them
+# (the ledger is each entry's spent_usd). A run with no model due, or with the
+# week's budget spent, makes no API call.
+#
+# Everything it writes is typed refresh data (update/launch_data.py, checked
+# by update/automation_integrity.py), so its PR merges through the validated
+# refresh lane with no human step.
+
+on:
+  schedule:
+    # Hourly at :40, after the catalog refresh (:00) has admitted new models.
+    - cron: "40 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "List the models due, but call no API and open no PR."
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: update-launch-tables
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5; zizmor: ignore[artipacked] credentials needed for the PR push
+        with:
+          persist-credentials: true
+          # The roadmodel cron GitHub App, so its PRs trigger the required
+          # status workflows (the default GITHUB_TOKEN's do not).
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Wait for an open launch-table PR
+        # Its tries are not on main yet: a run from main would try the same
+        # models again, paying twice, and replace that PR. It merges first.
+        id: gate
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          open="$(gh pr list --state open --limit 100 --json headRefName -q '.[].headRefName' \
+            | grep -c '^chore/launch-tables-refresh-' || true)"
+          if [ "${open}" != "0" ]; then
+            echo "A launch-table PR is still open; this run waits for it to merge."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        if: steps.gate.outputs.skip != 'true'
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: .github/requirements-updater.txt
+
+      - name: Install dependencies
+        if: steps.gate.outputs.skip != 'true'
+        run: pip install --require-hashes -r .github/requirements-updater.txt
+
+      - name: Collect launch tables
+        id: collect
+        if: steps.gate.outputs.skip != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2086  # an empty DRY_RUN adds no word
+          python update/collect_launch_tables.py $DRY_RUN
+          if git diff --quiet -- update/launch-tables.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Rebuild the estimates and the letters derived from them
+        if: steps.collect.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          python update/build_index_estimates.py
+          python update/derive_ratings.py --write
+          # Best-for prose is written from the letters (update/model_prose.py).
+          python update/model_prose.py --write
+          python update/render_md.py
+          if ! git diff --quiet -- docs/model-selector.txt; then
+            python update/build_catalog.py
+          fi
+
+      - name: Open PR if a launch table changed
+        if: steps.collect.outputs.changed == 'true' && github.event.inputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          # Validate the final data before publishing it.
+          python update/automation_integrity.py
+          git config user.name "roadmodel-bot"
+          git config user.email "roadmodel-bot@users.noreply.github.com"
+          DATE="$(date -u +%Y-%m-%d)"
+          BRANCH="chore/launch-tables-refresh-${DATE}"
+          git branch -D "$BRANCH" 2>/dev/null || true
+          git checkout -b "$BRANCH"
+          git add update/launch-tables.json docs/index-estimates.json docs/model-selector.txt docs/model-selector.md docs/catalog.json
+          git commit -m "Automated launch-table refresh: ${DATE}"
+          # The day's branch can outlive its merged PR; this run's data replaces it.
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            git push --force -u origin "$BRANCH"
+          else
+            git push -u origin "$BRANCH"
+          fi
+          # Literal Markdown syntax; shell expansion is not intended.
+          # shellcheck disable=SC2016
+          PR_URL="$(gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "Automated launch-table refresh: ${DATE}" \
+            --body "$(printf 'A new model'"'"'s launch-day benchmark table (or a try that found none, with its cost in the ledger), the AA Index estimates rebuilt from it and the letters derived from them. The diff is the whole change.\n\n---\n\nOpened automatically by `.github/workflows/update-launch-tables.yml`. The validated refresh merger checks the data (update/automation_integrity.py) and all CI results before squash-merging. To stop it: mark the PR as draft.')")"
+          echo "Opened: $PR_URL"
+
+      - name: Fail on collector errors
+        # An API error or a missing key: no try was made, so say so loudly
+        # (cron-health raises its alarm on a failed scheduled run).
+        if: ${{ !cancelled() && steps.gate.outputs.skip != 'true' }}
+        run: |
+          set -euo pipefail
+          if [ -s update/.cache/launch-tables-errors.txt ]; then
+            cat update/.cache/launch-tables-errors.txt
+            exit 1
+          fi

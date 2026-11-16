@@ -39,6 +39,11 @@ DATA_PATHS = (
     "update/catalog-groq.json",
     "docs/context-windows.json",
     "docs/effort-ratings.json",
+    # The launch tables update-launch-tables.yml collects and the AA Index
+    # estimates built from them: typed data checked by update/launch_data.py
+    # (2026-11), so a new model's estimate and letters merge with no admission.
+    "update/launch-tables.json",
+    "docs/index-estimates.json",
 )
 VALIDATOR_FILES = tuple(
     "update/" + name + ".py"
@@ -46,6 +51,7 @@ VALIDATOR_FILES = tuple(
         "automation_integrity",
         "build_catalog",
         "derive_ratings",
+        "launch_data",
         "lifecycle_rules",
         "model_prose",
         "render_md",

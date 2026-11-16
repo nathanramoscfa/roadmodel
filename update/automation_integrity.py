@@ -31,6 +31,7 @@ if str(UPDATE) not in sys.path:
 
 import build_catalog  # noqa: E402
 import derive_ratings  # noqa: E402
+import launch_data  # noqa: E402
 import lifecycle_rules as rules  # noqa: E402
 import model_prose  # noqa: E402
 import render_md  # noqa: E402
@@ -52,6 +53,11 @@ PROVIDER_SNAPSHOTS = tuple(
 )
 CONTEXT_WINDOWS = "docs/context-windows.json"
 EFFORT_RATINGS = "docs/effort-ratings.json"
+# The launch tables update-launch-tables.yml collects and the AA Index
+# estimates built from them (update/launch_data.py): typed data, checked
+# whenever a refresh changes them.
+LAUNCH_TABLES = "update/launch-tables.json"
+INDEX_ESTIMATES = "docs/index-estimates.json"
 INPUTS = (
     SELECTOR,
     COST,
@@ -63,6 +69,8 @@ INPUTS = (
     *PROVIDER_SNAPSHOTS,
     CONTEXT_WINDOWS,
     EFFORT_RATINGS,
+    LAUNCH_TABLES,
+    INDEX_ESTIMATES,
 )
 BODY = r'(?:[^"/]|/(?!>)|"(?:[^"\\]|\\.)*")*?'
 PAIR = re.compile(r'([a-z][a-z0-9-]*)="((?:[^"\\]|\\.)*)"', re.S)
@@ -548,6 +556,13 @@ def validate_documents(
         provider_snapshot(base[path], head[path])
     context_windows(base[CONTEXT_WINDOWS], head[CONTEXT_WINDOWS], known)
     effort_ratings(base[EFFORT_RATINGS], head[EFFORT_RATINGS], known)
+    # Checked only when changed, so a later benchmark refresh that drops a
+    # model a launch table names never blocks an unrelated refresh.
+    roster = known | set(bench["models"])
+    if head[LAUNCH_TABLES] != base[LAUNCH_TABLES]:
+        launch_data.check_launch_tables(json.loads(head[LAUNCH_TABLES]), roster, known)
+    if head[INDEX_ESTIMATES] != base[INDEX_ESTIMATES]:
+        launch_data.check_index_estimates(json.loads(head[INDEX_ESTIMATES]), roster, known)
     available = availability(base[AVAILABILITY], head[AVAILABILITY], head[SELECTOR])
     final_selector(base[SELECTOR], head[SELECTOR], bench, day, available)
     if head[MARKDOWN] != render_md.render(head[SELECTOR]):

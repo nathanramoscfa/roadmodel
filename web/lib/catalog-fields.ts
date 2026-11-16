@@ -68,6 +68,9 @@ export interface ModelRow {
   // The models whose launch tables placed an estimate, by display name, when
   // the model's own launch table is too thin; null for its own table.
   aa_estimate_via?: string[] | null;
+  // The derived categories whose letter roadmodel's launch-table estimate sets
+  // (S included), until Artificial Analysis measures the model.
+  aa_estimated_categories?: Category[] | null;
   // The effort AA ran the headline figure at: the model's top measured effort
   // ("max", "xhigh", …); for an estimate, the top effort its dials offer, the
   // setting its launch table reports; null when AA names none or the figure

@@ -147,8 +147,9 @@ export function CatalogLegend({ id }: { id?: string }) {
             is <em>estimated</em>: the daily catalog automation sets it from each provider&rsquo;s
             published results, and a new model starts from its predecessor&rsquo;s letters. Every
             {ESTIMATED_NAMES} letter is an estimate, as is a derived category&rsquo;s
-            letter for a model outside its benchmark&rsquo;s measured set; there an estimate stops
-            at {ESTIMATE_CEILING}, since S takes a measurement. A <strong>New</strong>{" "}
+            letter for a model outside its benchmark&rsquo;s measured set: roadmodel letters it
+            from that benchmark as the model&rsquo;s launch benchmarks place it, by the same rule,
+            and where they do not place it the estimate stops at {ESTIMATE_CEILING}. A <strong>New</strong>{" "}
             tag marks a model released in the last {NEW_RELEASE_DAYS} days (or, before Artificial
             Analysis lists it, added to this catalog in that time) and clears on its own.
             The <strong>AA Index</strong> column is the one published composite; hover it for the
