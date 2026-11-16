@@ -237,12 +237,14 @@ BUNDLED_EFFORT_TOKENS_PATH = _data.data_file("effort-tokens.json")
 BUNDLED_ESTIMATES_PATH = _data.data_file("index-estimates.json")
 # Index points a model AA has not measured is ranked below roadmodel's estimate
 # of its AA Index (roadmodel.estimate, docs/index-estimates.json): half the
-# estimate's error band, so 2 for an estimate from the model's own launch table
-# (estimate.BAND, 4 points) and 2.5 for one from later launches' tables
-# (estimate.OTHER_BAND, 5). A new model then wins a pick only by clearing a
-# measured one by more than that, and loses a near tie, where the estimate could
-# as easily be high as low. Its printed index stays the estimate itself.
-ESTIMATE_PENALTY: Final[float] = 2.0
+# estimate's error band to a tenth of a point, the index's own precision, so
+# 1.8 for an estimate from the model's own launch table (estimate.BAND, 3.5
+# points) and 2.5 for one from later launches' tables (estimate.OTHER_BAND, 5).
+# A new model then wins a pick only by clearing a measured one by more than
+# that, and loses a near tie, where the estimate could as easily be high as
+# low. Its printed index stays the estimate itself. This is the default for an
+# estimate that states no band.
+ESTIMATE_PENALTY: Final[float] = 1.8
 # A context window must hold the task's material plus the instructions and the
 # answer: 10% above the material's own size.
 CONTEXT_HEADROOM: Final[float] = 1.1
@@ -400,9 +402,11 @@ def _penalty(row: Any) -> float:
 
 
 def estimate_penalty(band: Any) -> float:
-    """Half an estimate's error band; ESTIMATE_PENALTY when it states none."""
+    """Half an estimate's error band, to a tenth of a point (so the figure a
+    ladder prints, the ranked one plus this, is the estimate exactly);
+    ESTIMATE_PENALTY when it states none."""
     if isinstance(band, (int, float)) and not isinstance(band, bool) and band > 0:
-        return round(float(band) / 2, 2)
+        return round(float(band) / 2, 1)
     return ESTIMATE_PENALTY
 
 

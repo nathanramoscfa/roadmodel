@@ -8,15 +8,15 @@
         "claude-opus-5-5",
         "gpt-6-astra"
       ],
-      "band": 4.0,
+      "band": 3.5,
       "effort": "max",
       "figures": {
-        "hle": 0.6114,
-        "lcr": 0.8658,
+        "hle": 0.6254,
+        "lcr": 0.8698,
         "scicode": 0.6956,
         "terminalbench_v4_0": 0.6033
       },
-      "index": 56.8,
+      "index": 57.4,
       "method": "anchors",
       "rows": 10
     },
@@ -27,15 +27,15 @@
         "gemini-4-argon",
         "gpt-6-astra"
       ],
-      "band": 4.0,
+      "band": 3.5,
       "effort": "high",
       "figures": {
-        "hle": 0.5877,
-        "lcr": 0.8485,
+        "hle": 0.5997,
+        "lcr": 0.8425,
         "scicode": 0.6615,
         "terminalbench_v4_0": 0.5576
       },
-      "index": 54.3,
+      "index": 53.6,
       "method": "anchors",
       "rows": 12
     },
@@ -49,15 +49,15 @@
         "gpt-6-sol",
         "gpt-6.1-sol"
       ],
-      "band": 4.0,
+      "band": 3.5,
       "effort": "max",
       "figures": {
-        "hle": 0.4353,
-        "lcr": 0.8237,
+        "hle": 0.4573,
+        "lcr": 0.8207,
         "scicode": 0.5317,
         "terminalbench_v4_0": 0.3447
       },
-      "index": 44.3,
+      "index": 46.7,
       "method": "anchors",
       "rows": 8
     }
