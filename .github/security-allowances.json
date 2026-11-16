@@ -460,7 +460,7 @@
         "language": "python",
         "rule_id": "py/clear-text-storage-sensitive-data",
         "rule_sha256": "6d2da207d4dd612a0dd14e77e1ec851e5136fe8f9481a5523ac94e9d438b6282",
-        "run_configuration_sha256": "32043fdb257b863e9b8e8f0b9b02889c14c077c708778a31a46e312416722490",
+        "run_configuration_sha256": "829c84491c8274947061525e3c5147b5c653c644333f0a217795f68e2cd2923b",
         "sources": [
           {
             "mode": "100644",
@@ -650,7 +650,7 @@
         "language": "python",
         "rule_id": "py/clear-text-storage-sensitive-data",
         "rule_sha256": "6d2da207d4dd612a0dd14e77e1ec851e5136fe8f9481a5523ac94e9d438b6282",
-        "run_configuration_sha256": "32043fdb257b863e9b8e8f0b9b02889c14c077c708778a31a46e312416722490",
+        "run_configuration_sha256": "829c84491c8274947061525e3c5147b5c653c644333f0a217795f68e2cd2923b",
         "sources": [
           {
             "mode": "100644",
@@ -829,7 +829,7 @@
         "language": "python",
         "rule_id": "py/clear-text-storage-sensitive-data",
         "rule_sha256": "6d2da207d4dd612a0dd14e77e1ec851e5136fe8f9481a5523ac94e9d438b6282",
-        "run_configuration_sha256": "32043fdb257b863e9b8e8f0b9b02889c14c077c708778a31a46e312416722490",
+        "run_configuration_sha256": "829c84491c8274947061525e3c5147b5c653c644333f0a217795f68e2cd2923b",
         "sources": [
           {
             "mode": "100644",
@@ -1008,7 +1008,7 @@
         "language": "python",
         "rule_id": "py/log-injection",
         "rule_sha256": "05c52d6c72cc5e2355ba2cc20d8a2d11c8ed1c2bce0627105bde1b370d9483f6",
-        "run_configuration_sha256": "32043fdb257b863e9b8e8f0b9b02889c14c077c708778a31a46e312416722490",
+        "run_configuration_sha256": "829c84491c8274947061525e3c5147b5c653c644333f0a217795f68e2cd2923b",
         "sources": [
           {
             "mode": "100644",
@@ -1157,7 +1157,7 @@
         "language": "python",
         "rule_id": "py/log-injection",
         "rule_sha256": "05c52d6c72cc5e2355ba2cc20d8a2d11c8ed1c2bce0627105bde1b370d9483f6",
-        "run_configuration_sha256": "32043fdb257b863e9b8e8f0b9b02889c14c077c708778a31a46e312416722490",
+        "run_configuration_sha256": "829c84491c8274947061525e3c5147b5c653c644333f0a217795f68e2cd2923b",
         "sources": [
           {
             "mode": "100644",
