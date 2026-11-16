@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.116] — 2026-11-16
+
 - **A new model's estimate is corrected for its own maker's record.** Every launch-table estimate took the same correction for vendor optimism (1.5 index points), as if every maker's launch benchmarks ran ahead of Artificial Analysis's later measurement by the same amount. They do not: over the 26 measured models whose launch tables place them, Google's ran 2.6 points ahead on average, DeepSeek's 6.4, Anthropic's 0.6, and OpenAI's 2.7 behind. Each maker's own record now corrects its models' index, Humanity's Last Exam and AA-LCR estimates, trusted in proportion to how much of it there is: a maker with n measured launches keeps n / (n + 3) of its own average, so one launch counts a quarter and three count half, and a maker with none takes the all-maker figure (`estimate.MAKER_OPTIMISM`, `estimate.optimism`). Leaving each model out, the index misses by 3.5 points root-mean-square against 3.8 with one correction for all, and trained only on earlier launches, 3.9 against 4.0; letters are exact 96 times in 122 instead of 94. SciCode shows no difference between makers and Terminal-Bench 4.0 none that predicts, so both keep one correction. The band narrows from ±4 to ±3.5, the measured error; the maker, the row count and the rows' spread did not predict a model's miss, so it stays one figure. A pick ranks an estimate half its band below it, now to a tenth of a point (1.8; 2.5 from later launches' tables). Today: GPT-6.1 Terra ≈44.3 → ≈46.7, Fable 5.2 ≈56.8 → ≈57.4, Gemini 4 Carbon ≈54.3 → ≈53.6; no letter changes.
 
 ## [0.2.115] — 2026-11-16
