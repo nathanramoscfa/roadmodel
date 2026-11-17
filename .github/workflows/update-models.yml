@@ -269,6 +269,19 @@ jobs:
           claude_code_ids="$(python update/claude_code_models.py | paste -sd, - || true)"
           if [ -n "${claude_code_ids}" ]; then
             python update/merge_catalog.py --sync-method claude-code --ids "${claude_code_ids}"
+            # The Claude apps publish no machine-readable model list; they run
+            # the Claude models Claude Code runs, under the same subscription,
+            # so claude-web gains the same ids (additive, as above). Without it
+            # Fable 5.2 and Haiku 5.5 never reached claude-web, and the models
+            # they replace could never be superseded (update/supersede.py).
+            python update/merge_catalog.py --sync-method claude-web --ids "${claude_code_ids}"
+          fi
+          # Cursor prices every model it runs on its Models & Pricing page; a
+          # catalogued one belongs on the cursor method. Same pattern:
+          # deterministic, additive, fail-open (update/extract_cursor_models.py).
+          cursor_ids="$(python update/extract_cursor_models.py | paste -sd, - || true)"
+          if [ -n "${cursor_ids}" ]; then
+            python update/merge_catalog.py --sync-method cursor --ids "${cursor_ids}"
           fi
           # OpenRouter lists every model it routes on a public endpoint
           # (openrouter.ai/api/v1/models); a catalogued one belongs on the

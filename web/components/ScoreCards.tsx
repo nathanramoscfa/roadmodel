@@ -246,13 +246,21 @@ export function SupersededCard({ model: m, successor }: { model: ModelRow; succe
   const successorPrice = successor
     ? blendedPrice(successor.input_price_per_1m, successor.output_price_per_1m)
     : null;
+  // A successor Artificial Analysis has not measured supersedes on its
+  // estimate less half the estimate's margin (update/supersede.py).
+  const unmeasured =
+    successor !== null &&
+    (successor.aa_index_source === "estimated" || successor.aa_index_source === "inherited");
+  const score = unmeasured
+    ? "has no AA Index measurement yet but is estimated to score higher, by more than the estimate's margin"
+    : "scores higher on the AA Index";
   return (
     <div className="w-[20rem] max-w-full" data-testid="superseded-card-body">
       <CardHeader name={m.name} tier={m.tier_cost} />
       <p className={"mt-2 text-xs leading-[1.125rem] " + STRONG}>
         <span className="font-semibold">Superseded by {name}.</span> {name}, from the same
-        maker, costs the same or less, scores higher on the AA Index, rates at least as high in
-        every category, and runs on every platform that offers {m.name}.
+        maker, costs the same or less, {score}, rates at least as high in every category, and
+        runs on every platform that offers {m.name}.
       </p>
       {successor && successor.aa_index !== null && successor.aa_index_source !== "inherited" && successor.aa_index_source !== "estimated" && m.aa_index !== null && successorPrice !== null && (
         <div className="mt-2 space-y-0.5 text-xs">
