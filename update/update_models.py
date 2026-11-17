@@ -523,7 +523,7 @@ def near_miss_block(selector_text: str, benchmarks: dict[str, Any]) -> str:
     supports-models pass searches the method's own source for exactly that
     model. Empty when there is none, or when the rule cannot be evaluated."""
     try:
-        found = supersede.live_near_misses(selector_text, benchmarks, supersede.load_estimates())
+        found = supersede.live_near_misses(selector_text, benchmarks)
         names = {m.id: m.name for m in supersede.parse_models(selector_text, benchmarks)}
     except Exception:  # noqa: BLE001 - a courtesy input; the pass runs without it
         return ""

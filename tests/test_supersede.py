@@ -172,6 +172,22 @@ def test_the_estimate_margin_is_the_pick_penalty(band: float) -> None:
     assert supersede.estimate_penalty(band) == scoring.estimate_penalty(band)
 
 
+def test_near_misses_judge_with_the_committed_estimates_by_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The catalog pass's targeted checks and the issue closer call
+    live_near_misses without estimates; they must see what the rule sees."""
+    methods = dict(BASE_METHODS, only_old=("maker", ["old"]))
+    text = _selector([_model("old", 5, 25, 40), _model("new", 4, 20, None)], methods)
+    path = tmp_path / "index-estimates.json"
+    path.write_text(json.dumps(_estimates(new=(45.0, 3.5))))
+    monkeypatch.setattr(supersede, "ESTIMATES_PATH", path)
+    assert [n.line() for n in supersede.live_near_misses(text, {})] == [
+        "NEAR-MISS old -> new: missing on only_old"
+    ]
+    assert supersede.live_near_misses(text, {}, {}) == []
+
+
 def test_the_cli_reads_the_committed_estimates() -> None:
     estimates = supersede.load_estimates()
     assert supersede.ESTIMATES_PATH.name == "index-estimates.json"

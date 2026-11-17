@@ -121,8 +121,9 @@ def _aa_index(mid: str, attrs: dict[str, str], benchmarks: dict[str, Any]) -> fl
     return float(m.group(1)) if m else None
 
 
-def load_estimates(path: Path = ESTIMATES_PATH) -> dict[str, Any]:
+def load_estimates(path: Path | None = None) -> dict[str, Any]:
     """The committed AA Index estimates, or none when the file is absent."""
+    path = path or ESTIMATES_PATH
     return json.loads(path.read_text()) if path.exists() else {}
 
 
@@ -291,7 +292,12 @@ def parse_near_miss(line: str) -> NearMiss | None:
 def live_near_misses(
     selector_text: str, benchmarks: dict[str, Any], estimates: dict[str, Any] | None = None
 ) -> list[NearMiss]:
-    """The near-misses among the selector's unretired models."""
+    """The near-misses among the selector's unretired models. ``estimates``
+    defaults to the committed ones, so every caller (the catalog pass's
+    targeted checks in update_models.py, close_resolved_issues.py) judges
+    a pair as the rule does."""
+    if estimates is None:
+        estimates = load_estimates()
     live = [m for m in parse_models(selector_text, benchmarks, estimates) if not m.retired]
     return near_misses(selector_text, live, unavailable_ids())
 
