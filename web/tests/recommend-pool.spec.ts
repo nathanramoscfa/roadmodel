@@ -61,7 +61,7 @@ test("the pool sets aside a superseded model while its successor is in reach, an
   const reach = reachableModelIds(["claude-max"], [], ALL)!;
   // Marked here, not looked up: a superseded model leaves the live rows on its
   // retires_on day, so a plan doesn't always have one in reach.
-  const [superseded, successor] = rows.filter((m) => reach.has(m.id) && m.aa_index !== null);
+  const [superseded, successor] = rows.filter((m) => reach.has(m.id) && m.aa_index !== null && !m.superseded_by);
   const models = rows.map((m) => (m.id === superseded.id ? { ...m, superseded_by: successor.id } : m));
   const pool = viewerPool(models, reach)!;
   expect(pool.has(superseded.id)).toBe(false);

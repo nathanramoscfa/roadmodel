@@ -141,3 +141,31 @@ def test_the_live_selector_has_both_methods() -> None:
     selector = (REPO_ROOT / "docs" / "model-selector.txt").read_text()
     for method in ("cursor", "claude-web"):
         assert merge_catalog._method_supports_re(method).search(selector), method
+
+
+def test_fetch_text_omits_markdown_accept_header_on_dot_md_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """cursor.com/docs/models-and-pricing.md already ends in .md; sending
+    Accept: text/markdown triggers Mintlify's .md rewrite (.md.md -> 404)."""
+    import requests
+
+    seen: dict[str, object] = {}
+
+    class _Resp:
+        text = PAGE
+
+        def raise_for_status(self) -> None:
+            return None
+
+    def _fake_get(url: str, **kwargs: object) -> _Resp:
+        seen["url"] = url
+        seen["headers"] = kwargs.get("headers")
+        return _Resp()
+
+    monkeypatch.setattr(requests, "get", _fake_get)
+    assert cx.fetch_text(cx.pricing_url()) == PAGE
+    headers = seen["headers"]
+    assert isinstance(headers, dict)
+    assert "Accept" not in headers
+    assert headers.get("User-Agent") == cx.USER_AGENT
