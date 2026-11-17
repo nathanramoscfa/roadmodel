@@ -120,6 +120,15 @@ project paths can use drive letters. Register each machine's own directories;
 running the updater on one machine does not make another machine's filesystem
 local.
 
+For automatic discovery, put each machine's absolute workspace roots in
+`~/.config/roadmodel/projects.roots`, one directory per line. Each run scans
+their immediate children for primary Git checkouts with
+`docs/roadmap/ROADMAP.md` or `private/ROADMAP.md`. Moving a project out of
+those roots removes it from the next run. Inside a root, `projects.txt` still
+supplies environment overrides for discovered projects. Entries outside
+those roots stay explicit. Use `--project-inventory` to inspect the effective
+list before an upgrade or checkout sync.
+
 A coordinator can update named SSH peers through its private
 `~/.config/roadmodel/fleet.json`:
 
@@ -133,13 +142,16 @@ A coordinator can update named SSH peers through its private
       "platform": "windows",
       "python": "C:\\Python313\\python.exe",
       "launcher": "~/.config/roadmodel/update_projects.py",
-      "projects": ["D:\\Code\\example-app", "D:\\Code\\example-library"]
+      "projects": "auto"
     }
   }
 }
 ```
 
 `platform` is `windows` or `posix`; `python` and project paths must be absolute.
+With `"projects": "auto"`, the peer uses its own discovery roots and registry,
+and the coordinator reads its inventory when considering roadmap refreshes.
+A list of absolute project paths continues to select explicit fleet projects.
 `launcher` is optional and defaults to the path shown, expanded on the peer.
 `host` is an existing SSH alias or hostname, optionally `user@host`. Peers need
 the installed updater and companions, a known SSH host key, and working

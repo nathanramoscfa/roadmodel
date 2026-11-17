@@ -93,6 +93,7 @@ class Peer:
     python: str
     launcher: str
     projects: tuple[str, ...]
+    use_registry: bool = False
 
 
 def _string(value: Any, field: str) -> str:
@@ -170,8 +171,13 @@ def load_config(config_path: Path) -> tuple[list[Peer], Optional[Path]]:
             raw.get("launcher", DEFAULT_LAUNCHER), f"{label}.launcher", platform, allow_home=True
         )
         projects = raw.get("projects")
+        if projects == "auto":
+            result.append(Peer(name, host, platform, python, launcher, (), use_registry=True))
+            continue
         if not isinstance(projects, list) or not projects:
-            raise ValueError(f"{label}: projects must be a nonempty list of absolute paths")
+            raise ValueError(
+                f"{label}: projects must be 'auto' or a nonempty list of absolute paths"
+            )
         paths = tuple(_path(project, f"{label}.projects", platform) for project in projects)
         result.append(Peer(name, host, platform, python, launcher, paths))
     return result, source
@@ -205,7 +211,9 @@ def _updater_args(
             # a coordinated run must not clear what a local run keeps.
             args.append("--keep-pins")
     if not check:
-        args.extend(["--log", "--add"])
+        args.append("--log")
+        if peer.projects:
+            args.append("--add")
     args.extend(peer.projects)
     return args
 
@@ -218,6 +226,7 @@ def build_command(
     stdin_script: bool = False,
     keep_pins: bool = False,
     refresh_plan: bool = False,
+    inventory: bool = False,
 ) -> list[str]:
     """Build one SSH invocation without interpolating paths into executable code.
 
@@ -231,7 +240,9 @@ def build_command(
         json.dumps(
             {
                 "launcher": peer.launcher,
-                "args": _updater_args(
+                "args": ["--local-only", "--project-inventory"]
+                if inventory
+                else _updater_args(
                     peer,
                     sync_only=sync_only,
                     check=check,
@@ -347,9 +358,12 @@ def run_fleet(
     for peer in peers:
         if dry_run:
             mode = "check" if check else "synchronize" if sync_only else "upgrade"
-            lines.append(
-                f"fleet {peer.name}: would {mode} {len(peer.projects)} configured project(s)"
+            scope = (
+                "its own project inventory"
+                if peer.use_registry
+                else f"{len(peer.projects)} configured project(s)"
             )
+            lines.append(f"fleet {peer.name}: would {mode} {scope}")
             continue
         try:
             input_kwargs = (
@@ -395,7 +409,12 @@ def run_fleet(
                     detail = f"updater exited {completed.returncode}; inspect its local update log"
                 lines.append(f"fleet {peer.name}: FAILED ({detail})")
             else:
-                lines.append(f"fleet {peer.name}: OK ({len(peer.projects)} configured project(s))")
+                scope = (
+                    "peer project inventory"
+                    if peer.use_registry
+                    else f"{len(peer.projects)} configured project(s)"
+                )
+                lines.append(f"fleet {peer.name}: OK ({scope})")
         except subprocess.TimeoutExpired:
             success = False
             lines.append(
@@ -408,6 +427,7 @@ def run_fleet(
 
 
 REFRESH_PLAN_MARKER = "ROADMODEL-REFRESH-PLAN "
+INVENTORY_MARKER = "ROADMODEL-PROJECT-INVENTORY "
 _PLAN_MODES = ("clone", "in-place", "skip")
 
 
@@ -439,14 +459,11 @@ def _plan_reports(stdout: str, peer: Peer) -> list[dict[str, Any]]:
     return result
 
 
-def refresh_plan(peer: Peer) -> list[dict[str, Any]]:
-    """Ask a peer how its projects' roadmaps would be refreshed from this
-    machine: its updater's `--refresh-plan` report, one dict per project.
-    Read-only on the peer, which needs roadmodel 0.2.101 or later. Raises
-    ValueError with a message of our own, never the peer's output."""
+def _read_peer_report(peer: Peer, *, inventory: bool = False) -> str:
+    label = "project inventory" if inventory else "plan"
     try:
         completed = subprocess.run(  # noqa: S603 — validated host and shell-encoded payload
-            build_command(peer, refresh_plan=True),
+            build_command(peer, refresh_plan=not inventory, inventory=inventory),
             stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
@@ -456,15 +473,41 @@ def refresh_plan(peer: Peer) -> list[dict[str, Any]]:
             check=False,
         )
     except subprocess.TimeoutExpired:
-        raise ValueError(f"no plan within {EXECUTION_TIMEOUT_SECONDS}s") from None
+        raise ValueError(f"no {label} within {EXECUTION_TIMEOUT_SECONDS}s") from None
     except OSError:
         raise ValueError("could not execute SSH") from None
     if completed.returncode == 255:
         raise ValueError("SSH connection failed")
     if completed.returncode:
-        raise ValueError(f"its updater exited {completed.returncode}; is it older than 0.2.101?")
+        support = "does it support project inventory?" if inventory else "is it older than 0.2.101?"
+        raise ValueError(f"its updater exited {completed.returncode}; {support}")
+    return completed.stdout
+
+
+def project_inventory(peer: Peer) -> tuple[str, ...]:
+    """Read the current paths reported by the peer's installed updater."""
+    stdout = _read_peer_report(peer, inventory=True)
+    lines = [line for line in stdout.splitlines() if line.startswith(INVENTORY_MARKER)]
+    if len(lines) != 1:
+        raise ValueError("no project inventory in its output")
     try:
-        return _plan_reports(completed.stdout, peer)
+        data = json.loads(lines[0][len(INVENTORY_MARKER) :])
+    except json.JSONDecodeError:
+        raise ValueError("its project inventory is not valid JSON") from None
+    if not isinstance(data, list):
+        raise ValueError("its project inventory is not a list")
+    paths = tuple(_path(path, "project inventory path", peer.platform) for path in data)
+    path_type = PureWindowsPath if peer.platform == "windows" else PurePosixPath
+    if len({path_type(path) for path in paths}) != len(paths):
+        raise ValueError("its project inventory repeats a path")
+    return paths
+
+
+def refresh_plan(peer: Peer) -> list[dict[str, Any]]:
+    """Ask the peer how each requested project can be refreshed, read-only."""
+    stdout = _read_peer_report(peer)
+    try:
+        return _plan_reports(stdout, peer)
     except json.JSONDecodeError:
         # Its message could quote the peer's output.
         raise ValueError("its refresh plan is not valid JSON") from None

@@ -45,6 +45,27 @@ def test_missing_config_is_noop(fleet: ModuleType, tmp_path: Path) -> None:
     assert list(tmp_path.iterdir()) == []
 
 
+def test_automatic_peer_uses_its_inventory(
+    fleet: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    peer = fleet.load_peers(_config(tmp_path, projects="auto"))[0]
+    assert peer.use_registry
+    assert fleet._updater_args(peer, sync_only=False, check=False) == [
+        "--local-only",
+        "--skip-roadmap-refresh",
+        "--log",
+    ]
+    paths = [r"E:\Code\App A", r"E:\Code\App B"]
+    stdout = "unrelated line\n" + fleet.INVENTORY_MARKER + json.dumps(paths)
+    monkeypatch.setattr(
+        fleet.subprocess, "run", lambda *_a, **_k: SimpleNamespace(returncode=0, stdout=stdout)
+    )
+    assert fleet.project_inventory(peer) == tuple(paths)
+    stdout = fleet.INVENTORY_MARKER + json.dumps([paths[0], paths[0].lower()])
+    with pytest.raises(ValueError, match="repeats a path"):
+        fleet.project_inventory(peer)
+
+
 @pytest.mark.parametrize("host", ["-oProxyCommand=evil", "good;touch x", "good\nmalicious", "a b"])
 def test_hosts_cannot_inject_ssh_options(fleet: ModuleType, tmp_path: Path, host: str) -> None:
     lines, ok = fleet.run_fleet(_config(tmp_path, host=host))
