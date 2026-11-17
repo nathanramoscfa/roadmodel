@@ -98,8 +98,22 @@
     "gpt-5.5": "gpt-5.5",
     "gpt-5.4": "gpt-5.4"
   },
-  "unexpected_slugs": [],
-  "discovered": [],
+  "unexpected_slugs": [
+    "gpt-6.2-astra",
+    "gpt-6.2-sol"
+  ],
+  "discovered": [
+    {
+      "slug": "gpt-6.2-astra",
+      "input_price_per_1m": 8.0,
+      "output_price_per_1m": 40.0
+    },
+    {
+      "slug": "gpt-6.2-sol",
+      "input_price_per_1m": 2.0,
+      "output_price_per_1m": 10.0
+    }
+  ],
   "missing_mapped_models": [
     "gpt-5",
     "gpt-5-mini",
