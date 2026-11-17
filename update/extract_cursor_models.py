@@ -88,9 +88,12 @@ def pricing_url() -> str:
 def fetch_text(url: str) -> str:
     import requests
 
+    # No Accept: text/markdown header: pricing_url() already ends in .md, and
+    # Mintlify's markdown content-negotiation rewrite turns .md + text/markdown
+    # into .md.md (404). Match update/check_sources.py's plain User-Agent fetch.
     response = requests.get(
         url,
-        headers={"User-Agent": USER_AGENT, "Accept": "text/plain, text/markdown, */*"},
+        headers={"User-Agent": USER_AGENT},
         timeout=FETCH_TIMEOUT,
         allow_redirects=True,
     )

@@ -58,8 +58,8 @@
       "max_output_tokens": 2048,
       "ladder_max_output_tokens": 6144,
       "temperature": 0.0,
-      "menu": "invited",
-      "notes": "Claude's small model: no thinking, takes temperature. The cached system prompt (roadmodel >= 0.2.56) makes a warm call read the prompt at $0.10 per 1M. Last link in the fallback chain."
+      "menu": null,
+      "notes": "Claude's small model: no thinking, takes temperature. The cached system prompt (roadmodel >= 0.2.56) makes a warm call read the prompt at $0.10 per 1M. Superseded in the catalog by Haiku 5.5, so off the operator menu; still the Anthropic link in the fallback chain and the Anthropic visitor default."
     },
     {
       "hint": "openai-gpt-6.1-sol",

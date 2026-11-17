@@ -325,3 +325,13 @@ def test_livecodebench_aggregate_ranks_models() -> None:
     assert overalls == sorted(overalls, reverse=True), (
         "LiveCodeBench rows are not sorted by pass1_overall descending"
     )
+
+
+def test_extract_cursor_models_live_fetches_and_maps() -> None:
+    """extract_cursor_models.fetch_text must succeed against the live .md URL
+    (guards against content-negotiation 404s that only surface without --input)."""
+    import extract_cursor_models as cx
+
+    md = cx.fetch_text(cx.pricing_url())
+    ids = cx.cursor_ids(md, (REPO_ROOT / "docs" / "model-selector.txt").read_text())
+    assert len(ids) >= 15, f"Expected >=15 catalogued Cursor models, got {len(ids)}: {ids}"
