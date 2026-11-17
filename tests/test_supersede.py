@@ -114,6 +114,71 @@ def test_only_the_same_maker_supersedes() -> None:
     assert _succ([_model("old", 5, 25, 40), _model("rival", 1, 2, 60)]) == {}
 
 
+def _estimates(**rows: tuple[float, float]) -> dict[str, object]:
+    return {"models": {mid: {"index": i, "band": b} for mid, (i, b) in rows.items()}}
+
+
+def _succ_est(models: list[str], estimates: dict[str, object]) -> dict[str, str]:
+    text = _selector(models, BASE_METHODS)
+    return supersede.successors(text, supersede.parse_models(text, {}, estimates))
+
+
+def test_an_unmeasured_successor_counts_its_estimate_less_half_its_band() -> None:
+    """Claude Fable 5.2 (2026-11-16): cheaper than Fable 5.1, estimated well
+    above it, but never measured while AA's measurements were frozen."""
+    models = [_model("old", 5, 25, 40), _model("new", 4, 20, None)]
+    assert _succ_est(models, _estimates(new=(42.0, 3.5))) == {"old": "new"}  # 40.2 > 40
+    assert _succ_est(models, _estimates(new=(41.7, 3.5))) == {}  # 39.9: inside the margin
+    assert _succ_est(models, _estimates(new=(42.0, 5.0))) == {}  # 39.5: a wider band
+    assert _succ_est(models, {}) == {}
+
+
+def test_a_measurement_overrides_the_estimate() -> None:
+    models = [_model("old", 5, 25, 40), _model("new", 4, 20, 39)]
+    assert _succ_est(models, _estimates(new=(60.0, 3.5))) == {}
+    parsed = supersede.parse_models(
+        _selector(models, BASE_METHODS), {}, _estimates(new=(60.0, 3.5))
+    )
+    assert {m.id: m.aa_estimate for m in parsed} == {"old": None, "new": None}
+
+
+def test_an_estimate_never_stands_in_for_the_older_model() -> None:
+    """The older model is superseded only against a figure of its own."""
+    models = [_model("old", 5, 25, None), _model("new", 4, 20, 50)]
+    assert _succ_est(models, _estimates(old=(30.0, 3.5))) == {}
+
+
+def test_the_successor_with_the_best_standing_wins() -> None:
+    models = [
+        _model("old", 5, 25, 40),
+        _model("measured", 4, 20, 45),
+        _model("estimated", 4, 20, None),
+    ]
+    methods = dict(BASE_METHODS, **{"maker-api": ("maker", ["old", "measured", "estimated"])})
+    methods["cursor"] = ("cursor", ["old", "measured", "estimated", "rival"])
+    text = _selector(models, methods)
+    est = _estimates(estimated=(50.0, 3.5))  # 48.2 beats the measured 45
+    assert supersede.successors(text, supersede.parse_models(text, {}, est)) == {
+        "old": "estimated",
+        "measured": "estimated",
+    }
+
+
+@pytest.mark.parametrize("band", [3.5, 4.0, 5.0, 2.25])
+def test_the_estimate_margin_is_the_pick_penalty(band: float) -> None:
+    sys.path.insert(0, str(REPO_ROOT / "src"))
+    from roadmodel import scoring
+
+    assert supersede.estimate_penalty(band) == scoring.estimate_penalty(band)
+
+
+def test_the_cli_reads_the_committed_estimates() -> None:
+    estimates = supersede.load_estimates()
+    assert supersede.ESTIMATES_PATH.name == "index-estimates.json"
+    assert isinstance(estimates.get("models"), dict)
+    assert supersede.load_estimates(REPO_ROOT / "no-such-file.json") == {}
+
+
 def _plan(
     text: str, today: dt.date, base: dict[str, supersede.Tags] | None = None
 ) -> supersede.Plan:
@@ -256,7 +321,11 @@ def test_the_retirement_day_retires_rerates_and_leaves_the_drift_check_green(
     today = first_since + dt.timedelta(days=supersede.RETIRE_AFTER_DAYS)
     full = json.loads((REPO_ROOT / "docs" / "benchmarks.json").read_text())
     # The models the rule retires that day: a tagged model can also clear first.
-    due = set(supersede.plan(text, full, today, None, supersede.unavailable_ids()).retired)
+    due = set(
+        supersede.plan(
+            text, full, today, None, supersede.unavailable_ids(), supersede.load_estimates()
+        ).retired
+    )
     if not due:
         pytest.skip("no model retires on the first leave date in the committed selector")
     benchmarks = json.loads((REPO_ROOT / "docs" / "benchmarks.json").read_text())["models"]

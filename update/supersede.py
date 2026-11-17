@@ -5,7 +5,14 @@ A model is SUPERSEDED when another model in ``<model-options>``:
 * has the same maker (the provider of the first-party access method that
   offers it, ``validate_catalog_conformance._model_makers``);
 * costs the same or less, on the blended price (3 x input + 1 x output) / 4;
-* scores higher on the Artificial Analysis Intelligence Index;
+* scores higher on the Artificial Analysis Intelligence Index. A newer model
+  AA has not measured yet counts its estimate (``docs/index-estimates.json``)
+  less half the estimate's band, the margin a pick ranks it by
+  (``roadmodel.scoring.estimate_penalty``): Claude Fable 5.2 launched cheaper
+  than Fable 5.1 on every surface and estimated well above it, yet 5.1 stayed
+  for want of a measurement that could not come while AA's were frozen
+  (2026-11-16). The older model still needs a figure of its own, and once AA
+  measures the newer one, the measurement decides;
 * is rated at least as high in each of the seven categories; and
 * is offered by every access method that offers the model, so the newer model
   is always there to take its place; and
@@ -69,6 +76,7 @@ from validate_catalog_conformance import _model_makers  # noqa: E402
 REPO_ROOT = UPDATE_DIR.parent
 SELECTOR_PATH = REPO_ROOT / "docs" / "model-selector.txt"
 BENCHMARKS_PATH = REPO_ROOT / "docs" / "benchmarks.json"
+ESTIMATES_PATH = REPO_ROOT / "docs" / "index-estimates.json"
 AVAILABILITY_PATH = REPO_ROOT / "infra" / "model-availability.json"
 EFFORT_RATINGS_PATH = derive_ratings.EFFORT_RATINGS_PATH
 
@@ -88,6 +96,14 @@ class Model:
     since: str | None  # superseded-on, if tagged
     by: str | None  # superseded-by, if tagged
     retired: str | None  # retired-on, if retired
+    # The estimate less half its band, for a model AA has not measured.
+    aa_estimate: float | None = None
+
+    @property
+    def standing(self) -> float | None:
+        """The figure this model challenges an older one with: its AA Index,
+        else its discounted estimate."""
+        return self.aa_index if self.aa_index is not None else self.aa_estimate
 
 
 def blended_price(input_per_1m: float, output_per_1m: float) -> float:
@@ -105,7 +121,34 @@ def _aa_index(mid: str, attrs: dict[str, str], benchmarks: dict[str, Any]) -> fl
     return float(m.group(1)) if m else None
 
 
-def parse_models(selector_text: str, benchmarks: dict[str, Any]) -> list[Model]:
+def load_estimates(path: Path = ESTIMATES_PATH) -> dict[str, Any]:
+    """The committed AA Index estimates, or none when the file is absent."""
+    return json.loads(path.read_text()) if path.exists() else {}
+
+
+def estimate_penalty(band: float) -> float:
+    """Half the band, to a tenth: ``roadmodel.scoring.estimate_penalty``,
+    restated here so the catalog cron needs no package import (a test holds
+    the two equal)."""
+    return round(float(band) / 2, 1)
+
+
+def discounted_estimates(estimates: dict[str, Any] | None) -> dict[str, float]:
+    """Each estimated model's index less half its band."""
+    out: dict[str, float] = {}
+    for mid, row in ((estimates or {}).get("models") or {}).items():
+        if not isinstance(row, dict):
+            continue
+        index, band = row.get("index"), row.get("band")
+        if isinstance(index, (int, float)) and isinstance(band, (int, float)):
+            out[str(mid)] = round(float(index) - estimate_penalty(band), 1)
+    return out
+
+
+def parse_models(
+    selector_text: str, benchmarks: dict[str, Any], estimates: dict[str, Any] | None = None
+) -> list[Model]:
+    estimated = discounted_estimates(estimates)
     options = _OPTIONS_RE.search(selector_text)
     if not options:
         raise ValueError("<model-options> block not found in selector text")
@@ -117,18 +160,20 @@ def parse_models(selector_text: str, benchmarks: dict[str, Any]) -> list[Model]:
         out_p = _parse_price(attrs.get("output-price-per-1m", ""))
         if not mid or in_p is None or out_p is None:
             continue
+        aa_index = _aa_index(mid, attrs, benchmarks)
         out.append(
             Model(
                 id=mid,
                 name=attrs.get("name", mid),
                 blended=blended_price(in_p, out_p),
-                aa_index=_aa_index(mid, attrs, benchmarks),
+                aa_index=aa_index,
                 ratings={
                     c: RATING_RANK.get(attrs.get(f"tier-{c}", ""), 0) for c in TASK_CATEGORIES
                 },
                 since=attrs.get("superseded-on") or None,
                 by=attrs.get("superseded-by") or None,
                 retired=attrs.get("retired-on") or None,
+                aa_estimate=estimated.get(mid) if aa_index is None else None,
             )
         )
     return out
@@ -154,15 +199,17 @@ def _offered(selector_text: str) -> dict[str, set[str]]:
 
 def _beats(old: Model, new: Model, makers: dict[str, str], unavailable: frozenset[str]) -> bool:
     """Every supersession test but coverage: same maker, available, no
-    dearer, a higher AA Index, rated at least as high everywhere."""
+    dearer, a higher AA Index (an unmeasured newcomer's discounted estimate),
+    rated at least as high everywhere."""
     maker = makers.get(old.id)
     if maker is None or old.aa_index is None:
         return False
-    if new.id == old.id or new.aa_index is None or makers.get(new.id) != maker:
+    standing = new.standing
+    if new.id == old.id or standing is None or makers.get(new.id) != maker:
         return False
     if new.id in unavailable:
         return False
-    if not (new.blended <= old.blended and new.aa_index > old.aa_index):
+    if not (new.blended <= old.blended and standing > old.aa_index):
         return False
     return all(new.ratings[c] >= old.ratings[c] for c in TASK_CATEGORIES)
 
@@ -183,8 +230,8 @@ def successors(
                 continue
             if not where <= offered.get(new.id, set()):
                 continue
-            if best is None or (-new.aa_index, new.blended, new.id) < (  # type: ignore[operator]
-                -best.aa_index,  # type: ignore[operator]
+            if best is None or (-new.standing, new.blended, new.id) < (  # type: ignore[operator]
+                -best.standing,  # type: ignore[operator]
                 best.blended,
                 best.id,
             ):
@@ -241,9 +288,11 @@ def parse_near_miss(line: str) -> NearMiss | None:
     return NearMiss(m["old"], m["new"], tuple(x.strip() for x in m["missing"].split(",")))
 
 
-def live_near_misses(selector_text: str, benchmarks: dict[str, Any]) -> list[NearMiss]:
+def live_near_misses(
+    selector_text: str, benchmarks: dict[str, Any], estimates: dict[str, Any] | None = None
+) -> list[NearMiss]:
     """The near-misses among the selector's unretired models."""
-    live = [m for m in parse_models(selector_text, benchmarks) if not m.retired]
+    live = [m for m in parse_models(selector_text, benchmarks, estimates) if not m.retired]
     return near_misses(selector_text, live, unavailable_ids())
 
 
@@ -272,11 +321,12 @@ def plan(
     today: dt.date,
     base: dict[str, Tags] | None = None,
     unavailable: frozenset[str] = frozenset(),
+    estimates: dict[str, Any] | None = None,
 ) -> Plan:
     """What each model's tags should be after this run. ``base`` holds the tags
     of the committed selector, so a tag a regenerated file dropped comes back
     with its original dates."""
-    models = parse_models(selector_text, benchmarks)
+    models = parse_models(selector_text, benchmarks, estimates)
     base = base or {}
     result = Plan({}, [], [], [])
     live: list[Model] = []
@@ -391,19 +441,20 @@ def main(argv: list[str] | None = None) -> int:
     today = args.today or dt.datetime.now(dt.UTC).date()
     selector_text = args.selector.read_text()
     benchmarks = json.loads(BENCHMARKS_PATH.read_text()) if BENCHMARKS_PATH.exists() else {}
+    estimates = load_estimates()
     if args.near_misses:
-        found = live_near_misses(selector_text, benchmarks)
+        found = live_near_misses(selector_text, benchmarks, estimates)
         if args.persisted_since is not None:
             then = {
                 (n.old, n.new)
-                for n in live_near_misses(args.persisted_since.read_text(), benchmarks)
+                for n in live_near_misses(args.persisted_since.read_text(), benchmarks, estimates)
             }
             found = [n for n in found if (n.old, n.new) in then]
         for n in found:
             print(n.line())
         return 0
     base = base_tags(args.base.read_text()) if args.base else None
-    p = plan(selector_text, benchmarks, today, base, unavailable_ids())
+    p = plan(selector_text, benchmarks, today, base, unavailable_ids(), estimates)
 
     names = {m.id: m.name for m in parse_models(selector_text, benchmarks)}
     for mid in p.newly:
@@ -415,7 +466,7 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"RETIRED {names.get(mid, mid)} (superseded by {names.get(t.by, t.by)} since {t.since})"
         )
-    for n in live_near_misses(selector_text, benchmarks):
+    for n in live_near_misses(selector_text, benchmarks, estimates):
         print(n.line())
 
     if args.write:

@@ -38,7 +38,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from discovery import _variants, catalog_keys, normalize, parse_declined  # noqa: E402
-from supersede import BENCHMARKS_PATH, live_near_misses  # noqa: E402
+from supersede import BENCHMARKS_PATH, live_near_misses, load_estimates  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SELECTOR_PATH = REPO_ROOT / "docs" / "model-selector.txt"
@@ -134,7 +134,7 @@ def main() -> int:
     try:
         bench = json.loads(BENCHMARKS_PATH.read_text()) if BENCHMARKS_PATH.exists() else {}
         selector = SELECTOR_PATH.read_text(encoding="utf-8")
-        near_misses = {(n.old, n.new) for n in live_near_misses(selector, bench)}
+        near_misses = {(n.old, n.new) for n in live_near_misses(selector, bench, load_estimates())}
     except Exception as exc:  # noqa: BLE001 - leave near-miss issues open, close the rest
         print(f"near-miss rule unavailable ({exc!r}); near-miss issues stay open")
         near_misses = None
