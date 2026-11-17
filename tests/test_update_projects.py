@@ -75,6 +75,33 @@ def test_registry_line_forms(up: ModuleType) -> None:
         up.parse_registry_line("/srv/app | pipenv:whatever")
 
 
+def test_discovery_follows_roadmaps_and_keeps_overrides(up: ModuleType, tmp_path: Path) -> None:
+    root = tmp_path / "code"
+    project = root / "active"
+    new = root / "new"
+    legacy = tmp_path / "outside"
+    worktree = root / "linked-worktree"
+    for checkout in (project, new, worktree):
+        (checkout / "docs/roadmap").mkdir(parents=True)
+        (checkout / "docs/roadmap/ROADMAP.md").touch()
+    for checkout in (project, new):
+        (checkout / ".git").mkdir()
+        (checkout / ".git/HEAD").touch()
+    (worktree / ".git").write_text("gitdir: elsewhere")
+    registry = tmp_path / "projects.txt"
+    content = f"{project} | conda:custom\n{legacy}\n{root / 'removed'}\n"
+    registry.write_text(content)
+    registry.with_suffix(".roots").write_text(f"{root}\n")
+    assert {e.path: e.override for e in up.project_entries(registry)} == {
+        project: "conda:custom",
+        new: None,
+        legacy: None,
+    }
+    (project / "docs/roadmap/ROADMAP.md").unlink()
+    assert {e.path for e in up.project_entries(registry)} == {new, legacy}
+    assert registry.read_text() == content
+
+
 def test_add_to_registry_dedupes_and_requires_dirs(up: ModuleType, tmp_path: Path) -> None:
     reg = tmp_path / "cfg" / "projects.txt"
     a = tmp_path / "a"
@@ -2394,7 +2421,7 @@ def test_a_peer_project_refreshes_in_a_clone_of_its_remote(
 def test_peer_roadmaps_ask_the_peer_only_when_one_is_due(
     up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    peer = SimpleNamespace(name="pc", projects=(r"E:\Code\a", r"E:\Code\b"))
+    peer = SimpleNamespace(name="pc", projects=(r"E:\Code\a", r"E:\Code\b"), use_registry=False)
     asked: list[str] = []
 
     def refresh_plan(p: object) -> list[dict[str, object]]:

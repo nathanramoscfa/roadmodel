@@ -46,7 +46,7 @@ import shutil
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path, PureWindowsPath
 from typing import Callable, Optional
 from urllib.parse import urlsplit
@@ -239,6 +239,21 @@ def refresh_peer_roadmaps(
     for peer in peers:
         reports: dict[str, dict] = {}
         failure: list[str] = []
+        paths = peer.projects
+        if peer.use_registry:
+            if dry_run:
+                lines.append(f"{peer.name}: project inventory comes from the peer's updater")
+                continue
+            try:
+                paths = fleet.project_inventory(peer)
+            except ValueError as exc:
+                lines.append(f"{peer.name}: FAILED (could not read its project inventory: {exc})")
+                attention = True
+                continue
+            if not paths:
+                lines.append(f"{peer.name}: no active projects found")
+                continue
+            peer = replace(peer, projects=paths, use_registry=False)
 
         def planner(entry: Entry, peer=peer, reports=reports, failure=failure) -> RefreshPlan:
             if not reports and not failure:
@@ -261,7 +276,7 @@ def refresh_peer_roadmaps(
             )
             continue
         peer_lines, peer_attention = refresh_roadmaps(
-            [Entry(Path(p), peer=peer.name) for p in peer.projects],
+            [Entry(Path(p), peer=peer.name) for p in paths],
             on_demand=on_demand,
             unattended=unattended,
             jobs=jobs,
@@ -327,6 +342,51 @@ def read_registry(file: Path) -> list[Entry]:
         if entry:
             entries.append(entry)
     return entries
+
+
+def project_entries(file: Path) -> list[Entry]:
+    """Find primary roadmodel checkouts under the opted-in roots.
+
+    The registry still supplies environment overrides and explicit projects
+    outside those roots. Each scan is read-only and reports unavailable roots.
+    """
+    import stat
+
+    entries = read_registry(file)
+    roots_file = file.with_suffix(".roots")
+    if not roots_file.is_file():
+        return entries
+    roots = set()
+    for number, line in enumerate(roots_file.read_text(encoding="utf-8").splitlines(), 1):
+        value = line.strip()
+        if not value or value.startswith("#"):
+            continue
+        root = Path(value).expanduser()
+        if not root.is_absolute() or not root.is_dir():
+            raise SystemExit(
+                f"{roots_file}:{number}: project root must be an existing absolute directory"
+            )
+        roots.add(root.resolve())
+    listed = {entry.path.resolve(): entry for entry in entries}
+    selected = {path: entry for path, entry in listed.items() if path.parent not in roots}
+    for root in sorted(roots):
+        for child in sorted(root.iterdir()):
+            if child.name.startswith("."):
+                continue
+            try:
+                info = child.lstat()
+            except FileNotFoundError:
+                continue
+            if child.is_symlink() or (
+                getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+            ):
+                continue
+            if (child / ".git" / "HEAD").is_file() and any(
+                (child / marker).is_file()
+                for marker in ("docs/roadmap/ROADMAP.md", "private/ROADMAP.md")
+            ):
+                selected[child] = listed.get(child, Entry(child))
+    return list(selected.values())
 
 
 def add_to_registry(file: Path, paths: list[str]) -> list[Path]:
@@ -2537,9 +2597,7 @@ def _sync_argv(python: Path, script: Path) -> list[str]:
 
 def sync_launchd_plist(python: Path, script: Path, minutes: int) -> str:
     """The checkout sync as a launchd agent that starts every ``minutes``."""
-    args = "".join(
-        f"    <string>{escape(a)}</string>\n" for a in _sync_argv(python, script)
-    )
+    args = "".join(f"    <string>{escape(a)}</string>\n" for a in _sync_argv(python, script))
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -2595,7 +2653,9 @@ def install_sync_schedule(minutes: int, dry_run: bool = False) -> str:
         _replace_bytes(plist, sync_launchd_plist(python, script, minutes).encode("utf-8"))
         cp = _sys(["launchctl", "bootstrap", domain, str(plist)])
         if cp.returncode != 0:
-            raise SystemExit(f"launchctl bootstrap failed: {cp.stderr.strip() or cp.stdout.strip()}")
+            raise SystemExit(
+                f"launchctl bootstrap failed: {cp.stderr.strip() or cp.stdout.strip()}"
+            )
         return f"launchd agent {plist} — {stamp}"
     if WINDOWS:
         if dry_run:
@@ -3225,7 +3285,7 @@ def _venv_base(projects_file: Path) -> Optional[Path]:
     else a registered project's env (each one already runs roadmodel)."""
     if sys.version_info[:2] >= MIN_PYTHON:
         return Path(sys.executable)
-    for entry in read_registry(projects_file):
+    for entry in project_entries(projects_file):
         env, _ = resolve_env(entry)
         if env is not None and _python_ok(env.python):
             return env.python
@@ -3459,6 +3519,11 @@ def _parser() -> argparse.ArgumentParser:
         ),
     )
     ap.add_argument(
+        "--project-inventory",
+        action="store_true",
+        help="print active project paths as one JSON line, without reading roadmaps or writing files",
+    )
+    ap.add_argument(
         "--auto-refresh",
         choices=("on", "off"),
         help=(
@@ -3507,7 +3572,7 @@ def _main(argv: Optional[list[str]] = None) -> int:
     early.add_argument("--dry-run", action="store_true")
     early.add_argument("--projects-file", type=Path, default=DEFAULT_PROJECTS_FILE)
     pre, _ = early.parse_known_args(raw)
-    if pre.log and "--check" not in raw and not pre.dry_run:
+    if pre.log and not {"--check", "--project-inventory"} & set(raw) and not pre.dry_run:
         log_fh = _open_log()
         sys.stdout = _Tee(sys.__stdout__, log_fh)
         sys.stderr = _Tee(sys.__stderr__, log_fh)
@@ -3518,6 +3583,7 @@ def _main(argv: Optional[list[str]] = None) -> int:
         "--sync-only",
         "--sync-checkouts",
         "--refresh-plan",
+        "--project-inventory",
     } & set(raw):
         if pre.dry_run:
             print("self-update: skipped (dry run); this is the local copy's plan")
@@ -3556,9 +3622,14 @@ def _main(argv: Optional[list[str]] = None) -> int:
         print(
             refresh_plan_report(
                 [Entry(Path(p).expanduser()) for p in args.projects]
-                or read_registry(args.projects_file)
+                or project_entries(args.projects_file)
             )
         )
+        return 0
+
+    if args.project_inventory:
+        paths = [str(entry.path.resolve()) for entry in project_entries(args.projects_file)]
+        print(_support("upgrade_fleet").INVENTORY_MARKER + json.dumps(paths))
         return 0
 
     if args.context_source and not args.context_sync:
@@ -3566,7 +3637,7 @@ def _main(argv: Optional[list[str]] = None) -> int:
     if args.sync_checkouts:
         # Its own frequent schedule: only git fast-forwards, no upgrades.
         paths = [Path(p) for p in args.projects] or [
-            e.path for e in read_registry(args.projects_file)
+            e.path for e in project_entries(args.projects_file)
         ]
         print("Checkouts:")
         for line in sync_checkouts(paths, dry_run=args.dry_run):
@@ -3607,7 +3678,7 @@ def _main(argv: Optional[list[str]] = None) -> int:
             dry_run=args.dry_run,
             agents=agents,
             anchor=not args.keep_pins,
-            projects=[e.path for e in read_registry(args.projects_file)],
+            projects=[e.path for e in project_entries(args.projects_file)],
         ):
             print(f"  {line}")
         return 0
@@ -3625,7 +3696,7 @@ def _main(argv: Optional[list[str]] = None) -> int:
     entries = [
         Entry(Path(p).expanduser())
         for p in (args.projects or ((args.add or []) if args.dry_run else []))
-    ] or read_registry(args.projects_file)
+    ] or project_entries(args.projects_file)
     if not entries:
         print(
             f"No projects registered. Add some:\n  python {Path(sys.argv[0]).name} --add <project dir> ...\n"
@@ -3775,7 +3846,15 @@ def main(argv: Optional[list[str]] = None) -> int:
     hidden = _windowless_relaunch(raw)
     if hidden is not None:
         return hidden
-    if {"--check", "--dry-run", "--help", "-h", "--self-check", "--refresh-plan"} & set(raw):
+    if {
+        "--check",
+        "--dry-run",
+        "--help",
+        "-h",
+        "--self-check",
+        "--refresh-plan",
+        "--project-inventory",
+    } & set(raw):
         return _main(raw)
     try:
         locking = _support("updater_lock")
