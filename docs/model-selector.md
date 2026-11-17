@@ -1120,7 +1120,7 @@ Tier ratings:
 - **Tier ratings:** Coding **C** · Planning **C** · Agentic **D** · Multimodal **B** · Long-context **A** · Knowledge **D** · Speed **S**
 - **Headline benchmarks:** AA Intelligence Index 16.9 (reasoning); HLE 10.4%; SciCode 42.2; Terminal-Bench 4.0 0.0; AA-LCR 0.743; Output Speed 97.2 tokens/s; AA-Omniscience -4.2; latency leader among Claude family
 - **Pricing notes:** Hidden by default; Bedrock/Vertex: regional endpoints +10% surcharge; Cache: writes 1.25x, reads 0.1x
-- **Best for:** Strong long context, with very fast output, at a low price. Its AA Intelligence Index of 16.9 ranks 28th of 35 measured models. Weakest at agentic work and knowledge (D), then coding and planning (C).
+- **Best for:** Strong long context, with very fast output, at a low price. Its AA Intelligence Index of 16.9 ranks 28th of 35 measured models. Weakest at agentic work and knowledge (D), then coding and planning (C). Superseded by Haiku 5.5.
 
 #### Haiku 5.5 — `claude-haiku-5-5`
 
@@ -1406,7 +1406,7 @@ Billing types:
 #### claude.ai web / desktop — `claude-web`
 
 - **Billing:** subscription-included (requires claude-max-subscription)
-- **Supports models:** claude-sonnet-5-5,claude-opus-5-5,claude-opus-5,opus-4.8,claude-fable-5.1,opus-4.7,claude-sonnet-5,sonnet-4.6,claude-4.5-haiku
+- **Supports models:** claude-fable-5.2,claude-haiku-5-5,claude-sonnet-5-5,claude-opus-5-5,claude-opus-5,opus-4.8,claude-fable-5.1,opus-4.7,claude-sonnet-5,sonnet-4.6,claude-4.5-haiku
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
 - **Best for:** Chat-driven Claude use (no terminal, no codebase tool use) under the same Max budget that funds Claude Code — pick when the task is conversational rather than code-editing.
 
