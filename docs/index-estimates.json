@@ -1,6 +1,6 @@
 {
   "about": "roadmodel's estimate of each unmeasured catalog model's AA Intelligence Index, from its launch table, or from later launch tables that list it when its own is too thin (src/roadmodel/estimate.py). Shown \u2248 on /models until Artificial Analysis measures the model. Regenerate with update/build_index_estimates.py.",
-  "launch_tables_sha256": "5d331270bab4fa5c3377f3877f1f0e332d381c07378aca50395697bb68c7b102",
+  "launch_tables_sha256": "927e4b961669959699366fe749f6bd5ad0e62589e06687359d554ce7e92d982d",
   "models": {
     "claude-fable-5.2": {
       "anchors": [
