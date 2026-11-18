@@ -766,6 +766,13 @@
       "checked_on": "2026-11-18",
       "attempts": 1,
       "spent_usd": 0.434
+    },
+    "gpt-6.2-sol": {
+      "release_date": "2026-11-18",
+      "tables": [],
+      "checked_on": "2026-11-18",
+      "attempts": 1,
+      "spent_usd": 0.604
     }
   }
 }
