@@ -1,9 +1,9 @@
 {
   "schema_version": "5",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-11-18T21:04:55Z",
+  "generated_at_utc": "2026-11-18T22:04:51Z",
   "source_doc_sha256": {
-    "model-selector.txt": "3a969f0d11e0c94463d36eb13db198198b5773377833d158c7a9d6e7c97568bb",
+    "model-selector.txt": "90cee9810ae4410c9381d0bfde247a3a8d7fce6b794e22118bb1aecf723a3067",
     "model-tier-cost-scale.md": "74533f200864dd588af41c015d24c11933787b6444aa82e1f26bdb515962b58b"
   },
   "models": [
@@ -1723,6 +1723,7 @@
         "gemini-4-argon",
         "gemini-4-carbon",
         "gemini-4-hydrogen",
+        "gemini-4-neon",
         "glm-4.5-air",
         "glm-4.6",
         "glm-5.2",
