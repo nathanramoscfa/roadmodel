@@ -44,7 +44,9 @@
     "GPT-6 Luna": "medium",
     "GPT-6 Sol": "medium",
     "GPT-6.1 Sol": "low",
-    "GPT-6.1 Terra": "low"
+    "GPT-6.1 Terra": "low",
+    "GPT-6.2 Astra": "low",
+    "GPT-6.2 Sol": "low"
   },
   "xai-api": {
     "Grok 4.5": "high",
