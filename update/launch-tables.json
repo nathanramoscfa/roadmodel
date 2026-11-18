@@ -579,6 +579,193 @@
       "checked_on": "2026-11-16",
       "attempts": 1,
       "spent_usd": 0.279
+    },
+    "gemini-4-neon": {
+      "release_date": "2026-11-18",
+      "tables": [
+        {
+          "source": "https://storage.googleapis.com/deepmind-media/Model-Cards/Gemini-4-Neon-Model-Card.pdf",
+          "columns": [
+            "gemini-4-neon",
+            "claude-opus-5-5",
+            "gpt-6.2-sol"
+          ],
+          "rows": [
+            {
+              "benchmark": "Vals Index v2.2",
+              "values": [
+                70.9,
+                70.1,
+                66.1
+              ],
+              "higher_is_better": true
+            },
+            {
+              "benchmark": "CursorBench 4.1 (Score)",
+              "values": [
+                65.4,
+                58.1,
+                null
+              ],
+              "higher_is_better": true
+            },
+            {
+              "benchmark": "Terminal-bench 4.1 (Cheating adjusted accuracy)",
+              "values": [
+                65.2,
+                65.8,
+                61.5
+              ],
+              "higher_is_better": true
+            },
+            {
+              "benchmark": "FrontierCode 2.0 (Main score)",
+              "values": [
+                46.2,
+                47.3,
+                43.8
+              ],
+              "higher_is_better": true
+            },
+            {
+              "benchmark": "SWE-sweep (Provider harness)",
+              "values": [
+                39.0,
+                10.1,
+                8.3
+              ],
+              "higher_is_better": true
+            },
+            {
+              "benchmark": "SWE-sweep (Mini-SWE harness)",
+              "values": [
+                12.8,
+                3.6,
+                11.6
+              ],
+              "higher_is_better": true
+            },
+            {
+              "benchmark": "AutomationBench",
+              "values": [
+                56.3,
+                42.5,
+                41.3
+              ],
+              "higher_is_better": true
+            },
+            {
+              "benchmark": "Agents' Last Exam v1.1",
+              "values": [
+                75.8,
+                71.6,
+                73.0
+              ],
+              "higher_is_better": true
+            },
+            {
+              "benchmark": "RiemannBench",
+              "values": [
+                84.0,
+                80.0,
+                80.0
+              ],
+              "higher_is_better": true
+            },
+            {
+              "benchmark": "Terminal-Bench-Science 0.1",
+              "values": [
+                70.5,
+                63.3,
+                68.0
+              ],
+              "higher_is_better": true
+            },
+            {
+              "benchmark": "HLE-Diamond",
+              "values": [
+                71.3,
+                67.9,
+                64.0
+              ],
+              "higher_is_better": true
+            },
+            {
+              "benchmark": "MKA Climb (WSR)",
+              "values": [
+                56.5,
+                53.0,
+                52.7
+              ],
+              "higher_is_better": true
+            },
+            {
+              "benchmark": "Chartography",
+              "values": [
+                73.5,
+                66.3,
+                75.1
+              ],
+              "higher_is_better": true
+            },
+            {
+              "benchmark": "LVBench",
+              "values": [
+                89.0,
+                83.7,
+                87.6
+              ],
+              "higher_is_better": true
+            },
+            {
+              "benchmark": "GraphWalks 256k to 1M, BFS (F1)",
+              "values": [
+                95.2,
+                66.8,
+                80.1
+              ],
+              "higher_is_better": true
+            },
+            {
+              "benchmark": "CWE-Bench v2",
+              "values": [
+                70.7,
+                67.1,
+                66.0
+              ],
+              "higher_is_better": true
+            },
+            {
+              "benchmark": "SEC-bench Pro",
+              "values": [
+                90.5,
+                null,
+                88.3
+              ],
+              "higher_is_better": true
+            },
+            {
+              "benchmark": "WebExploitBench v1.2",
+              "values": [
+                51.3,
+                37.1,
+                null
+              ],
+              "higher_is_better": true
+            }
+          ]
+        }
+      ],
+      "checked_on": "2026-11-18",
+      "attempts": 1,
+      "spent_usd": 2.705
+    },
+    "gpt-6.2-astra": {
+      "release_date": "2026-11-18",
+      "tables": [],
+      "checked_on": "2026-11-18",
+      "attempts": 1,
+      "spent_usd": 0.434
     }
   }
 }
