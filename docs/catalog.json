@@ -1,10 +1,10 @@
 {
   "schema_version": "5",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-11-18T20:35:53Z",
+  "generated_at_utc": "2026-11-18T21:04:55Z",
   "source_doc_sha256": {
-    "model-selector.txt": "bb89dd19394b79e841f22c5f6c828f378ae2745dec537c316b932e6a966282da",
-    "model-tier-cost-scale.md": "4fabb3b166f5d26105e973ba6e6ee45178cb7c49600473c22b9374764e0647ee"
+    "model-selector.txt": "3a969f0d11e0c94463d36eb13db198198b5773377833d158c7a9d6e7c97568bb",
+    "model-tier-cost-scale.md": "74533f200864dd588af41c015d24c11933787b6444aa82e1f26bdb515962b58b"
   },
   "models": [
     {
@@ -450,6 +450,32 @@
       "retires_on": null
     },
     {
+      "id": "gemini-4-neon",
+      "name": "Gemini 4 Neon",
+      "input_price_per_1m": 3.0,
+      "output_price_per_1m": 15.0,
+      "cache_read_per_1m": null,
+      "tier_cost": "high",
+      "tiers": {
+        "coding": "B",
+        "planning": "B",
+        "agentic": "B",
+        "multimodal": "B",
+        "long-context": "B",
+        "knowledge": "B",
+        "speed": "B"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "Artificial Analysis has not measured Gemini 4 Neon yet, so its letters are estimates",
+      "pricing_notes": "Provider-direct Google API per-token pricing (not via the Cursor pool)",
+      "best_for": "Competent coding, planning, agentic work, multimodal input, long context and knowledge at a high price.",
+      "superseded_by": null,
+      "superseded_on": null,
+      "added_on": "2026-11-18",
+      "always_thinks": false,
+      "retires_on": null
+    },
+    {
       "id": "glm-4.5-air",
       "name": "GLM-4.5-Air",
       "input_price_per_1m": 0.2,
@@ -836,6 +862,58 @@
       "superseded_by": null,
       "superseded_on": null,
       "added_on": "2026-11-12",
+      "always_thinks": false,
+      "retires_on": null
+    },
+    {
+      "id": "gpt-6.2-astra",
+      "name": "GPT-6.2 Astra",
+      "input_price_per_1m": 8.0,
+      "output_price_per_1m": 40.0,
+      "cache_read_per_1m": null,
+      "tier_cost": "very-high",
+      "tiers": {
+        "coding": "A",
+        "planning": "A",
+        "agentic": "A",
+        "multimodal": "B",
+        "long-context": "A",
+        "knowledge": "A",
+        "speed": "B"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "Artificial Analysis has not measured GPT-6.2 Astra yet, so its letters are estimates",
+      "pricing_notes": "Provider-direct OpenAI API per-token pricing (not via the Cursor pool)",
+      "best_for": "Strong coding, planning, agentic work, long context and knowledge at a very high price.",
+      "superseded_by": null,
+      "superseded_on": null,
+      "added_on": "2026-11-18",
+      "always_thinks": false,
+      "retires_on": null
+    },
+    {
+      "id": "gpt-6.2-sol",
+      "name": "GPT-6.2 Sol",
+      "input_price_per_1m": 2.0,
+      "output_price_per_1m": 10.0,
+      "cache_read_per_1m": null,
+      "tier_cost": "medium",
+      "tiers": {
+        "coding": "A",
+        "planning": "A",
+        "agentic": "A",
+        "multimodal": "A",
+        "long-context": "A",
+        "knowledge": "A",
+        "speed": "D"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "Artificial Analysis has not measured GPT-6.2 Sol yet, so its letters are estimates",
+      "pricing_notes": "Provider-direct OpenAI API per-token pricing (not via the Cursor pool)",
+      "best_for": "Strong coding, planning, agentic work, multimodal input, long context and knowledge at a medium price. Weakest at speed (D).",
+      "superseded_by": null,
+      "superseded_on": null,
+      "added_on": "2026-11-18",
       "always_thinks": false,
       "retires_on": null
     },
@@ -1272,7 +1350,9 @@
         "gpt-6-luna",
         "gpt-6-sol",
         "gpt-6.1-sol",
-        "gpt-6.1-terra"
+        "gpt-6.1-terra",
+        "gpt-6.2-astra",
+        "gpt-6.2-sol"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
@@ -1294,7 +1374,9 @@
         "gpt-6-luna": "medium",
         "gpt-6-sol": "medium",
         "gpt-6.1-sol": "low",
-        "gpt-6.1-terra": "low"
+        "gpt-6.1-terra": "low",
+        "gpt-6.2-astra": "low",
+        "gpt-6.2-sol": "low"
       }
     },
     {
@@ -1312,7 +1394,9 @@
         "gpt-6-luna",
         "gpt-6-sol",
         "gpt-6.1-sol",
-        "gpt-6.1-terra"
+        "gpt-6.1-terra",
+        "gpt-6.2-astra",
+        "gpt-6.2-sol"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
@@ -1334,7 +1418,9 @@
         "gpt-6-luna": "medium",
         "gpt-6-sol": "medium",
         "gpt-6.1-sol": "low",
-        "gpt-6.1-terra": "low"
+        "gpt-6.1-terra": "low",
+        "gpt-6.2-astra": "low",
+        "gpt-6.2-sol": "low"
       }
     },
     {
@@ -1450,7 +1536,8 @@
         "gemini-3.8-flash",
         "gemini-4-argon",
         "gemini-4-carbon",
-        "gemini-4-hydrogen"
+        "gemini-4-hydrogen",
+        "gemini-4-neon"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
@@ -1595,7 +1682,9 @@
         "gpt-6-luna",
         "gpt-6-sol",
         "gpt-6.1-sol",
-        "gpt-6.1-terra"
+        "gpt-6.1-terra",
+        "gpt-6.2-astra",
+        "gpt-6.2-sol"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
@@ -1649,6 +1738,8 @@
         "gpt-6-sol",
         "gpt-6.1-sol",
         "gpt-6.1-terra",
+        "gpt-6.2-astra",
+        "gpt-6.2-sol",
         "gpt-oss-120b",
         "gpt-oss-20b",
         "grok-4.3",
