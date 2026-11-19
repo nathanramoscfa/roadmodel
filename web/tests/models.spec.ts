@@ -799,29 +799,37 @@ test("measured letters match the published bands; every other letter is marked e
 
   // Hover representative cells to verify structured RatingCard contents.
   const rowOf = (mid: string) => page.locator(`[data-testid="model-row"][data-model-id="${mid}"]`);
+  const clearRatingCard = async () => {
+    await page.mouse.move(2, 2);
+    await expect(page.getByTestId("rating-card")).toHaveCount(0);
+  };
   if (sampleMeasuredKnowledge) {
     await rowOf(sampleMeasuredKnowledge).locator("td").nth(KNOWLEDGE_TD).getByTestId("rating-trigger").hover();
     const card = page.getByTestId("rating-card");
     await expect(card).toContainText("Humanity's Last Exam");
     await expect(card).toContainText("Gap to leader");
+    await clearRatingCard();
   }
   if (sampleLaunchKnowledge) {
     await rowOf(sampleLaunchKnowledge).locator("td").nth(KNOWLEDGE_TD).getByTestId("rating-trigger").hover();
     const card = page.getByTestId("rating-card");
     await expect(card).toContainText("Humanity's Last Exam");
     await expect(card).toContainText("launch benchmarks");
+    await clearRatingCard();
   }
   if (sampleCappedKnowledge) {
     await rowOf(sampleCappedKnowledge).locator("td").nth(KNOWLEDGE_TD).getByTestId("rating-trigger").hover();
     const card = page.getByTestId("rating-card");
     await expect(card).toContainText("Humanity's Last Exam");
     await expect(card).toContainText("unmeasured estimate stops at A");
+    await clearRatingCard();
   }
   if (sampleMeasuredPlanning) {
     await rowOf(sampleMeasuredPlanning).locator("td").nth(CODING_TD + 1).getByTestId("rating-trigger").hover();
     const card = page.getByTestId("rating-card");
     await expect(card).toContainText("Artificial Analysis Intelligence Index");
     await expect(card).toContainText("Gap to leader");
+    await clearRatingCard();
   }
   await rows.first().locator("td").nth(CODING_TD + 3).getByTestId("rating-trigger").hover();
   await expect(page.getByTestId("rating-card")).toContainText(
@@ -924,15 +932,21 @@ test("coding letters are each model's rank on SciCode + Terminal-Bench 4.0, and 
   expect(measured).toBeGreaterThan(0);
 
   const rowOf = (mid: string) => page.locator(`[data-testid="model-row"][data-model-id="${mid}"]`);
+  const clearCodingCard = async () => {
+    await page.mouse.move(2, 2);
+    await expect(page.getByTestId("rating-card")).toHaveCount(0);
+  };
   if (sampleCodingId) {
     await rowOf(sampleCodingId).locator("td").nth(TD.coding).getByTestId("rating-trigger").hover();
     const card = page.getByTestId("rating-card");
     await expect(card).toContainText("SciCode + Terminal-Bench 4.0");
     await expect(card).toContainText("of every 40 measured models, the top 8 are S");
+    await clearCodingCard();
   }
   if (sampleLaunchCell) {
     await rowOf(sampleLaunchCell.id).locator("td").nth(sampleLaunchCell.td).getByTestId("rating-trigger").hover();
     await expect(page.getByTestId("rating-card")).toContainText("launch benchmarks");
+    await clearCodingCard();
   }
   if (sampleCappedCell) {
     await rowOf(sampleCappedCell.id).locator("td").nth(sampleCappedCell.td).getByTestId("rating-trigger").hover();
@@ -981,6 +995,7 @@ test("every model off the frontier names the model that beats it, from any cost 
   await row.getByTestId("score-trigger").hover();
   await expect(page.getByTestId("score-card").getByTestId("frontier-status")).toContainText(lead.m.name);
   await page.mouse.move(2, 2);
+  await expect(page.getByTestId("score-card")).toHaveCount(0);
 
   const onFrontier = measured.find((r) => leaderOf(r) === r)!;
   await page
@@ -1275,6 +1290,7 @@ test("a model released in the last two weeks carries a New tag that says when it
       benchmarks.models[m.id] ? "launch-window results" : "awaits its first Artificial Analysis measurement",
     );
     await page.mouse.move(0, 0);
+    await expect(card).toHaveCount(0);
   }
 });
 
@@ -1791,4 +1807,88 @@ test("every catalog model has an AA Index, Score, quality band, and differentiat
     expect(r.scoreText, `${r.id} value-cell text`).not.toBe("—");
     expect(r.ratings.join(""), `${r.id} ratings`).not.toBe("BBBBBBB");
   }
+});
+
+
+test("table HoverCards stay open when moving into the popup and close upon leaving it", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/models");
+
+  const firstScored = scored.find((m) => aaIndexFor(m) !== null)!;
+  const row = page.locator(`[data-testid="model-row"][data-model-id="${firstScored.id}"]`);
+  const scoreTrigger = row.getByTestId("score-trigger");
+  await scoreTrigger.scrollIntoViewIfNeeded();
+  await scoreTrigger.hover();
+
+  const scoreCard = page.getByTestId("score-card");
+  await expect(scoreCard).toBeVisible();
+  await expect(scoreCard).toContainText(firstScored.name);
+  const box = (await scoreCard.boundingBox())!;
+
+  // Sweep into the card's center and lower half (directly over lower table rows).
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.5, { steps: 6 });
+  await page.waitForTimeout(250);
+  await expect(scoreCard).toBeVisible();
+  await expect(scoreCard).toContainText(firstScored.name);
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.85, { steps: 4 });
+  await page.waitForTimeout(250);
+  await expect(scoreCard).toBeVisible();
+  await expect(scoreCard).toContainText(firstScored.name);
+
+  // Clicking inside an open popup (even when the trigger is focused) keeps it open.
+  await scoreTrigger.focus();
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(scoreCard).toBeVisible();
+  await expect(scoreCard).toContainText(firstScored.name);
+
+  // Moving outside the popup closes it immediately.
+  const outX = box.x > 24 ? box.x - 12 : box.x + box.width + 12;
+  await page.mouse.move(outX, box.y + box.height / 2);
+  await expect(scoreCard).toHaveCount(0);
+
+  // Also verify rating letter HoverCards stay open when moving inside the popup.
+  const ratingTrigger = row.getByTestId("rating-trigger").first();
+  await ratingTrigger.hover();
+  const ratingCard = page.getByTestId("rating-card");
+  await expect(ratingCard).toBeVisible();
+  await expect(ratingCard).toContainText(firstScored.name);
+  const rBox = (await ratingCard.boundingBox())!;
+  await page.mouse.move(rBox.x + rBox.width / 2, rBox.y + rBox.height / 2, { steps: 6 });
+  await page.waitForTimeout(250);
+  await expect(ratingCard).toBeVisible();
+  await expect(ratingCard).toContainText(firstScored.name);
+  const rOutX = rBox.x > 24 ? rBox.x - 12 : rBox.x + rBox.width + 12;
+  await page.mouse.move(rOutX, rBox.y + rBox.height / 2);
+  await expect(ratingCard).toHaveCount(0);
+});
+
+test("Score HoverCard clamps inside short viewports and scrolls its own body", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 560 });
+  await page.goto("/models");
+
+  const firstScored = scored.find((m) => aaIndexFor(m) !== null)!;
+  const trigger = page
+    .locator(`[data-testid="model-row"][data-model-id="${firstScored.id}"]`)
+    .getByTestId("score-trigger");
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.hover();
+
+  const card = page.getByTestId("score-card");
+  await expect(card).toBeVisible();
+  const box = (await card.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(7);
+  expect(box.y).toBeGreaterThanOrEqual(7);
+  expect(box.x + box.width).toBeLessThanOrEqual(1280 - 7);
+  expect(box.y + box.height).toBeLessThanOrEqual(560 - 7);
+
+  const scrollMetrics = await card.evaluate((el) => {
+    const cs = getComputedStyle(el);
+    return {
+      overflowY: cs.overflowY,
+      scrollHeight: el.scrollHeight,
+      clientHeight: el.clientHeight,
+    };
+  });
+  expect(scrollMetrics.overflowY).toBe("auto");
+  expect(scrollMetrics.scrollHeight).toBeGreaterThan(scrollMetrics.clientHeight);
 });

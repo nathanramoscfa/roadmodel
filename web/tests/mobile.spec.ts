@@ -146,3 +146,30 @@ test("fields read 16px so iOS Safari doesn't zoom on focus", async ({ page }) =>
     expect(box.height, route).toBeGreaterThanOrEqual(44);
   }
 });
+
+
+test("Score HoverCard fits inside a small phone viewport, stays open on inner touch, and closes on tap away", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.goto("/");
+
+  const trigger = page.getByTestId("score-trigger").first();
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.tap();
+
+  const card = page.getByTestId("score-card");
+  await expect(card).toBeVisible();
+  const box = (await card.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(7);
+  expect(box.y).toBeGreaterThanOrEqual(7);
+  expect(box.x + box.width).toBeLessThanOrEqual(375 - 7);
+  expect(box.y + box.height).toBeLessThanOrEqual(667 - 7);
+
+  // Tapping inside the popup (e.g., to scroll) keeps it open.
+  await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(card).toBeVisible();
+
+  // Tapping outside the popup (in the 8px viewport margin) closes it.
+  const outY = box.y > 20 ? 2 : 665;
+  await page.touchscreen.tap(2, outY);
+  await expect(card).toHaveCount(0);
+});

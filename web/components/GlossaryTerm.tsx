@@ -26,7 +26,7 @@ const BASE_CLASS =
 // `whitespace-nowrap` / `uppercase tracking-wide`, which ran the definition
 // off the right edge of the box in one unbroken line.
 const TOOLTIP_CLASS =
-  "hidden absolute top-full z-20 mt-1 w-72 whitespace-normal break-words rounded-md border border-brand-slate-200 bg-white p-2 text-left text-xs font-normal normal-case leading-snug tracking-normal text-brand-slate-700 shadow-lg group-hover:block group-focus:block dark:border-brand-slate-600 dark:bg-brand-slate-800 dark:text-brand-slate-200";
+  "hidden absolute top-full z-20 mt-1 w-72 max-w-[calc(100vw-2rem)] whitespace-normal break-words rounded-md border border-brand-slate-200 bg-white p-2 text-left text-xs font-normal normal-case leading-snug tracking-normal text-brand-slate-700 shadow-lg before:content-[''] before:absolute before:-top-2 before:left-0 before:right-0 before:h-2 group-hover:block group-focus:block dark:border-brand-slate-600 dark:bg-brand-slate-800 dark:text-brand-slate-200";
 
 export function GlossaryTerm({ definition, url, align = "left", children }: GlossaryTermProps) {
   const tooltip = (
