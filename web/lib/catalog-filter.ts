@@ -17,7 +17,8 @@
 //     just because the band starts there.
 // The Score is never refitted: it measures a model against the whole market's
 // price line, so a filter changes which models are drawn, never their Scores.
-import { blendedPrice, frontierLeaders } from "@/lib/benchmark-grid";
+import { frontierLeaders } from "@/lib/benchmark-grid";
+import { headlinePrice } from "@/lib/pick-effort";
 import {
   COST_TIER_DEFS,
   JURISDICTION_DEFS,
@@ -100,12 +101,12 @@ export function filterSummary(f: CatalogFilters, codes: readonly string[]): stri
 // The server marks the whole catalog this way; the page re-marks the pool.
 export function withFrontier(rows: readonly ModelRow[]): ModelRow[] {
   const out = rows.map((r) => ({ ...r, value_frontier: false, value_beaten_by: null as string | null }));
-  // Priced like the Score and the charts (blended), so every value figure on
-  // the page reads one price per model.
+  // Priced at each model's headline Effort token multiplier, matching the
+  // Score and the charts so every value figure on the page reads one price.
   const leaders = frontierLeaders(
     out.map((r) => ({
       row: r,
-      price: blendedPrice(r.input_price_per_1m, r.output_price_per_1m),
+      price: headlinePrice(r),
       index: r.aa_index,
     })),
   );

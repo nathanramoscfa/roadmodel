@@ -34,7 +34,7 @@ import {
 } from "../lib/benchmark-grid";
 import { modelProvider } from "../lib/catalog-fields";
 import { estimateFor, estimatedCategories, getModelRows, inheritedSource, pastLeaveDate } from "../lib/catalog-models";
-import { effortWord } from "../lib/pick-effort";
+import { effortWord, headlinePrice } from "../lib/pick-effort";
 import { isNewer } from "../lib/series";
 import { liveCatalog } from "./fixtures/live-catalog";
 
@@ -87,6 +87,7 @@ const OPEN_WEIGHT_IDS = new Set(
 interface BenchModel {
   aa_slug: string;
   aa_name: string;
+  aa_effort?: string | null;
   release_date?: string | null;
   evaluations: Record<string, number | null>;
   median_output_tokens_per_second: number | null;
@@ -94,6 +95,12 @@ interface BenchModel {
 const benchmarks = JSON.parse(
   readFileSync(path.join(process.cwd(), "data", "benchmarks.json"), "utf8"),
 ) as { models: Record<string, BenchModel> };
+const effortTokens = JSON.parse(
+  readFileSync(path.join(process.cwd(), "data", "effort-tokens.json"), "utf8"),
+) as {
+  models?: Record<string, { levels?: Record<string, { multiplier?: number }> }>;
+  derived?: Record<string, Record<string, number>>;
+};
 const MEASURED_COUNT = catalog.models.filter((m) => benchmarks.models[m.id]).length;
 
 // --- The one composite number (AA Index) --------------------------------------
@@ -146,8 +153,28 @@ interface Measured {
   price: number;
   index: number;
 }
+function headlineEffortFor(m: ScoredModel): string | null {
+  const b = benchmarks.models[m.id];
+  const measured = b?.evaluations.artificial_analysis_intelligence_index;
+  if (typeof measured === "number") return b?.aa_effort ?? null;
+  return estimateFor(m.id)?.effort ?? null;
+}
+
+function effectivePrice(m: ScoredModel): number {
+  const mults: Record<string, number> = { ...(effortTokens.derived?.[m.id] ?? {}) };
+  for (const [lvl, row] of Object.entries(effortTokens.models?.[m.id]?.levels ?? {})) {
+    if (typeof row.multiplier === "number" && row.multiplier > 0) mults[lvl] = row.multiplier;
+  }
+  return headlinePrice({
+    input_price_per_1m: m.input_price_per_1m,
+    output_price_per_1m: m.output_price_per_1m,
+    aa_index_effort: headlineEffortFor(m),
+    token_multiplier_by_effort: Object.keys(mults).length > 0 ? mults : undefined,
+  });
+}
+
 const MEASURED: Measured[] = scored
-  .map((m) => ({ m, price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m), index: shownIndexFor(m) }))
+  .map((m) => ({ m, price: effectivePrice(m), index: shownIndexFor(m) }))
   .filter((r): r is Measured => r.index !== null);
 // The rows the Score fit and the Score charts read: AA's own figures.
 const FITTED = MEASURED.filter((r) => aaIndexFor(r.m) !== null);
@@ -599,7 +626,7 @@ test("rating cells are letters only; the Score column is the cost-adjusted score
   // the within-tier Score.
   const inputs = scored.map((m) => ({
     m,
-    price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m),
+    price: effectivePrice(m),
     index: shownIndexFor(m),
   }));
   const frontier = new Set([...paretoFrontier(inputs)].map((r) => r.m.id));
@@ -619,7 +646,7 @@ test("rating cells are letters only; the Score column is the cost-adjusted score
   // price, one pooled slope, one intercept per cost tier) over every measured
   // model. Recompute from the same inputs and compare every rendered figure.
   const fitInputs = scored.map((m) => ({
-    price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m),
+    price: effectivePrice(m),
     index: aaIndexFor(m),
     tier: m.tier_cost,
   }));
@@ -629,7 +656,7 @@ test("rating cells are letters only; the Score column is the cost-adjusted score
   expect(fit!.slope).toBeGreaterThan(0); // pricier models do score higher, on average
   expect(fit!.sigma).toBeGreaterThan(0);
   const scoreOf = (m: ScoredModel) =>
-    scoreFor(fit, m.tier_cost, blendedPrice(m.input_price_per_1m, m.output_price_per_1m), scoreIndexFor(m));
+    scoreFor(fit, m.tier_cost, effectivePrice(m), scoreIndexFor(m));
   for (const m of scored) {
     // Match on the id: a name filter for "Fable 5" would also hit "Fable 5.1".
     const row = page.locator(`[data-testid="model-row"][data-model-id="${m.id}"]`);
@@ -979,7 +1006,7 @@ test("Group by Quality is the default: AA Index bands, highest Score first in ea
   // highest Score first, unmeasured Scores last, the name breaking a tie.
   const fit = fitScoreModel(
     scored.map((m) => ({
-      price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m),
+      price: effectivePrice(m),
       index: aaIndexFor(m),
       tier: m.tier_cost,
     })),
@@ -988,7 +1015,7 @@ test("Group by Quality is the default: AA Index bands, highest Score first in ea
   const rowsIn = scored.map((m) => ({
     m,
     band: bandOf(shownIndexFor(m)),
-    score: scoreFor(fit, m.tier_cost, blendedPrice(m.input_price_per_1m, m.output_price_per_1m), scoreIndexFor(m)),
+    score: scoreFor(fit, m.tier_cost, effectivePrice(m), scoreIndexFor(m)),
   }));
   const bands = [...new Set(rowsIn.map((r) => r.band).filter((b): b is number => b !== null))].sort((a, b) => b - a);
   const groups = await page.getByTestId("quality-group").evaluateAll((els) => els.map((e) => e.getAttribute("data-band")));
@@ -1420,7 +1447,7 @@ test("one Score chart per cost tier in either grouping, every measured model plo
 
   const fit = fitScoreModel(
     scored.map((m) => ({
-      price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m),
+      price: effectivePrice(m),
       index: aaIndexFor(m),
       tier: m.tier_cost,
     })),
@@ -1446,7 +1473,7 @@ test("one Score chart per cost tier in either grouping, every measured model plo
     await expect(chart.getByTestId("score-chart-point")).toHaveCount(inTier.length);
     for (const m of inTier) {
       const expected = formatScore(
-        scoreFor(fit, m.tier_cost, blendedPrice(m.input_price_per_1m, m.output_price_per_1m), aaIndexFor(m)),
+        scoreFor(fit, m.tier_cost, effectivePrice(m), aaIndexFor(m)),
       );
       await expect(
         chart.locator(`[data-testid="score-chart-point"][data-model-id="${m.id}"]`),
@@ -1470,7 +1497,7 @@ test("hovering a chart dot shows its model, Score, AA Index and prices; the line
   await page.goto("/models");
   const fit = fitScoreModel(
     scored.map((m) => ({
-      price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m),
+      price: effectivePrice(m),
       index: aaIndexFor(m),
       tier: m.tier_cost,
     })),
@@ -1490,7 +1517,7 @@ test("hovering a chart dot shows its model, Score, AA Index and prices; the line
     centres.every((o) => o === c || Math.hypot(o.x - c.x, o.y - c.y) > 28),
   )!.id;
   const m = scored.find((x) => x.id === clearId)!;
-  const price = blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
+  const price = effectivePrice(m);
   const sc = scoreFor(fit, m.tier_cost, price, aaIndexFor(m));
 
   const dot = page.locator(`[data-testid="score-chart-point"][data-model-id="${m.id}"]`);
@@ -1550,7 +1577,7 @@ test("the Score cell opens a breakdown whose parts add up to the printed Score",
   await page.goto("/models");
   const fit = fitScoreModel(
     scored.map((m) => ({
-      price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m),
+      price: effectivePrice(m),
       index: aaIndexFor(m),
       tier: m.tier_cost,
     })),
@@ -1576,8 +1603,13 @@ test("the Score cell opens a breakdown whose parts add up to the printed Score",
     expect(Math.round((index - tierMean) * 10)).toBe(Math.round(vsAvg * 10));
     expect(Math.round((vsAvg + adj) * 10)).toBe(Math.round(score * 10));
     expect(formatScore(score)).toBe(
-      formatScore(scoreFor(fit, m.tier_cost, blendedPrice(m.input_price_per_1m, m.output_price_per_1m), aaIndexFor(m))),
+      formatScore(scoreFor(fit, m.tier_cost, effectivePrice(m), aaIndexFor(m))),
     );
+    const effort = headlineEffortFor(m);
+    if (effort) {
+      await expect(card.getByTestId("score-breakdown-effort")).toContainText(effortWord(effort));
+      await expect(card.getByTestId("score-breakdown-effort")).toContainText("output");
+    }
     await page.mouse.move(2, 2);
     await expect(card).toHaveCount(0);
   }

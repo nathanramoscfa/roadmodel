@@ -62,9 +62,9 @@ export function fitTitle(titles: readonly string[], cx: number, width: number): 
 
 // The price axis's titles, longest first (fitTitle).
 export const PRICE_AXIS_TITLES = [
-  "Blended price, $ per 1M tokens (log scale)",
-  "Blended price, $/1M tokens (log)",
-  "Blended $/1M (log)",
+  "Effort-adjusted blended price, $ per 1M tokens (log scale)",
+  "Effort-adjusted price, $/1M tokens (log)",
+  "Effort $/1M (log)",
 ] as const;
 
 export interface Box {

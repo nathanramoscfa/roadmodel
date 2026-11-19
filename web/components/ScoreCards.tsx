@@ -49,7 +49,7 @@ import {
   type Rating,
 } from "@/lib/catalog-fields";
 import { RATING_SCALE } from "@/lib/glossary";
-import { EFFORT_TOKEN_MULTIPLIER, effortWord, type EffortLevel } from "@/lib/pick-effort";
+import { EFFORT_TOKEN_MULTIPLIER, effortWord, headlinePrice, headlineTokenShare, type EffortLevel } from "@/lib/pick-effort";
 
 const RATING_MEANING: Record<string, string> = Object.fromEntries(
   RATING_SCALE.map((r) => [r.rating, r.meaning]),
@@ -184,10 +184,11 @@ export function FrontierStatus({
       </div>
     );
   }
-  const price = blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
-  const leaderPrice = blendedPrice(leader.input_price_per_1m, leader.output_price_per_1m);
+  const price = headlinePrice(m);
+  const leaderPrice = headlinePrice(leader);
   const scores = leader.aa_index > m.aa_index ? "scores higher" : "scores the same";
-  const costs = leaderPrice < price ? "costs less" : "costs the same";
+  const costs = leaderPrice < price - 1e-9 ? "costs less" : "costs the same";
+  const priceLabel = m.aa_index_effort || leader.aa_index_effort ? "Effort-adjusted price" : "Blended price";
   return (
     <div
       className="rounded-md border border-brand-slate-200 bg-brand-slate-50 px-3 py-2 text-xs leading-[1.125rem] dark:border-brand-slate-600 dark:bg-brand-slate-900/70"
@@ -208,7 +209,7 @@ export function FrontierStatus({
         value={`${indexText(leader)}${leader.aa_index_source === "cited" ? " (cited)" : ""} vs ${indexText(m)}`}
         valueClass={STRONG}
       />
-      <Row label="Blended price" value={`${usd(leaderPrice)} vs ${usd(price)}`} valueClass={STRONG} />
+      <Row label={priceLabel} value={`${usd(leaderPrice)} vs ${usd(price)}`} valueClass={STRONG} />
     </div>
   );
 }
@@ -217,15 +218,21 @@ export function FrontierStatus({
 // where it stands across the whole catalog.
 export function FrontierPointCard({ model: m, leader }: { model: ModelRow; leader: ModelRow | null }) {
   if (m.aa_index === null) return null;
-  const price = blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
+  const price = headlinePrice(m);
+  const share = headlineTokenShare(m);
   return (
     <div className="w-[19rem] max-w-full" data-testid="frontier-point-card">
       <CardHeader name={m.name} tier={m.tier_cost} />
       <div className="mt-2 space-y-0.5">
         <Row label="AA Index" value={`${indexText(m)}`} valueClass={"font-semibold " + STRONG} />
-        <Row label="Blended price" value={`${usd(price)} per 1M tokens`} valueClass={STRONG} />
+        <Row
+          label={m.aa_index_effort ? `Price at ${effortWord(m.aa_index_effort)}` : "Blended price"}
+          value={`${usd(price)} per 1M tokens`}
+          valueClass={STRONG}
+        />
         <p className={"text-right text-xs tabular-nums " + MUTED}>
-          (3 × {formatUsd(m.input_price_per_1m)} input + {formatUsd(m.output_price_per_1m)} output) ÷ 4
+          (3 × {formatUsd(m.input_price_per_1m)} input + {formatUsd(m.output_price_per_1m)} output
+          {share !== null && <> × {share.toFixed(2)}</>}) ÷ 4
         </p>
       </div>
       <div className="mt-2.5">
@@ -239,7 +246,7 @@ export function FrontierPointCard({ model: m, leader }: { model: ModelRow; leade
 // the model that holds it.
 export function FrontierStepCard({ atPrice, model: m }: { atPrice: number; model: ModelRow }) {
   if (m.aa_index === null) return null;
-  const price = blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
+  const price = headlinePrice(m);
   return (
     <div className="w-[19rem] max-w-full" data-testid="frontier-step-card">
       <p className={"text-sm font-semibold " + STRONG}>Top score at {usd(atPrice)} or less</p>
@@ -247,7 +254,11 @@ export function FrontierStepCard({ atPrice, model: m }: { atPrice: number; model
         <CardHeader name={m.name} tier={m.tier_cost} />
         <div className="mt-1.5 space-y-0.5 text-xs">
           <Row label="AA Index" value={`${indexText(m)}`} valueClass={"font-semibold " + STRONG} />
-          <Row label="Blended price" value={`${usd(price)} per 1M tokens`} valueClass={STRONG} />
+          <Row
+            label={m.aa_index_effort ? `Price at ${effortWord(m.aa_index_effort)}` : "Blended price"}
+            value={`${usd(price)} per 1M tokens`}
+            valueClass={STRONG}
+          />
         </div>
       </div>
       <p className={"mt-2 text-xs leading-[1.125rem] " + MUTED}>
@@ -442,8 +453,14 @@ export function ScoreBreakdownCard({
   effort?: { label: string; tokenShare: number } | null;
 }) {
   const listPrice = blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
-  const price = effort
-    ? (3 * m.input_price_per_1m + m.output_price_per_1m * effort.tokenShare) / 4
+  const defaultShare = headlineTokenShare(m);
+  const activeEffort =
+    effort ??
+    (m.aa_index_effort && defaultShare !== null
+      ? { label: effortWord(m.aa_index_effort), tokenShare: defaultShare }
+      : null);
+  const price = activeEffort
+    ? (3 * m.input_price_per_1m + m.output_price_per_1m * activeEffort.tokenShare) / 4
     : listPrice;
   const b = scoreBreakdown(fit, m.tier_cost, price, m.aa_index);
   if (!b) return null;
@@ -515,18 +532,18 @@ export function ScoreBreakdownCard({
           The price adjustment
         </p>
         <Row
-          label={effort ? `Price at ${effort.label}` : "Blended price"}
+          label={activeEffort ? `Price at ${activeEffort.label}` : "Blended price"}
           value={`${usd(b.price)} per 1M tokens`}
           valueClass={STRONG}
         />
         <p className={"-mt-0.5 mb-1 text-right text-xs tabular-nums " + MUTED}>
           (3 × {formatUsd(m.input_price_per_1m)} input + {formatUsd(m.output_price_per_1m)} output
-          {effort && <> × {effort.tokenShare.toFixed(2)}</>}) ÷ 4
+          {activeEffort && <> × {activeEffort.tokenShare.toFixed(2)}</>}) ÷ 4
         </p>
-        {effort && (
+        {activeEffort && (
           <p className={"mb-1 text-xs leading-[1.125rem] " + MUTED} data-testid="score-breakdown-effort">
             The per-token price is the same at every effort, but the tokens drawn are not: at{" "}
-            {effort.label} the model draws {effort.tokenShare.toFixed(2)}× what a typical model
+            {activeEffort.label} the model draws {activeEffort.tokenShare.toFixed(2)}× what a typical model
             draws at High. Its output is priced at that, its input as listed, so it is priced here
             at {usd(b.price)} rather than its {usd(listPrice)} list price, as on the chart below.
           </p>
@@ -573,7 +590,9 @@ export function ModelPointCard({
   fit: ScoreFit;
   leader: ModelRow | null;
 }) {
-  const price = blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
+  const listPrice = blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
+  const share = headlineTokenShare(m);
+  const price = headlinePrice(m);
   const b = scoreBreakdown(fit, m.tier_cost, price, m.aa_index);
   if (!b) return null;
   return (
@@ -595,7 +614,14 @@ export function ModelPointCard({
       <div className={"mt-2.5 space-y-0.5 border-t pt-2.5 " + RULE}>
         <Row label="Input" value={`${usd(m.input_price_per_1m)} per 1M tokens`} valueClass={STRONG} />
         <Row label="Output" value={`${usd(m.output_price_per_1m)} per 1M tokens`} valueClass={STRONG} />
-        <Row label="Blended (3 : 1)" value={`${usd(b.price)} per 1M tokens`} valueClass={STRONG} />
+        <Row label="Blended (3 : 1)" value={`${usd(listPrice)} per 1M tokens`} valueClass={STRONG} />
+        {m.aa_index_effort && share !== null && (
+          <Row
+            label={`At ${effortWord(m.aa_index_effort)} (${share.toFixed(2)}× out)`}
+            value={`${usd(b.price)} per 1M tokens`}
+            valueClass={STRONG}
+          />
+        )}
       </div>
       <div className="mt-2.5">
         <FrontierStatus model={m} leader={leader} />
@@ -647,8 +673,8 @@ export function PriceLineCard({
       <dl className="mt-2.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-xs leading-[1.125rem]">
         <dt className={"font-semibold tabular-nums " + STRONG}>p</dt>
         <dd>
-          Blended price, $ per 1M tokens
-          <span className={"block " + MUTED}>= (3 × input + 1 × output) ÷ 4</span>
+          Effort-adjusted blended price, $ per 1M tokens
+          <span className={"block " + MUTED}>= (3 × input + m × output) ÷ 4</span>
         </dd>
         <dt className={"font-semibold tabular-nums " + STRONG}>{num(t.intercept)}</dt>
         <dd>Intercept for this tier: the line&rsquo;s height at p&nbsp;=&nbsp;$1</dd>

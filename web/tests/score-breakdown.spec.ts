@@ -32,6 +32,7 @@ import {
   type BenchKey,
   type BenchRow,
 } from "../lib/benchmark-grid";
+import { headlinePrice } from "../lib/pick-effort";
 import { liveCatalog } from "./fixtures/live-catalog";
 
 interface CatalogModel {
@@ -45,7 +46,16 @@ interface CatalogModel {
 const catalog = liveCatalog<{ models: CatalogModel[] }>();
 const benchmarks = JSON.parse(
   readFileSync(path.join(process.cwd(), "data", "benchmarks.json"), "utf8"),
-) as { models: Record<string, { evaluations: Record<string, number | null> }> };
+) as { models: Record<string, { aa_effort?: string | null; evaluations: Record<string, number | null> }> };
+const effortTokens = JSON.parse(
+  readFileSync(path.join(process.cwd(), "data", "effort-tokens.json"), "utf8"),
+) as {
+  models?: Record<string, { levels?: Record<string, { multiplier?: number }> }>;
+  derived?: Record<string, Record<string, number>>;
+};
+const indexEstimates = JSON.parse(
+  readFileSync(path.join(process.cwd(), "data", "index-estimates.json"), "utf8"),
+) as { models?: Record<string, { effort?: string | null }> };
 
 // Same source order as the page: the AA snapshot, else the catalog's citation.
 function aaIndexFor(m: CatalogModel): number | null {
@@ -54,7 +64,21 @@ function aaIndexFor(m: CatalogModel): number | null {
   return extractAaIndex(m.headline_benchmarks ?? "");
 }
 
-const priceOf = (m: CatalogModel) => blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
+function priceOf(m: CatalogModel): number {
+  const b = benchmarks.models[m.id];
+  const measured = b?.evaluations.artificial_analysis_intelligence_index;
+  const eff = typeof measured === "number" ? (b?.aa_effort ?? null) : (indexEstimates.models?.[m.id]?.effort ?? null);
+  const mults: Record<string, number> = { ...(effortTokens.derived?.[m.id] ?? {}) };
+  for (const [lvl, row] of Object.entries(effortTokens.models?.[m.id]?.levels ?? {})) {
+    if (typeof row.multiplier === "number" && row.multiplier > 0) mults[lvl] = row.multiplier;
+  }
+  return headlinePrice({
+    input_price_per_1m: m.input_price_per_1m,
+    output_price_per_1m: m.output_price_per_1m,
+    aa_index_effort: eff,
+    token_multiplier_by_effort: Object.keys(mults).length > 0 ? mults : undefined,
+  });
+}
 const fit = fitScoreModel(
   catalog.models.map((m) => ({ price: priceOf(m), index: aaIndexFor(m), tier: m.tier_cost })),
 );
@@ -87,6 +111,19 @@ test("every model's breakdown adds up exactly to the Score the table prints", ()
     checked += 1;
   }
   expect(checked).toBe(fit!.n);
+});
+
+test("headlinePrice charges reasoning models for extra output tokens at their headline effort", () => {
+  const hydrogen = catalog.models.find((m) => m.id === "gemini-4-hydrogen");
+  if (hydrogen) {
+    // Gemini 4 Hydrogen ($1.50/$7.50) at Extra high (1.6x output): (3*1.5 + 1.6*7.5)/4 = 4.125 vs 3.00 list.
+    expect(priceOf(hydrogen)).toBeCloseTo(4.125, 3);
+    expect(priceOf(hydrogen)).toBeGreaterThan(blendedPrice(hydrogen.input_price_per_1m, hydrogen.output_price_per_1m));
+  }
+  const opus = catalog.models.find((m) => m.id === "claude-opus-5-5");
+  if (opus) {
+    expect(priceOf(opus)).toBeGreaterThan(blendedPrice(opus.input_price_per_1m, opus.output_price_per_1m));
+  }
 });
 
 test("the typical price is where the tier's line meets the tier average", () => {

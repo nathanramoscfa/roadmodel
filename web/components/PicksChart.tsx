@@ -19,9 +19,9 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { blendedPrice, formatUsd, paretoFrontier } from "@/lib/benchmark-grid";
+import { formatUsd, paretoFrontier } from "@/lib/benchmark-grid";
 import type { PriorityRecommendation } from "@/lib/api";
-import { effortLabel, effortPoints, named, type EffortLevel } from "@/lib/pick-effort";
+import { effortLabel, effortPoints, headlinePrice, named, type EffortLevel } from "@/lib/pick-effort";
 import type { SlimRow } from "@/lib/recommend-picks";
 import { fitTitle, FRONTIER, LABEL_PX, pickPriceTicks, placeLabels, useWidth } from "./chart-kit";
 import { FloatingCard, type AnchorRect } from "./FloatingCard";
@@ -68,7 +68,7 @@ function pickPt(row: SlimRow, level: EffortLevel | null): Pt | null {
   const at = ptsOf(row).find((p) => p.level === level && level !== null);
   if (at) return at;
   if (row.aa_index === null) return null;
-  const price = blendedPrice(row.input_price_per_1m, row.output_price_per_1m);
+  const price = headlinePrice(row);
   return { key: `${row.id}@-`, row, level: null, x: Math.log10(price), index: row.aa_index, price };
 }
 

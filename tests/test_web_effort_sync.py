@@ -33,3 +33,13 @@ def test_the_web_prices_an_effort_as_the_scorer_does() -> None:
     assert "row.output_price_per_1m * tokenMultiplier(row, level)" in body.group(0)
     assert "/ 4" in body.group(0)
     assert "blended * tokenMultiplier" not in text
+
+
+def test_headline_price_scales_only_the_output_share() -> None:
+    """/models headline Score and frontier scaling uses the same formula."""
+    text = PICK_EFFORT.read_text(encoding="utf-8")
+    body = re.search(r"export function headlinePrice\(.*?\n\}", text, re.S)
+    assert body is not None
+    assert "3 * row.input_price_per_1m" in body.group(0)
+    assert "row.output_price_per_1m * share" in body.group(0)
+    assert "/ 4" in body.group(0)

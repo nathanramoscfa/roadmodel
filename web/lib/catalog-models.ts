@@ -20,7 +20,6 @@ import {
 } from "@/lib/catalog-fields";
 import { extractAaIndex } from "@/lib/benchmark-scores";
 import {
-  blendedPrice,
   fitScoreModel,
   GRID_COLUMNS,
   newUntil,
@@ -30,6 +29,7 @@ import {
   type ScoreFit,
 } from "@/lib/benchmark-grid";
 import { withFrontier } from "@/lib/catalog-filter";
+import { headlinePrice } from "@/lib/pick-effort";
 import { BENCHMARKS } from "@/lib/glossary";
 import { compareVersions, isNewer, version } from "@/lib/series";
 
@@ -318,7 +318,7 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
     r.value_score = scoreFor(
       fit,
       r.tier_cost,
-      blendedPrice(r.input_price_per_1m, r.output_price_per_1m),
+      headlinePrice(r),
       r.aa_index,
     );
   }
@@ -332,11 +332,11 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
 // estimated model still gets a Score against that line.
 export function getScoreFit(
   rows: readonly (Pick<ModelRow, "input_price_per_1m" | "output_price_per_1m" | "aa_index" | "tier_cost"> &
-    Partial<Pick<ModelRow, "aa_index_source">>)[],
+    Partial<Pick<ModelRow, "aa_index_source" | "aa_index_effort" | "token_multiplier_by_effort">>)[],
 ): ScoreFit | null {
   return fitScoreModel(
     rows.filter((r) => r.aa_index_source !== "inherited" && r.aa_index_source !== "estimated").map((r) => ({
-      price: blendedPrice(r.input_price_per_1m, r.output_price_per_1m),
+      price: headlinePrice(r),
       index: r.aa_index,
       tier: r.tier_cost,
     })),
