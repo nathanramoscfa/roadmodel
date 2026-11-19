@@ -4,14 +4,15 @@ import Link from "next/link";
 
 import { BenchmarkReference } from "@/components/BenchmarkReference";
 import { CatalogLegend } from "@/components/CatalogLegend";
+import { PlatformDetails } from "@/components/ConfigurationDetails";
 import { Footer } from "@/components/Footer";
 import { ModelsExplorer } from "@/components/ModelsExplorer";
 import {
   getBenchmarkMeta,
   getCatalogGeneratedAt,
   getModelRows,
-  getPendingConfigurations,
   getScoreFit,
+  getUnscoredConfigurations,
 } from "@/lib/catalog-models";
 import { parsePrefs, PREFS_COOKIE } from "@/lib/models-prefs";
 
@@ -23,6 +24,7 @@ export default async function HomePage() {
   const generatedAt = getCatalogGeneratedAt();
   const bench = getBenchmarkMeta();
   const scoreFit = getScoreFit(models);
+  const unscoredConfigurations = getUnscoredConfigurations();
 
   return (
     <>
@@ -45,6 +47,11 @@ export default async function HomePage() {
             </Link>{" "}
             for a task.
           </p>
+          {unscoredConfigurations.length > 0 && (
+            <a href="#platform-details" className="mt-2 inline-block text-sm font-medium text-brand-accent hover:underline">
+              Platform details
+            </a>
+          )}
         </header>
 
         {/* Overview first: the filters, the frontier drawn across every model
@@ -55,13 +62,14 @@ export default async function HomePage() {
         <div className="mt-10 space-y-8">
           <ModelsExplorer
             models={models}
-            configurations={getPendingConfigurations(scoreFit)}
             generatedAt={generatedAt}
             benchmarksGeneratedAt={bench.generatedAt}
             measuredCount={bench.measuredCount}
             scoreFit={scoreFit}
             prefs={prefs}
-          />
+          >
+            <PlatformDetails configurations={unscoredConfigurations} />
+          </ModelsExplorer>
           <CatalogLegend id="how-to-read" />
           <BenchmarkReference id="benchmarks" />
         </div>

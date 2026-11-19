@@ -13,6 +13,7 @@ PRESET = "antigravity-orchestrator-neon"
 ULTRACODE = "claude-code-opus-5-5-high-ultracode"
 TASK = scoring.Task("agentic", "high")
 ULTRA = "| Google AI Ultra ($200) | $200 | Google | Antigravity |"
+PRO = "| Google AI Pro | $20 | Google | Antigravity |"
 CLAUDE_MAX = "| claude.ai Max ($200) | $200 | Anthropic | Claude Code |"
 
 
@@ -57,6 +58,22 @@ def test_index_or_grades_from_another_configuration_cannot_rank(
     add_evidence(preset, "gemini-4-neon")
     result = scoring.rank(TASK, context(ULTRA, CLAUDE_MAX), catalog=catalog, benchmarks=benchmarks)
     assert not any(c.configuration_index is not None for c in result.candidates)
+
+
+@pytest.mark.parametrize("planner, available_on_pro", [("carbon", False), ("argon", True)])
+def test_orchestrator_plan_eligibility_when_evidence_is_available(
+    configurations: list[dict[str, Any]],
+    catalog: dict[str, Any],
+    benchmarks: dict[str, Any],
+    planner: str,
+    available_on_pro: bool,
+) -> None:
+    preset_id = f"antigravity-orchestrator-{planner}"
+    preset = next(c for c in configurations if c["id"] == preset_id)
+    add_evidence(preset)
+    for plan, available in ((ULTRA, True), (PRO, available_on_pro)):
+        result = scoring.rank(TASK, context(plan), catalog=catalog, benchmarks=benchmarks)
+        assert (preset_id in {c.model_id for c in result.candidates}) is available
 
 
 def test_preset_requires_an_eligible_plan_and_has_one_fixed_level(

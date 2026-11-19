@@ -33,6 +33,7 @@ export interface AgentConfiguration {
   availability: string;
   source: string;
   evidenceSource: string | null;
+  benchmarkNote?: { summary: string; source: string };
 }
 
 export interface ModelRow {

@@ -180,14 +180,16 @@ is the property the prose rules could not offer.
 
 ## The Cost / Balanced / Quality ladder
 
-/models also lists selectable agent configurations such as Antigravity’s
-Orchestrator (Neon) and Claude Code with Ultracode enabled. Their entries live
-in [agent-configurations.json](agent-configurations.json). A configuration
-qualifies for the ladder when evidence for its exact ID includes an
-Intelligence Index measurement or a calibrated estimate with an uncertainty
-band, comparable input and output costs normalized per million tokens, and
-all seven category grades. Record the source with the evidence. Count the
-usage of all participating models in the normalized cost. The Score compares
+The Models page’s Platform details lists selectable agent configurations
+awaiting comparable evidence, including Antigravity’s Orchestrator presets
+and Claude Code with Ultracode enabled. Their entries and any published
+benchmark notes live in [agent-configurations.json](agent-configurations.json).
+A configuration qualifies for the table, plots, and ladder when evidence for
+its exact ID includes an Intelligence Index measurement or a calibrated
+estimate with an uncertainty band, comparable input and output costs
+normalized per million tokens, and all seven category grades. Record the
+source with the evidence. Count the usage of all participating models in the
+normalized cost. The Score compares
 that cost and index to the catalog’s ordinary model fit. The ladder also
 checks which platforms and plans the user can run. It prints `Fixed` for a
 vendor preset and shows Ultracode alongside the selected Claude effort.
