@@ -169,6 +169,7 @@ test("Score HoverCard fits inside a small phone viewport, stays open on inner to
   await expect(card).toBeVisible();
 
   // Tapping outside the popup (in the 8px viewport margin) closes it.
-  await page.touchscreen.tap(2, 2);
+  const outY = box.y > 20 ? 2 : 665;
+  await page.touchscreen.tap(2, outY);
   await expect(card).toHaveCount(0);
 });

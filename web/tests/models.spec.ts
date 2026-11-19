@@ -1835,6 +1835,12 @@ test("table HoverCards stay open when moving into the popup and close upon leavi
   await expect(scoreCard).toBeVisible();
   await expect(scoreCard).toContainText(firstScored.name);
 
+  // Clicking inside an open popup (even when the trigger is focused) keeps it open.
+  await scoreTrigger.focus();
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(scoreCard).toBeVisible();
+  await expect(scoreCard).toContainText(firstScored.name);
+
   // Moving outside the popup closes it immediately.
   const outX = box.x > 24 ? box.x - 12 : box.x + box.width + 12;
   await page.mouse.move(outX, box.y + box.height / 2);

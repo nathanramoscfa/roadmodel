@@ -264,6 +264,7 @@ export function HoverCard({
   const cardRef = useRef<HTMLDivElement | null>(null);
   const bridgeRef = useRef<HTMLDivElement | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastInsidePointerDownAt = useRef(0);
   const pointer = useRef<string>("mouse");
   const id = useId();
   const getAnchor = useCallback(() => ref.current?.getBoundingClientRect() ?? null, []);
@@ -277,6 +278,7 @@ export function HoverCard({
 
   const closeImmediate = useCallback(() => {
     cancelClose();
+    lastInsidePointerDownAt.current = 0;
     if (closeActiveHoverCard === closeImmediate) {
       closeActiveHoverCard = null;
     }
@@ -321,19 +323,31 @@ export function HoverCard({
     };
   }, [cancelClose, closeImmediate]);
 
-  // A tap anywhere outside the trigger/popup closes it; Escape also closes.
+  // A tap/click inside the popup records a grace timestamp so a blur on the
+  // trigger (e.g. Linux WebKit focusing a tapped button and blurring on card
+  // tap with relatedTarget === null) does not dismiss the card; outside taps,
+  // external focus changes, and Escape close it immediately.
   useEffect(() => {
     if (!open) return;
-    const away = (e: PointerEvent) => {
+    const onPointerDownCapture = (e: PointerEvent) => {
+      if (isWithinPopup(e.target)) {
+        lastInsidePointerDownAt.current = Date.now();
+      } else {
+        closeImmediate();
+      }
+    };
+    const onFocusIn = (e: FocusEvent) => {
       if (!isWithinPopup(e.target)) closeImmediate();
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") closeImmediate();
     };
-    document.addEventListener("pointerdown", away);
+    document.addEventListener("pointerdown", onPointerDownCapture, true);
+    document.addEventListener("focusin", onFocusIn);
     document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("pointerdown", away);
+      document.removeEventListener("pointerdown", onPointerDownCapture, true);
+      document.removeEventListener("focusin", onFocusIn);
       document.removeEventListener("keydown", onKey);
     };
   }, [open, isWithinPopup, closeImmediate]);
@@ -357,6 +371,7 @@ export function HoverCard({
         }}
         onPointerDown={(e) => {
           pointer.current = e.pointerType;
+          lastInsidePointerDownAt.current = Date.now();
         }}
         onClick={() => {
           if (pointer.current !== "mouse") {
@@ -368,9 +383,16 @@ export function HoverCard({
           if (e.currentTarget.matches(":focus-visible")) openNow();
         }}
         onBlur={(e) => {
-          if (!isWithinPopup(e.relatedTarget)) closeImmediate();
+          if (
+            Date.now() - lastInsidePointerDownAt.current < 500 ||
+            isWithinPopup(e.relatedTarget)
+          ) {
+            return;
+          }
+          closeImmediate();
         }}
         onKeyDown={(e) => {
+          if (e.key === "Tab") lastInsidePointerDownAt.current = 0;
           if (e.key === "Escape") closeImmediate();
         }}
         className={
