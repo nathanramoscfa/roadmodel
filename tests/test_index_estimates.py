@@ -242,7 +242,9 @@ def test_a_model_its_own_table_places_ignores_other_tables() -> None:
 
 def test_too_few_rows_from_other_tables_give_no_estimate() -> None:
     later = {**LATER, "tables": [{**LATER["tables"][0], "rows": LATER["tables"][0]["rows"][:2]}]}
-    assert "thin" not in estimate.estimate_all({"thin": THIN, "later": later}, BENCH)
+    assert "thin" not in estimate.estimate_all({"later": later}, BENCH)
+    two_row_own = _launch("thin", "2026-06-01", ["thin", "old-a", None], [[55, 40, 70]] * 2)
+    assert "thin" not in estimate.estimate_all({"thin": two_row_own, "later": later}, BENCH)
 
 
 # --------------------------------------------------------------------------- #
@@ -394,3 +396,126 @@ def test_maker_matches_the_selector_prose_rules() -> None:
         assert estimate.maker(mid) == stale_claims.maker_of(mid), mid
     rules = [(rx.pattern, name) for rx, name in estimate._MAKER_RULES]
     assert rules == [(rx.pattern, name) for rx, name in stale_claims._MAKER_RULES]
+
+
+# --------------------------------------------------------------------------- #
+# Universal day-one waterfall: pairwise, chained, predecessor, prior, extras.
+
+
+def test_single_anchor_pairwise_estimate() -> None:
+    bench = {
+        "old-a": {
+            "release_date": "2026-01-01",
+            "evaluations": {INDEX: 50.0, "hle": 0.40},
+        }
+    }
+    entry = _entry([[55, 50], [66, 60], [77, 70]], ["new", "old-a"])
+    est = estimate.estimate_all({"new": entry}, bench)["new"]
+    assert est.method == estimate.PAIR_METHOD
+    assert est.band == estimate.PAIR_BAND
+    assert est.anchors == ("old-a",)
+    assert est.rows == 3
+    assert est.index > 50.0
+
+
+def test_chained_estimate_through_already_estimated_peer() -> None:
+    peer = _launch(
+        "peer",
+        "2026-05-01",
+        ["peer", "old-a", "old-b", "old-c"],
+        [[55 + i, 40 + i, 50 + i, 60 + i] for i in range(3)],
+    )
+    follow = _launch(
+        "follow",
+        "2026-06-01",
+        ["follow", "peer"],
+        [[60 + i, 55 + i] for i in range(3)],
+    )
+    estimates = estimate.estimate_all({"peer": peer, "follow": follow}, BENCH)
+    assert estimates["peer"].method == "anchors"
+    assert estimates["follow"].method == estimate.CHAIN_METHOD
+    assert estimates["follow"].band == estimate.CHAIN_BAND
+    assert "peer" in estimates["follow"].anchors
+
+
+def test_predecessor_and_prior_fallbacks_with_catalog() -> None:
+    bench = {
+        "gpt-9-sol": {"release_date": "2026-01-01", "evaluations": {INDEX: 52.0}},
+        "peer-low-1": {"release_date": "2026-02-01", "evaluations": {INDEX: 24.0}},
+        "peer-low-2": {"release_date": "2026-03-01", "evaluations": {INDEX: 28.0}},
+    }
+    catalog = {
+        "models": [
+            {
+                "id": "gpt-9-sol",
+                "output_price_per_1m": 10.0,
+                "tier_cost": "medium",
+                "tiers": {"multimodal": "A", "speed": "B"},
+            },
+            {
+                "id": "gpt-9.1-sol",
+                "output_price_per_1m": 10.0,
+                "tier_cost": "medium",
+                "tiers": {"multimodal": "B", "speed": "B"},
+            },
+            {
+                "id": "peer-low-1",
+                "input_price_per_1m": 0.25,
+                "output_price_per_1m": 1.0,
+                "tier_cost": "low",
+                "tiers": {"multimodal": "C", "speed": "A"},
+            },
+            {
+                "id": "peer-low-2",
+                "input_price_per_1m": 0.4,
+                "output_price_per_1m": 1.5,
+                "tier_cost": "low",
+                "tiers": {"multimodal": "C", "speed": "A"},
+            },
+            {
+                "id": "brand-new-mini",
+                "input_price_per_1m": 0.3,
+                "output_price_per_1m": 1.2,
+                "tier_cost": "low",
+                "added_on": "2026-06-01",
+                "tiers": {"multimodal": "B", "speed": "B"},
+            },
+        ]
+    }
+    tables = {
+        "brand-new-mini": {
+            "release_date": "2026-06-01",
+            "tables": [
+                {
+                    "source": "https://vendor.example/mini",
+                    "columns": ["brand-new-mini", "peer-low-1"],
+                    "rows": [{"benchmark": "MMMU", "values": [70.0, 50.0]}],
+                }
+            ],
+        }
+    }
+    estimates = estimate.estimate_all(tables, bench, catalog=catalog)
+    pred = estimates["gpt-9.1-sol"]
+    assert pred.method == estimate.PREDECESSOR_METHOD
+    assert pred.band == estimate.PREDECESSOR_BAND
+    assert pred.anchors == ("gpt-9-sol",)
+    assert pred.index == 54.5
+
+    prior = estimates["brand-new-mini"]
+    assert prior.method == estimate.PRIOR_METHOD
+    assert prior.band == estimate.PRIOR_BAND
+    assert prior.index == 26.0
+    assert prior.letters.get("multimodal") == "B"
+    assert prior.letters.get("speed") == "A"
+
+
+def test_every_live_catalog_model_has_index_and_non_placeholder_letters() -> None:
+    catalog = json.loads((REPO / "docs" / "catalog.json").read_text())
+    bench = json.loads((REPO / "docs" / "benchmarks.json").read_text())["models"]
+    estimates = json.loads((REPO / "docs" / "index-estimates.json").read_text())["models"]
+    for model in catalog["models"]:
+        mid = model["id"]
+        measured = estimate.measured_index(bench, mid)
+        assert measured is not None or mid in estimates, f"{mid} lacks measured index and estimate"
+        tiers = model.get("tiers", {})
+        assert set(tiers.values()) != {"B"}, f"{mid} still has all-B placeholder ratings"

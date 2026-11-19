@@ -99,6 +99,7 @@ const INDEX_KEY = "artificial_analysis_intelligence_index";
 interface RawEstimate {
   index: number;
   band: number;
+  method?: string;
   anchors: string[];
   // The top level the model's effort dials offer: the setting a vendor's
   // launch table reports, and the one the recommender places it at.
@@ -115,12 +116,13 @@ const ESTIMATES = (indexEstimates as { models?: Record<string, RawEstimate> }).m
 // band is about four), or null when its launch table is too thin.
 export function estimateFor(
   id: string,
-): { index: number; band: number; anchors: string[]; effort: string | null; via: string[] } | null {
+): { index: number; band: number; method: string; anchors: string[]; effort: string | null; via: string[] } | null {
   const e = ESTIMATES[id];
   if (!e || typeof e.index !== "number" || !Number.isFinite(e.index)) return null;
   return {
     index: Math.round(e.index),
     band: e.band,
+    method: e.method ?? "anchors",
     anchors: e.anchors ?? [],
     effort: e.effort ?? null,
     via: e.via ?? [],
@@ -265,6 +267,7 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
                 : null,
       aa_inherited_from: (inherited !== null || estimate) && source ? nameOf(source) : null,
       aa_index_band: estimate?.band ?? null,
+      aa_estimate_method: estimate?.method ?? null,
       aa_estimate_anchors: estimate ? estimate.anchors.map(nameOf) : null,
       aa_estimate_via: estimate && estimate.via.length ? estimate.via.map(nameOf) : null,
       aa_estimated_categories: estimate ? estimatedCategories(m.id) : null,
@@ -290,7 +293,6 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
   const marked = withFrontier(rows);
   const fit = getScoreFit(marked);
   for (const r of marked) {
-    if (r.aa_index_source === "inherited") continue;
     r.value_score = scoreFor(
       fit,
       r.tier_cost,

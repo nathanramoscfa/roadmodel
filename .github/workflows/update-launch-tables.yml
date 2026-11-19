@@ -127,7 +127,7 @@ jobs:
           BRANCH="chore/launch-tables-refresh-${DATE}"
           git branch -D "$BRANCH" 2>/dev/null || true
           git checkout -b "$BRANCH"
-          git add update/launch-tables.json docs/index-estimates.json docs/model-selector.txt docs/model-selector.md docs/catalog.json
+          git add update/launch-tables.json docs/index-estimates.json docs/model-selector.txt docs/model-selector.md docs/catalog.json docs/effort-ratings.json
           git commit -m "Automated launch-table refresh: ${DATE}"
           # The day's branch can outlive its merged PR; this run's data replaces it.
           if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then

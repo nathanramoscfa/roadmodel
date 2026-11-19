@@ -1088,13 +1088,13 @@
       <model id="gpt-6.2-astra" name="GPT-6.2 Astra"
              input-price-per-1m="$8.00" output-price-per-1m="$40.00"
              jurisdiction="us"
-             tier-coding="A" tier-planning="A" tier-agentic="A"
-             tier-multimodal="B" tier-long-context="A" tier-knowledge="A"
+             tier-coding="A" tier-planning="S" tier-agentic="S"
+             tier-multimodal="B" tier-long-context="S" tier-knowledge="A"
              tier-speed="B"
              headline-benchmarks="Artificial Analysis has not measured GPT-6.2 Astra yet, so its letters are estimates"
              pricing-notes="Provider-direct OpenAI API per-token pricing (not via the Cursor pool)"
              prose-generated="best-for headline-benchmarks"
-             best-for="Strong coding, planning, agentic work, long context and knowledge at a very high price." added-on="2026-11-18"/>
+             best-for="Frontier-class planning, agentic work and long context, plus strong coding and knowledge, at a very high price." added-on="2026-11-18"/>
     </tier>
     <tier cost="high">
       <model id="claude-opus-5-5" name="Opus 5.5"
@@ -1161,13 +1161,13 @@
       <model id="gemini-4-neon" name="Gemini 4 Neon"
              input-price-per-1m="$3.00" output-price-per-1m="$15.00"
              jurisdiction="us"
-             tier-coding="B" tier-planning="B" tier-agentic="B"
-             tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
+             tier-coding="S" tier-planning="S" tier-agentic="S"
+             tier-multimodal="A" tier-long-context="A" tier-knowledge="S"
              tier-speed="B"
              headline-benchmarks="Artificial Analysis has not measured Gemini 4 Neon yet, so its letters are estimates"
              pricing-notes="Provider-direct Google API per-token pricing (not via the Cursor pool)"
              prose-generated="best-for headline-benchmarks"
-             best-for="Competent coding, planning, agentic work, multimodal input, long context and knowledge at a high price." added-on="2026-11-18"/>
+             best-for="Frontier-class coding, planning, agentic work and knowledge, plus strong multimodal input and long context, at a high price." added-on="2026-11-18"/>
     </tier>
     <tier cost="medium">
       <model id="claude-sonnet-5" name="Sonnet 5"
@@ -1273,12 +1273,12 @@
              input-price-per-1m="$1.25" output-price-per-1m="$10.00"
              jurisdiction="us"
              tier-coding="A" tier-planning="B" tier-agentic="A"
-             tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
+             tier-multimodal="D" tier-long-context="B" tier-knowledge="C"
              tier-speed="B"
              headline-benchmarks="GPT-5.1 Codex Max variant at the same medium-tier pricing as gpt-5.1-codex; Codex-lineage terminal / tool-use profile; Artificial Analysis has not measured GPT-5.1 Codex Max yet, so its letters are estimates"
              pricing-notes="Hidden by default"
              prose-generated="best-for headline-benchmarks"
-             best-for="Strong coding and agentic work at a medium price. Weakest at multimodal input (D)." />
+             best-for="Strong coding and agentic work at a medium price. Weakest at multimodal input (D), then knowledge (C)." />
       <model id="gpt-6-sol" name="GPT-6 Sol"
              input-price-per-1m="$2.00" output-price-per-1m="$10.00"
              jurisdiction="us"
@@ -1298,17 +1298,17 @@
              headline-benchmarks="AA Intelligence Index 51.8 (max); HLE 52.9%; SciCode 54.2; Terminal-Bench 4.0 56.1; AA-LCR 0.830; LMArena WebDev #4 (Elo 1757.8)"
              pricing-notes="Provider-direct OpenAI API per-token pricing (not via the Cursor pool)"
              prose-generated="best-for headline-benchmarks"
-             best-for="Frontier-class agentic work, plus strong coding, planning, multimodal input, long context and knowledge, at a medium price. Its AA Intelligence Index of 51.8 ranks 7th of 35 measured models. Weakest at speed (D)." added-on="2026-10-01"/>
+             best-for="Frontier-class agentic work, plus strong coding, planning, multimodal input, long context and knowledge, at a medium price. Its AA Intelligence Index of 51.8 ranks 7th of 35 measured models. Weakest at speed (D). Superseded by GPT-6.2 Sol." added-on="2026-10-01" superseded-by="gpt-6.2-sol" superseded-on="2026-11-19"/>
       <model id="gpt-6.2-sol" name="GPT-6.2 Sol"
              input-price-per-1m="$2.00" output-price-per-1m="$10.00"
              jurisdiction="us"
-             tier-coding="A" tier-planning="A" tier-agentic="A"
+             tier-coding="A" tier-planning="S" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="D"
              headline-benchmarks="Artificial Analysis has not measured GPT-6.2 Sol yet, so its letters are estimates"
              pricing-notes="Provider-direct OpenAI API per-token pricing (not via the Cursor pool)"
              prose-generated="best-for headline-benchmarks"
-             best-for="Strong coding, planning, agentic work, multimodal input, long context and knowledge at a medium price. Weakest at speed (D)." added-on="2026-11-18"/>
+             best-for="Frontier-class planning and agentic work, plus strong coding, multimodal input, long context and knowledge, at a medium price. Weakest at speed (D)." added-on="2026-11-18"/>
       <model id="gemini-4-argon" name="Gemini 4 Argon"
              input-price-per-1m="$2.00" output-price-per-1m="$10.00"
              jurisdiction="us"
@@ -1323,12 +1323,12 @@
              input-price-per-1m="$2.00" output-price-per-1m="$10.00"
              jurisdiction="us"
              tier-coding="S" tier-planning="S" tier-agentic="S"
-             tier-multimodal="B" tier-long-context="S" tier-knowledge="S"
+             tier-multimodal="A" tier-long-context="S" tier-knowledge="S"
              tier-speed="B"
              headline-benchmarks="Artificial Analysis has not measured Gemini 4 Carbon yet, so its letters are estimates"
              pricing-notes="Provider-direct Google API per-token pricing (not via the Cursor pool)"
              prose-generated="best-for headline-benchmarks"
-             best-for="Frontier-class coding, planning, agentic work, long context and knowledge at a medium price." added-on="2026-11-12"/>
+             best-for="Frontier-class coding, planning, agentic work, long context and knowledge, plus strong multimodal input, at a medium price." added-on="2026-11-12"/>
     </tier>
     <tier cost="low">
       <model id="gemini-3.5-flash" name="Gemini 3.5 Flash"
@@ -1688,13 +1688,13 @@
       <model id="gemini-4-hydrogen" name="Gemini 4 Hydrogen"
              input-price-per-1m="$1.50" output-price-per-1m="$7.50"
              jurisdiction="us"
-             tier-coding="B" tier-planning="B" tier-agentic="B"
-             tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
-             tier-speed="B"
+             tier-coding="S" tier-planning="S" tier-agentic="S"
+             tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
+             tier-speed="A"
              headline-benchmarks="Artificial Analysis has not measured Gemini 4 Hydrogen yet, so its letters are estimates"
              pricing-notes="Provider-direct Google API per-token pricing (not via the Cursor pool)"
              prose-generated="best-for headline-benchmarks"
-             best-for="Competent coding, planning, agentic work, multimodal input, long context and knowledge at a low price." added-on="2026-11-13"/>
+             best-for="Frontier-class coding, planning and agentic work, plus strong multimodal input, long context and knowledge, with fast output, at a low price. It is the cheapest model in the catalog rated S for coding, planning and agentic work." added-on="2026-11-13"/>
     </tier>
   </model-options>
 
@@ -2015,13 +2015,13 @@
       - Never sacrifice quality to save cost — the cost step is a true-tie
         resolver, not a downgrade trigger.
       - For PRIMARY = `multimodal`, only consider models with tier-multimodal
-        of S or A (currently: gemini-3-flash, gemini-3.8-flash, claude-fable-5.2, claude-fable-5.1 at S; gemini-2.5-flash, gpt-6.1-terra, claude-sonnet-5-5, gpt-6-sol, gpt-6.1-sol, gpt-6.2-sol, gpt-5.6-terra, claude-opus-5-5, gpt-5.6-sol at A).
+        of S or A (currently: gemini-3-flash, gemini-3.8-flash, claude-fable-5.2, claude-fable-5.1 at S; gemini-2.5-flash, gpt-6.1-terra, gemini-4-hydrogen, claude-sonnet-5-5, gemini-4-carbon, gpt-6-sol, gpt-6.1-sol, gpt-6.2-sol, gpt-5.6-terra, gemini-4-neon, claude-opus-5-5, gpt-5.6-sol at A).
       - For PRIMARY = `long-context`, prefer models with native large
         context (opus-4.7 1M, opus-4.8 1M, claude-opus-5 1M, claude-opus-5-5 1M, gemini-3.1-pro 1M, gemini-3.5-flash-lite 1M) over forcing
         a smaller-context model into Max Mode truncation.
       - For PRIMARY = `coding` at S-tier requirement, the candidate set is
-        claude-sonnet-5-5, gemini-4-argon, gemini-4-carbon, claude-opus-5-5, muse-wonder, claude-fable-5.2, claude-fable-5.1; cost tie-breaker favors
-        claude-sonnet-5-5 when the ratings are equivalent for the prompt.
+        gemini-4-hydrogen, claude-sonnet-5-5, gemini-4-argon, gemini-4-carbon, gemini-4-neon, claude-opus-5-5, muse-wonder, claude-fable-5.2, claude-fable-5.1; cost tie-breaker favors
+        gemini-4-hydrogen when the ratings are equivalent for the prompt.
       - Default to composer-2.5 for routine multi-file implementation when a
         coding-A rating suffices; escalate only on a concrete capability
         gap.

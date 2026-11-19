@@ -70,8 +70,8 @@
       "max_output_tokens": 2048,
       "ladder_max_output_tokens": 6144,
       "temperature": null,
-      "menu": "founder",
-      "notes": "OpenAI's mid-tier flagship at $2/$10 per 1M, reasoning at its floor."
+      "menu": null,
+      "notes": "OpenAI's mid-tier flagship at $2/$10 per 1M, reasoning at its floor. Superseded in the catalog by GPT-6.2 Sol, so off the operator menu."
     },
     {
       "hint": "anthropic-claude-sonnet-5-5",

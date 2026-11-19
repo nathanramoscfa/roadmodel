@@ -1,6 +1,6 @@
 {
   "about": "roadmodel's estimate of each unmeasured catalog model's AA Intelligence Index, from its launch table, or from later launch tables that list it when its own is too thin (src/roadmodel/estimate.py). Shown \u2248 on /models until Artificial Analysis measures the model. Regenerate with update/build_index_estimates.py.",
-  "launch_tables_sha256": "81c4c782f019ad95c04751e5405a87ba22ed7bda99c93fcf6ee70fae876099e9",
+  "launch_tables_sha256": "e2986f965db6f47aa19659e5366b29549d1c0e9e651b416c63c5aef655f1f769",
   "models": {
     "claude-fable-5.2": {
       "anchors": [
@@ -17,8 +17,30 @@
         "terminalbench_v4_0": 0.6033
       },
       "index": 57.4,
+      "letters": {
+        "multimodal": "S"
+      },
       "method": "anchors",
       "rows": 10
+    },
+    "codestral": {
+      "anchors": [],
+      "band": 6.0,
+      "effort": null,
+      "index": 19.0,
+      "letters": {
+        "speed": "A"
+      },
+      "method": "prior",
+      "rows": 0
+    },
+    "composer-2.5": {
+      "anchors": [],
+      "band": 6.0,
+      "effort": null,
+      "index": 33.0,
+      "method": "prior",
+      "rows": 0
     },
     "gemini-4-carbon": {
       "anchors": [
@@ -36,8 +58,64 @@
         "terminalbench_v4_0": 0.5576
       },
       "index": 53.6,
+      "letters": {
+        "multimodal": "A"
+      },
       "method": "anchors",
       "rows": 12
+    },
+    "gemini-4-hydrogen": {
+      "anchors": [
+        "claude-sonnet-5-5"
+      ],
+      "band": 4.5,
+      "effort": "xhigh",
+      "figures": {
+        "hle": 0.5243,
+        "lcr": 0.8111,
+        "scicode": 0.5852,
+        "terminalbench_v4_0": 0.5921
+      },
+      "index": 53.6,
+      "letters": {
+        "multimodal": "A",
+        "speed": "A"
+      },
+      "method": "pairwise",
+      "rows": 6
+    },
+    "gemini-4-neon": {
+      "anchors": [
+        "claude-opus-5-5"
+      ],
+      "band": 4.5,
+      "effort": null,
+      "figures": {
+        "hle": 0.6038,
+        "lcr": 0.8359,
+        "scicode": 0.6519,
+        "terminalbench_v4_0": 0.5725
+      },
+      "index": 56.9,
+      "letters": {
+        "multimodal": "A"
+      },
+      "method": "pairwise",
+      "rows": 17
+    },
+    "gpt-5.1-codex-max": {
+      "anchors": [
+        "gpt-5.1-codex"
+      ],
+      "band": 4.5,
+      "effort": "max",
+      "figures": {
+        "hle": 0.2568,
+        "lcr": 0.6856
+      },
+      "index": 26.1,
+      "method": "pairwise",
+      "rows": 3
     },
     "gpt-6.1-terra": {
       "anchors": [
@@ -58,6 +136,42 @@
         "terminalbench_v4_0": 0.3447
       },
       "index": 46.7,
+      "method": "anchors",
+      "rows": 8
+    },
+    "gpt-6.2-astra": {
+      "anchors": [
+        "gpt-5.6-sol",
+        "gpt-6-astra",
+        "gpt-6.1-sol"
+      ],
+      "band": 3.5,
+      "effort": "max",
+      "figures": {
+        "hle": 0.5509,
+        "lcr": 0.8402,
+        "scicode": 0.5492,
+        "terminalbench_v4_0": 0.5968
+      },
+      "index": 55.0,
+      "method": "anchors",
+      "rows": 8
+    },
+    "gpt-6.2-sol": {
+      "anchors": [
+        "gpt-5.6-sol",
+        "gpt-6-astra",
+        "gpt-6.1-sol"
+      ],
+      "band": 3.5,
+      "effort": "max",
+      "figures": {
+        "hle": 0.537,
+        "lcr": 0.8232,
+        "scicode": 0.5481,
+        "terminalbench_v4_0": 0.5557
+      },
+      "index": 53.8,
       "method": "anchors",
       "rows": 8
     }

@@ -24,7 +24,13 @@ POLICIES: dict[str, tuple[str, set[str]]] = {
     "update-models.yml": (
         "chore/catalog-refresh-",
         COMMON
-        | {"docs/model-tier-cost-scale.md", "docs/context-windows.json", "docs/effort-ratings.json"}
+        | {
+            "docs/model-tier-cost-scale.md",
+            "docs/context-windows.json",
+            "docs/effort-ratings.json",
+            "docs/index-estimates.json",
+            "update/launch-tables.json",
+        }
         | {
             f"update/catalog-{provider}.json"
             for provider in (
@@ -55,7 +61,14 @@ POLICIES: dict[str, tuple[str, set[str]]] = {
     ),
     "update-benchmarks.yml": (
         "chore/benchmarks-refresh-",
-        COMMON | {"docs/benchmarks.json", "docs/effort-ratings.json", "update/aa-model-map.json"},
+        COMMON
+        | {
+            "docs/benchmarks.json",
+            "docs/effort-ratings.json",
+            "docs/index-estimates.json",
+            "update/aa-model-map.json",
+            "update/launch-tables.json",
+        },
     ),
     "probe-availability.yml": (
         "auto/availability-",
@@ -63,7 +76,8 @@ POLICIES: dict[str, tuple[str, set[str]]] = {
     ),
     "update-launch-tables.yml": (
         "chore/launch-tables-refresh-",
-        COMMON | {"update/launch-tables.json", "docs/index-estimates.json"},
+        COMMON
+        | {"update/launch-tables.json", "docs/index-estimates.json", "docs/effort-ratings.json"},
     ),
 }
 

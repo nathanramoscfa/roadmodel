@@ -51,7 +51,7 @@ category's evidence, by the same rules among the same measured models
 (estimated_letters): the AA Index estimate and, from its own launch table, the
 HLE, AA-LCR, SciCode and Terminal-Bench 4.0 figures (docs/index-estimates.json,
 src/roadmodel/estimate.py). Tested by hiding the figures of the 35 measured
-models with a launch table, the estimate gives the exact letter 94 times in
+models with a launch table, the estimate gives the exact letter 96 times in
 122 and is never more than one letter off in 120, where a placeholder B is
 exact 21 times; an estimated S is truly S 22 times in 29 and the rest are A,
 and 22 of the 29 true S models are estimated S. So an estimated S stands: a
@@ -289,6 +289,10 @@ def current_tiers(selector: str) -> dict[str, dict[str, str]]:
             continue
         attrs = {cat: re.search(rf'tier-{cat}="([SABCD])"', body) for cat in CATEGORY_EVIDENCE}
         entry = {cat: a.group(1) for cat, a in attrs.items() if a}
+        for cat in ("multimodal", "speed"):
+            extra = re.search(rf'tier-{cat}="([SABCD])"', body)
+            if extra:
+                entry[f"_extra_{cat}"] = extra.group(1)
         price = re.search(r'output-price-per-1m="\$?\s*([\d.]+)"', body)
         entry["_output_price"] = price.group(1) if price else "0"
         entry["_coding_all"] = (re.search(r'tier-coding="([SABCD])"', body) or [None, ""])[1]
@@ -371,9 +375,8 @@ def plan_changes(
     neither, whose letters stay, capped at ESTIMATE_CEILING."""
     live = live_ids(selector)
     derived = derive({cid: row for cid, row in benchmarks.items() if cid in live})
-    estimated = estimated_letters(
-        benchmarks, load_estimates() if estimates is None else estimates, live
-    )
+    estimates_map = load_estimates() if estimates is None else estimates
+    estimated = estimated_letters(benchmarks, estimates_map, live)
     current = current_tiers(selector)
     changes: list[dict[str, Any]] = []
     unmeasured: dict[str, list[str]] = {cat: [] for cat in CATEGORY_EVIDENCE}
@@ -410,6 +413,22 @@ def plan_changes(
             cur = tiers.get(cat, "")
             if cur != d["letter"]:
                 changes.append({"id": mid, "category": cat, "from": cur, "to": d["letter"], **d})
+        if mid in live and points(benchmarks.get(mid, {}), "planning") is None:
+            extra = (estimates_map.get(mid) or {}).get("letters")
+            if isinstance(extra, dict):
+                for cat in ("multimodal", "speed"):
+                    letter = extra.get(cat)
+                    cur = tiers.get(f"_extra_{cat}", "")
+                    if isinstance(letter, str) and letter in "SABCD" and cur != letter:
+                        changes.append(
+                            {
+                                "id": mid,
+                                "category": cat,
+                                "from": cur,
+                                "to": letter,
+                                "estimated": True,
+                            }
+                        )
     return changes, unmeasured
 
 
