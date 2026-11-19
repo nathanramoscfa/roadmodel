@@ -1,21 +1,19 @@
 // web/components/FloatingCard.tsx
 //
-// The hover/focus card behind the /models cells and the score charts.
-// It renders in a portal and positions itself against the VIEWPORT, so it is
-// never clipped by the table's horizontal-scroll box or a chart's frame, and
+// The hover/focus card behind the /models cells, glossary definitions, and the
+// score charts. It renders in a portal and positions itself against the VIEWPORT,
+// so it is never clipped by the table's scroll box or a chart's frame, and
 // never runs off-screen: it opens on the preferred side of its anchor, flips
 // to the other side when that has more room, and is clamped inside an 8px
 // margin. Chart cards remain pointer-transparent (`interactive={false}`) so
-// sweeping across a dense plot stays smooth; table `HoverCard` popups are
-// `interactive` (`pointer-events-auto`) with a gap bridge and height clamp so
-// moving the pointer into the popup keeps it open until the pointer leaves
-// the popup, and tall cards scroll cleanly on small viewports.
-//
-// HoverCard wraps an ordinary trigger (a table cell's figure): hover opens it
-// for a mouse, a tap toggles it on touch, keyboard focus opens it, Escape and
-// a tap elsewhere close it.
+// sweeping across a dense plot stays smooth; table `HoverCard` and
+// `GlossaryTerm` popups are `interactive` (`pointer-events-auto`) with a gap
+// bridge and height clamp so moving the pointer into the popup keeps it open
+// until the pointer leaves the popup, and tall cards scroll cleanly on small
+// viewports (with a touch-only close button when opened by tap).
 "use client";
 
+import { X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -23,6 +21,9 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type FocusEvent as ReactFocusEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
   type RefObject,
@@ -46,7 +47,7 @@ const CLOSE_DELAY_MS = 140;
 const CARD_CLASS =
   "fixed z-50 max-w-[calc(100vw-16px)] rounded-lg border border-brand-slate-200 bg-white p-3.5 text-left text-[13px] font-normal normal-case leading-5 tracking-normal text-brand-slate-700 shadow-xl shadow-brand-slate-900/10 dark:border-brand-slate-600 dark:bg-brand-slate-800 dark:text-brand-slate-200 dark:shadow-black/40";
 
-// Ensures at most one interactive HoverCard is open across the page at a time.
+// Ensures at most one interactive HoverCard/GlossaryTerm popup is open across the page at a time.
 let closeActiveHoverCard: (() => void) | null = null;
 
 function sameRect(a: AnchorRect | null, b: AnchorRect | null): boolean {
@@ -127,6 +128,7 @@ export function FloatingCard({
   interactive = false,
   cardRef,
   bridgeRef,
+  onClose,
   onCardPointerEnter,
   onCardPointerLeave,
   onBridgePointerLeave,
@@ -140,6 +142,7 @@ export function FloatingCard({
   interactive?: boolean;
   cardRef?: RefObject<HTMLDivElement | null>;
   bridgeRef?: RefObject<HTMLDivElement | null>;
+  onClose?: () => void;
   onCardPointerEnter?: (e: ReactPointerEvent<HTMLDivElement>) => void;
   onCardPointerLeave?: (e: ReactPointerEvent<HTMLDivElement>) => void;
   onBridgePointerLeave?: (e: ReactPointerEvent<HTMLDivElement>) => void;
@@ -233,6 +236,19 @@ export function FloatingCard({
         onPointerEnter={interactive ? onCardPointerEnter : undefined}
         onPointerLeave={interactive ? onCardPointerLeave : undefined}
       >
+        {interactive && onClose && (
+          <div className="sticky top-0 z-10 -mx-3.5 -mt-3.5 mb-2 flex justify-end border-b border-brand-slate-100 bg-white/95 px-2 py-1 backdrop-blur-sm dark:border-brand-slate-700/70 dark:bg-brand-slate-800/95">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close popup"
+              data-testid="floating-card-close"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-brand-slate-500 hover:bg-brand-slate-100 hover:text-brand-slate-900 dark:text-brand-slate-400 dark:hover:bg-brand-slate-700 dark:hover:text-brand-slate-50"
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
+        )}
         {children}
       </div>
     </>,
@@ -240,34 +256,19 @@ export function FloatingCard({
   );
 }
 
-// A focusable trigger that shows `card` on hover (mouse), tap (touch/pen), or
-// keyboard focus. Interactive mouse hover stays open while moving into or
-// hovering over the popup, and closes once the pointer leaves the popup.
-export function HoverCard({
-  card,
-  label,
-  className = "",
-  triggerTestId,
-  cardTestId,
-  children,
-}: {
-  card: ReactNode;
-  // Accessible name for the trigger button.
-  label: string;
-  className?: string;
-  triggerTestId?: string;
-  cardTestId?: string;
-  children: ReactNode;
-}) {
+// Shared open/close, hover-bridge, blur-guard, and touch-dismissal state for
+// interactive portaled popups (HoverCard and GlossaryTerm).
+export function useHoverPopup<T extends HTMLElement = HTMLButtonElement>() {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLButtonElement>(null);
+  const [openedByTouch, setOpenedByTouch] = useState(false);
+  const triggerRef = useRef<T | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const bridgeRef = useRef<HTMLDivElement | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastInsidePointerDownAt = useRef(0);
   const pointer = useRef<string>("mouse");
   const id = useId();
-  const getAnchor = useCallback(() => ref.current?.getBoundingClientRect() ?? null, []);
+  const getAnchor = useCallback(() => triggerRef.current?.getBoundingClientRect() ?? null, []);
 
   const cancelClose = useCallback(() => {
     if (closeTimer.current !== null) {
@@ -282,17 +283,22 @@ export function HoverCard({
     if (closeActiveHoverCard === closeImmediate) {
       closeActiveHoverCard = null;
     }
+    setOpenedByTouch(false);
     setOpen(false);
   }, [cancelClose]);
 
-  const openNow = useCallback(() => {
-    cancelClose();
-    if (closeActiveHoverCard && closeActiveHoverCard !== closeImmediate) {
-      closeActiveHoverCard();
-    }
-    closeActiveHoverCard = closeImmediate;
-    setOpen(true);
-  }, [cancelClose, closeImmediate]);
+  const openNow = useCallback(
+    (touch = false) => {
+      cancelClose();
+      if (closeActiveHoverCard && closeActiveHoverCard !== closeImmediate) {
+        closeActiveHoverCard();
+      }
+      closeActiveHoverCard = closeImmediate;
+      setOpenedByTouch(touch);
+      setOpen(true);
+    },
+    [cancelClose, closeImmediate],
+  );
 
   const scheduleClose = useCallback(() => {
     cancelClose();
@@ -301,14 +307,20 @@ export function HoverCard({
       if (closeActiveHoverCard === closeImmediate) {
         closeActiveHoverCard = null;
       }
+      setOpenedByTouch(false);
       setOpen(false);
     }, CLOSE_DELAY_MS);
   }, [cancelClose, closeImmediate]);
 
+  const toggleTouch = useCallback(() => {
+    if (open) closeImmediate();
+    else openNow(true);
+  }, [open, openNow, closeImmediate]);
+
   const isWithinPopup = useCallback((target: EventTarget | null) => {
     if (!(target instanceof Node)) return false;
     return Boolean(
-      ref.current?.contains(target) ||
+      triggerRef.current?.contains(target) ||
         cardRef.current?.contains(target) ||
         bridgeRef.current?.contains(target),
     );
@@ -352,49 +364,99 @@ export function HoverCard({
     };
   }, [open, isWithinPopup, closeImmediate]);
 
+  const triggerProps = {
+    ref: triggerRef,
+    "aria-describedby": open ? id : undefined,
+    onPointerEnter: (e: ReactPointerEvent<T>) => {
+      pointer.current = e.pointerType;
+      if (e.pointerType === "mouse") openNow(false);
+    },
+    onPointerLeave: (e: ReactPointerEvent<T>) => {
+      if (e.pointerType === "mouse" && !isWithinPopup(e.relatedTarget)) {
+        scheduleClose();
+      }
+    },
+    onPointerDown: (e: ReactPointerEvent<T>) => {
+      pointer.current = e.pointerType;
+      lastInsidePointerDownAt.current = Date.now();
+    },
+    onClick: (e: ReactMouseEvent<T>) => {
+      if (pointer.current !== "mouse") {
+        e.preventDefault();
+        toggleTouch();
+      }
+    },
+    onFocus: (e: ReactFocusEvent<T>) => {
+      if (e.currentTarget.matches(":focus-visible")) openNow(false);
+    },
+    onBlur: (e: ReactFocusEvent<T>) => {
+      if (
+        Date.now() - lastInsidePointerDownAt.current < 500 ||
+        isWithinPopup(e.relatedTarget)
+      ) {
+        return;
+      }
+      closeImmediate();
+    },
+    onKeyDown: (e: ReactKeyboardEvent<T>) => {
+      if (e.key === "Tab") lastInsidePointerDownAt.current = 0;
+      if (e.key === "Escape") closeImmediate();
+    },
+  };
+
+  const cardProps = {
+    getAnchor,
+    id,
+    interactive: true as const,
+    cardRef,
+    bridgeRef,
+    onClose: openedByTouch ? closeImmediate : undefined,
+    onCardPointerEnter: (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (e.pointerType === "mouse") cancelClose();
+    },
+    onBridgePointerLeave: (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (e.pointerType === "mouse" && !isWithinPopup(e.relatedTarget)) {
+        scheduleClose();
+      }
+    },
+    onCardPointerLeave: (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (e.pointerType === "mouse" && !isWithinPopup(e.relatedTarget)) {
+        closeImmediate();
+      }
+    },
+  };
+
+  return { open, cardProps, triggerProps };
+}
+
+// A focusable trigger that shows `card` on hover (mouse), tap (touch/pen), or
+// keyboard focus. Interactive mouse hover stays open while moving into or
+// hovering over the popup, and closes once the pointer leaves the popup.
+export function HoverCard({
+  card,
+  label,
+  className = "",
+  triggerTestId,
+  cardTestId,
+  children,
+}: {
+  card: ReactNode;
+  // Accessible name for the trigger button.
+  label: string;
+  className?: string;
+  triggerTestId?: string;
+  cardTestId?: string;
+  children: ReactNode;
+}) {
+  const { open, cardProps, triggerProps } = useHoverPopup<HTMLButtonElement>();
+
   return (
     <>
       <button
-        ref={ref}
         type="button"
         aria-label={label}
-        aria-describedby={open ? id : undefined}
         data-testid={triggerTestId}
-        onPointerEnter={(e) => {
-          pointer.current = e.pointerType;
-          if (e.pointerType === "mouse") openNow();
-        }}
-        onPointerLeave={(e) => {
-          if (e.pointerType === "mouse" && !isWithinPopup(e.relatedTarget)) {
-            scheduleClose();
-          }
-        }}
-        onPointerDown={(e) => {
-          pointer.current = e.pointerType;
-          lastInsidePointerDownAt.current = Date.now();
-        }}
-        onClick={() => {
-          if (pointer.current !== "mouse") {
-            if (open) closeImmediate();
-            else openNow();
-          }
-        }}
-        onFocus={(e) => {
-          if (e.currentTarget.matches(":focus-visible")) openNow();
-        }}
-        onBlur={(e) => {
-          if (
-            Date.now() - lastInsidePointerDownAt.current < 500 ||
-            isWithinPopup(e.relatedTarget)
-          ) {
-            return;
-          }
-          closeImmediate();
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Tab") lastInsidePointerDownAt.current = 0;
-          if (e.key === "Escape") closeImmediate();
-        }}
+        {...triggerProps}
         className={
           "cursor-help rounded-sm border-b border-dotted border-brand-slate-400 outline-none focus-visible:ring-2 focus-visible:ring-brand-accent dark:border-brand-slate-500 " +
           className
@@ -403,27 +465,7 @@ export function HoverCard({
         {children}
       </button>
       {open && (
-        <FloatingCard
-          getAnchor={getAnchor}
-          id={id}
-          testId={cardTestId}
-          interactive
-          cardRef={cardRef}
-          bridgeRef={bridgeRef}
-          onCardPointerEnter={(e) => {
-            if (e.pointerType === "mouse") cancelClose();
-          }}
-          onBridgePointerLeave={(e) => {
-            if (e.pointerType === "mouse" && !isWithinPopup(e.relatedTarget)) {
-              scheduleClose();
-            }
-          }}
-          onCardPointerLeave={(e) => {
-            if (e.pointerType === "mouse" && !isWithinPopup(e.relatedTarget)) {
-              closeImmediate();
-            }
-          }}
-        >
+        <FloatingCard {...cardProps} testId={cardTestId}>
           {card}
         </FloatingCard>
       )}

@@ -1,6 +1,6 @@
 {
   "about": "roadmodel's estimate of each unmeasured catalog model's AA Intelligence Index, from its launch table, or from later launch tables that list it when its own is too thin (src/roadmodel/estimate.py). Shown \u2248 on /models until Artificial Analysis measures the model. Regenerate with update/build_index_estimates.py.",
-  "launch_tables_sha256": "e2986f965db6f47aa19659e5366b29549d1c0e9e651b416c63c5aef655f1f769",
+  "launch_tables_sha256": "66ce6b6189211cfb91bf7c76a74020ee68cff00f1c246a2379b0565a598ae202",
   "models": {
     "claude-fable-5.2": {
       "anchors": [
@@ -27,7 +27,7 @@
       "anchors": [],
       "band": 6.0,
       "effort": null,
-      "index": 20.3,
+      "index": 21.0,
       "letters": {
         "speed": "A"
       },
@@ -38,7 +38,7 @@
       "anchors": [],
       "band": 6.0,
       "effort": null,
-      "index": 34.4,
+      "index": 35.2,
       "method": "prior",
       "rows": 0
     },
@@ -102,20 +102,6 @@
       },
       "method": "pairwise",
       "rows": 17
-    },
-    "gpt-5.1-codex-max": {
-      "anchors": [
-        "gpt-5.1-codex"
-      ],
-      "band": 4.5,
-      "effort": "max",
-      "figures": {
-        "hle": 0.2568,
-        "lcr": 0.6856
-      },
-      "index": 26.1,
-      "method": "pairwise",
-      "rows": 3
     },
     "gpt-6.1-terra": {
       "anchors": [

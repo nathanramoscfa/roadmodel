@@ -249,13 +249,24 @@ test("renders the rationale as readable lines with glossary popovers (#270, #269
   const why = page.getByRole("region", { name: /Why this model/i });
   await expect(why).toBeVisible();
   await expect(why.locator("p")).toHaveCount(3);
-  const tooltips = why.locator('[role="tooltip"]');
-  await expect(tooltips).toHaveCount(2);
-  await expect(tooltips.filter({ hasText: "Frontier-class" })).toHaveCount(1);
-  await expect(tooltips.filter({ hasText: "gold standard for software-engineering" })).toHaveCount(1);
+  const sTier = why.getByRole("link", { name: "S-tier" });
+  await expect(sTier).toHaveAttribute("href", "/docs#ratings");
+  await sTier.hover();
+  const glossary = page.getByTestId("glossary-card");
+  await expect(glossary).toBeVisible();
+  await expect(glossary).toContainText("Frontier-class");
+  await page.mouse.move(2, 2);
+  await expect(glossary).toHaveCount(0);
+
   const swebench = why.getByRole("link", { name: "SWE-bench Verified" });
   await expect(swebench).toHaveAttribute("href", "https://www.swebench.com/");
   await expect(swebench).toHaveAttribute("target", "_blank");
+  await swebench.hover();
+  await expect(glossary).toBeVisible();
+  await expect(glossary).toContainText("gold standard for software-engineering");
+  await expect(glossary).toContainText("View source");
+  await page.mouse.move(2, 2);
+  await expect(glossary).toHaveCount(0);
 });
 
 test("renders sub-headed rationale sections when the service supplies them", async ({ page }) => {

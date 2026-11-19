@@ -213,8 +213,14 @@ def test_zai_extractor_parses_fixture() -> None:
 
     models = {m["id"]: m for m in snap["models"]}
     # Exactly the curated subset is emitted (z.ai ships ~17 priced models).
-    assert set(models) == {"glm-5.2", "glm-4.6", "glm-4.5-air"}
+    assert set(models) == {"glm-5.3", "glm-5.3-flash", "glm-5.2", "glm-4.6", "glm-4.5-air"}
 
+    assert models["glm-5.3"]["input_price_per_1m"] == 1.4
+    assert models["glm-5.3"]["output_price_per_1m"] == 4.4
+    assert models["glm-5.3"]["cache_read_per_1m"] == 0.26
+    assert models["glm-5.3-flash"]["input_price_per_1m"] == 0.15
+    assert models["glm-5.3-flash"]["output_price_per_1m"] == 0.50
+    assert models["glm-5.3-flash"]["cache_read_per_1m"] == 0.03
     assert models["glm-5.2"]["input_price_per_1m"] == 1.4
     assert models["glm-5.2"]["output_price_per_1m"] == 4.4
     assert models["glm-5.2"]["cache_read_per_1m"] == 0.26
@@ -286,7 +292,13 @@ def test_zai_extractor_cli_writes_snapshot(tmp_path: Path) -> None:
     )
     assert result.returncode == 0, result.stderr
     data = json.loads(out.read_text())
-    assert {m["id"] for m in data["models"]} == {"glm-5.2", "glm-4.6", "glm-4.5-air"}
+    assert {m["id"] for m in data["models"]} == {
+        "glm-5.3",
+        "glm-5.3-flash",
+        "glm-5.2",
+        "glm-4.6",
+        "glm-4.5-air",
+    }
 
 
 def test_committed_zai_snapshot_invariants() -> None:
@@ -296,7 +308,7 @@ def test_committed_zai_snapshot_invariants() -> None:
     ids = {m["id"] for m in snap["models"]}
     # A curated model z.ai delists is reported, not priced (GLM-4.5-Air, 2026-11).
     missing = set(snap.get("missing_mapped_models", []))
-    assert {"glm-5.2", "glm-4.6", "glm-4.5-air"} <= ids | missing
+    assert {"glm-5.3", "glm-5.3-flash", "glm-5.2", "glm-4.6", "glm-4.5-air"} <= ids | missing
     assert not ids & missing
     for m in snap["models"]:
         assert m["input_price_per_1m"] > 0

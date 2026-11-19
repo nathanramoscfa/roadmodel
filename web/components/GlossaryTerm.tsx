@@ -1,64 +1,92 @@
 // web/components/GlossaryTerm.tsx
 //
-// Inline "definable term" with a CSS-only popover (#269). The definition shows
-// on hover AND on keyboard focus (focus also fires on tap, so touch is covered)
-// via group-hover / group-focus — no client JS. The definition lives in the DOM
-// (display:none until revealed, so a hidden popover never widens an
-// overflow-x container — `invisible` still occupies layout, and the /models
-// table wrapper grew a horizontal scrollbar from tooltips it wasn't showing).
-import type { ReactNode } from "react";
+// Inline "definable term" with a portaled hover/focus/tap popover (#269).
+// Uses FloatingCard + useHoverPopup so definitions inside scrolled table
+// containers (column header info icons, Jurisdiction badges) and rationale prose
+// render in document.body without scroll-box clipping, stay open when moving
+// into the popup (including to tap "View source ↗"), and get a touch-only
+// close button when tapped on phones/tablets.
+"use client";
+
+import type { ReactNode, RefObject } from "react";
+
+import { FloatingCard, useHoverPopup } from "./FloatingCard";
 
 interface GlossaryTermProps {
   definition: string;
-  // Canonical source. When set, the term is a link (hover/focus still reveals the
-  // definition; click opens the source). When absent, it stays a definable span.
+  // Canonical source. When set, the term is a link (hover/focus reveals the
+  // definition; mouse click opens the source, touch tap opens the popup with
+  // the source link inside). When absent, it stays a definable span.
   url?: string;
-  // Which edge the popover hangs from. "right" for terms near the right edge of
-  // a scroll container, where a left-anchored 16rem popover would be clipped.
+  // Retained for caller compatibility; FloatingCard positions against the viewport.
   align?: "left" | "right";
   children: ReactNode;
 }
 
 const BASE_CLASS =
-  "group relative inline-block border-b border-dotted border-brand-slate-400 outline-none dark:border-brand-slate-500";
-// `whitespace-normal` + `break-words` + `normal-case tracking-normal` are
-// load-bearing: a term inside a table header inherits that header's
-// `whitespace-nowrap` / `uppercase tracking-wide`, which ran the definition
-// off the right edge of the box in one unbroken line.
-const TOOLTIP_CLASS =
-  "hidden absolute top-full z-20 mt-1 w-72 max-w-[calc(100vw-2rem)] whitespace-normal break-words rounded-md border border-brand-slate-200 bg-white p-2 text-left text-xs font-normal normal-case leading-snug tracking-normal text-brand-slate-700 shadow-lg before:content-[''] before:absolute before:-top-2 before:left-0 before:right-0 before:h-2 group-hover:block group-focus:block dark:border-brand-slate-600 dark:bg-brand-slate-800 dark:text-brand-slate-200";
+  "inline-block border-b border-dotted border-brand-slate-400 outline-none focus-visible:ring-2 focus-visible:ring-brand-accent dark:border-brand-slate-500";
 
-export function GlossaryTerm({ definition, url, align = "left", children }: GlossaryTermProps) {
-  const tooltip = (
-    <span
-      role="tooltip"
-      className={`${TOOLTIP_CLASS} ${align === "right" ? "right-0" : "left-0"}`}
-    >
-      {definition}
+export function GlossaryTerm({ definition, url, children }: GlossaryTermProps) {
+  const { open, cardProps, triggerProps } = useHoverPopup<HTMLElement>();
+
+  const card = (
+    <div className="w-72 max-w-full text-xs leading-snug">
+      <p>{definition}</p>
       {url ? (
-        <span className="mt-1 block font-medium text-brand-accent">View source ↗</span>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1.5 inline-block font-medium text-brand-accent hover:underline"
+        >
+          View source ↗
+        </a>
       ) : null}
-    </span>
+    </div>
   );
 
-  if (url) {
-    return (
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={`${BASE_CLASS} cursor-pointer hover:border-brand-accent`}
-      >
-        {children}
-        {tooltip}
-      </a>
-    );
-  }
-
   return (
-    <span tabIndex={0} className={`${BASE_CLASS} cursor-help`}>
-      {children}
-      {tooltip}
-    </span>
+    <>
+      {url ? (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          ref={triggerProps.ref as RefObject<HTMLAnchorElement | null>}
+          aria-describedby={triggerProps["aria-describedby"]}
+          onPointerEnter={triggerProps.onPointerEnter}
+          onPointerLeave={triggerProps.onPointerLeave}
+          onPointerDown={triggerProps.onPointerDown}
+          onClick={triggerProps.onClick}
+          onFocus={triggerProps.onFocus}
+          onBlur={triggerProps.onBlur}
+          onKeyDown={triggerProps.onKeyDown}
+          className={`${BASE_CLASS} cursor-pointer hover:border-brand-accent`}
+        >
+          {children}
+        </a>
+      ) : (
+        <span
+          tabIndex={0}
+          ref={triggerProps.ref as RefObject<HTMLSpanElement | null>}
+          aria-describedby={triggerProps["aria-describedby"]}
+          onPointerEnter={triggerProps.onPointerEnter}
+          onPointerLeave={triggerProps.onPointerLeave}
+          onPointerDown={triggerProps.onPointerDown}
+          onClick={triggerProps.onClick}
+          onFocus={triggerProps.onFocus}
+          onBlur={triggerProps.onBlur}
+          onKeyDown={triggerProps.onKeyDown}
+          className={`${BASE_CLASS} cursor-help`}
+        >
+          {children}
+        </span>
+      )}
+      {open && (
+        <FloatingCard {...cardProps} testId="glossary-card">
+          {card}
+        </FloatingCard>
+      )}
+    </>
   );
 }

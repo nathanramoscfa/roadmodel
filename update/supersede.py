@@ -11,8 +11,9 @@ A model is SUPERSEDED when another model in ``<model-options>``:
   (``roadmodel.scoring.estimate_penalty``): Claude Fable 5.2 launched cheaper
   than Fable 5.1 on every surface and estimated well above it, yet 5.1 stayed
   for want of a measurement that could not come while AA's were frozen
-  (2026-11-16). The older model still needs a figure of its own, and once AA
-  measures the newer one, the measurement decides;
+  (2026-11-16). An unmeasured older model with an estimate uses its optimistic
+  upper bound (``index + band / 2``) as the bar a challenger must clear, and
+  once AA measures either model, the measurement decides;
 * is rated at least as high in each of the seven categories; and
 * is offered by every access method that offers the model, so the newer model
   is always there to take its place; and
@@ -135,12 +136,20 @@ class Model:
     retired: str | None  # retired-on, if retired
     # The estimate less half its band, for a model AA has not measured.
     aa_estimate: float | None = None
+    # The estimate plus half its band, for an unmeasured model as an incumbent.
+    aa_estimate_upper: float | None = None
 
     @property
     def standing(self) -> float | None:
         """The figure this model challenges an older one with: its AA Index,
         else its discounted estimate."""
         return self.aa_index if self.aa_index is not None else self.aa_estimate
+
+    @property
+    def ceiling(self) -> float | None:
+        """The figure a challenger must clear to supersede this model: its
+        measured AA Index, else its optimistic upper estimate."""
+        return self.aa_index if self.aa_index is not None else self.aa_estimate_upper
 
 
 def blended_price(input_per_1m: float, output_per_1m: float) -> float:
@@ -171,22 +180,32 @@ def estimate_penalty(band: float) -> float:
     return round(float(band) / 2, 1)
 
 
-def discounted_estimates(estimates: dict[str, Any] | None) -> dict[str, float]:
-    """Each estimated model's index less half its band."""
+def _bounded_estimates(estimates: dict[str, Any] | None, sign: int) -> dict[str, float]:
     out: dict[str, float] = {}
     for mid, row in ((estimates or {}).get("models") or {}).items():
         if not isinstance(row, dict):
             continue
         index, band = row.get("index"), row.get("band")
         if isinstance(index, (int, float)) and isinstance(band, (int, float)):
-            out[str(mid)] = round(float(index) - estimate_penalty(band), 1)
+            out[str(mid)] = round(float(index) + sign * estimate_penalty(band), 1)
     return out
+
+
+def discounted_estimates(estimates: dict[str, Any] | None) -> dict[str, float]:
+    """Each estimated model's index less half its band."""
+    return _bounded_estimates(estimates, -1)
+
+
+def optimistic_estimates(estimates: dict[str, Any] | None) -> dict[str, float]:
+    """Each estimated model's index plus half its band."""
+    return _bounded_estimates(estimates, 1)
 
 
 def parse_models(
     selector_text: str, benchmarks: dict[str, Any], estimates: dict[str, Any] | None = None
 ) -> list[Model]:
     estimated = discounted_estimates(estimates)
+    upper = optimistic_estimates(estimates)
     options = _OPTIONS_RE.search(selector_text)
     if not options:
         raise ValueError("<model-options> block not found in selector text")
@@ -212,6 +231,7 @@ def parse_models(
                 by=attrs.get("superseded-by") or None,
                 retired=attrs.get("retired-on") or None,
                 aa_estimate=estimated.get(mid) if aa_index is None else None,
+                aa_estimate_upper=upper.get(mid) if aa_index is None else None,
             )
         )
     return out
@@ -257,6 +277,21 @@ def delisted_by_provider(directory: Path = UPDATE_DIR) -> dict[str, set[str]]:
     return out
 
 
+def listed_by_provider(directory: Path = UPDATE_DIR) -> dict[str, set[str]]:
+    """Model ids each maker's scraped catalog currently prices."""
+    out: dict[str, set[str]] = {}
+    for p in sorted(directory.glob("catalog-*.json")):
+        raw = json.loads(p.read_text())
+        provider = raw.get("provider")
+        if not provider:
+            continue
+        ids = {
+            str(m["id"]) for m in (raw.get("models") or []) if isinstance(m, dict) and m.get("id")
+        }
+        out.setdefault(str(provider), set()).update(ids)
+    return out
+
+
 def _offered(selector_text: str) -> dict[str, set[str]]:
     """Each model id -> the access methods whose supports-models list it."""
     offered: dict[str, set[str]] = {}
@@ -282,10 +317,12 @@ def _required_methods(
 
 def _beats(old: Model, new: Model, makers: dict[str, str], unavailable: frozenset[str]) -> bool:
     """Every supersession test but coverage: same maker, available, higher
-    AA Index (an unmeasured newcomer's discounted estimate), plus for cross-series
+    AA Index (an unmeasured newcomer's discounted estimate clears the
+    incumbent's AA Index or optimistic upper estimate), plus for cross-series
     replacements no dearer blended price and ratings at least as high everywhere."""
     maker = makers.get(old.id)
-    if maker is None or old.aa_index is None:
+    old_ceiling = old.ceiling
+    if maker is None or old_ceiling is None:
         return False
     standing = new.standing
     if new.id == old.id or standing is None or makers.get(new.id) != maker:
@@ -293,8 +330,8 @@ def _beats(old: Model, new: Model, makers: dict[str, str], unavailable: frozense
     if new.id in unavailable:
         return False
     if is_newer(old.id, new.id):
-        return standing > old.aa_index
-    if not (new.blended <= old.blended and standing > old.aa_index):
+        return standing > old_ceiling
+    if not (new.blended <= old.blended and standing > old_ceiling):
         return False
     return all(new.ratings[c] >= old.ratings[c] for c in TASK_CATEGORIES)
 
@@ -435,6 +472,7 @@ def plan(
     unavailable: frozenset[str] = frozenset(),
     estimates: dict[str, Any] | None = None,
     delisted: dict[str, set[str]] | None = None,
+    listed: dict[str, set[str]] | None = None,
 ) -> Plan:
     """What each model's tags should be after this run. ``base`` holds the tags
     of the committed selector, so a tag a regenerated file dropped comes back
@@ -453,8 +491,11 @@ def plan(
             result.tags[m.id] = Tags(by, since, retired)
         else:
             live.append(m)
+    delisted_default = delisted is None
     if delisted is None:
         delisted = delisted_by_provider()
+    if listed is None:
+        listed = listed_by_provider() if delisted_default else {}
     delisted_ids = {mid for ids in delisted.values() for mid in ids}
     makers = _makers(selector_text, live)
     succ = successors(selector_text, live, unavailable, delisted)
@@ -473,9 +514,12 @@ def plan(
             for c in live
             if c.id != m.id and makers.get(c.id) == makers.get(m.id) and is_newer(m.id, c.id)
         )
+        maker = makers.get(m.id)
+        off_maker_page = bool(maker and maker in listed and m.id not in listed[maker])
         retire_now = (
             (today - dt.date.fromisoformat(first_seen)).days >= RETIRE_AFTER_DAYS
             or m.id in delisted_ids
+            or off_maker_page
             or newer_versions >= 2
         )
         if retire_now:
