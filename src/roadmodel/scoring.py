@@ -62,6 +62,7 @@ from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timedelta, timezone
 from typing import Any, Final
 
+from roadmodel import agent_configurations as _configurations
 from roadmodel import cost as _cost
 from roadmodel import data_files as _data
 from roadmodel import ladder_layout as _layout
@@ -313,6 +314,10 @@ class Candidate:
     # aa_estimate_penalty below the figure it prints.
     aa_estimated: bool = False
     aa_estimate_penalty: float = 0.0
+    configuration_index: float | None = None
+    configuration_settings: dict[str, str] = field(default_factory=dict)
+    configuration_output_price: float | None = None
+    configuration_picker_model: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -1353,6 +1358,134 @@ def _platform_key(c: Candidate, dial: bool = False) -> tuple[bool, float, int, i
     )
 
 
+def _configuration_candidates(
+    task: Task,
+    catalog: dict[str, Any],
+    bench: dict[str, Any],
+    text: str,
+    headroom: str,
+    pools: list[tuple[str, str, str]],
+    allowed: set[str],
+    denied: set[str],
+    jurisdictions: set[str],
+    unavailable: set[str],
+    requirement: float,
+    lam: float,
+    k: float,
+) -> list[Candidate]:
+    entries = [
+        (entry, evidence)
+        for entry in _configurations.configurations()
+        if (evidence := _configurations.evidence_for(entry)) is not None
+    ]
+    if not entries:
+        return []
+    methods = {m["id"]: m for m in catalog.get("access_methods", []) if isinstance(m, dict)}
+    models = {m["id"]: m for m in catalog.get("models", []) if isinstance(m, dict)}
+    planning_scale = _evidence_scale(catalog, bench, FRONTIER_INDEX)
+    out = []
+    for entry, evidence in entries:
+        cid, pid = entry["id"], entry["platform_id"]
+        method = methods.get(pid)
+        if (
+            method is None
+            or (allowed and pid not in allowed)
+            or pid in denied
+            or cid in unavailable
+            or str(method.get("provider_jurisdiction", "us")).lower() not in jurisdictions
+        ):
+            continue
+        model_id = entry.get("model_id")
+        if model_id and (
+            model_id in unavailable
+            or model_id not in models
+            or model_id not in method.get("supports_models", [])
+            or str(models[model_id].get("jurisdiction", "")).lower() not in jurisdictions
+            or entry.get("effort") not in (native_levels(pid, model_id, catalog=catalog) or [])
+        ):
+            continue
+        index = _configurations.index_for(evidence)
+        price = _configurations.price_for(evidence)
+        grades = evidence.get("grades")
+        if (
+            index is None
+            or price is None
+            or not isinstance(grades, dict)
+            or not all(
+                isinstance(grades.get(category), str) and grades[category] in LETTER_QUALITY
+                for category in CATEGORIES
+            )
+        ):
+            continue
+        letter, planning = grades[task.category], grades["planning"]
+        eligible_catalog = {
+            **catalog,
+            "subscription_tiers": [
+                t
+                for t in catalog.get("subscription_tiers", [])
+                if _configurations.tier_allowed(entry, str(t.get("tier", "")))
+            ],
+        }
+        funding, state, scarcity, note = _funding_for(
+            method, eligible_catalog, text, headroom, pools, model_name=entry["name"]
+        )
+        if funding == "unfunded":
+            continue
+        aa, band = index
+        estimate_penalty = min(aa, band / 2)
+        planning_points = planning_scale.points(aa - estimate_penalty) if planning_scale else None
+        general = LETTER_QUALITY[planning] if planning_points is None else planning_points
+        quality = general if task.category == "planning" else LETTER_QUALITY[letter]
+        penalty = SHORTFALL_SLOPE * max(0.0, requirement - min(quality, general))
+        input_price, output_price = price
+        blended = (3 * input_price + output_price) / 4
+        effective = blended * scarcity
+        decades = math.log10(max(effective, COST_FLOOR_USD) / COST_FLOOR_USD)
+        cost_penalty = lam * k * decades
+        out.append(
+            Candidate(
+                model_id=cid,
+                model_name=entry["name"],
+                provider=str(method["provider"]),
+                platform_id=pid,
+                platform_name=str(method["name"]),
+                funding=funding,
+                pool_state=state,
+                quality=round(quality, 2),
+                quality_source="configuration",
+                letter=letter,
+                requirement=requirement,
+                requirement_penalty=round(penalty, 2),
+                blended_price_usd=blended,
+                output_share=output_price / (4 * blended),
+                scarcity=scarcity,
+                effort=entry["effort"] or "fixed",
+                effort_multiplier=1.0,
+                effective_cost_usd=round(effective, 4),
+                cost_decades=round(decades, 3),
+                cost_penalty=round(cost_penalty, 2),
+                score=round(quality - penalty - cost_penalty, 2),
+                notes=[note] if note else [],
+                evidence_points=planning_points if task.category == "planning" else None,
+                aa_estimated=band > 0,
+                aa_estimate_penalty=estimate_penalty,
+                configuration_index=aa,
+                configuration_settings=entry["settings"],
+                configuration_output_price=output_price,
+                configuration_picker_model=str(models[model_id]["name"])
+                if model_id
+                else entry["name"],
+            )
+        )
+    return out
+
+
+def _candidate_aa(c: Candidate, bench: dict[str, Any]) -> float | None:
+    if c.configuration_index is not None:
+        return c.configuration_index - c.aa_estimate_penalty
+    return _evidence(bench, c.model_id, FRONTIER_INDEX, c.evidence_level)
+
+
 def rank(
     task: Task,
     user_context_text: str,
@@ -1546,6 +1679,24 @@ def rank(
             continue
         candidates.append(best_for_model)
 
+    candidates.extend(
+        _configuration_candidates(
+            task,
+            cat,
+            bench,
+            text,
+            headroom,
+            pools,
+            allowed_p,
+            excluded_p,
+            juris,
+            unavailable,
+            requirement,
+            lam,
+            k,
+        )
+    )
+
     if effort_aware and candidates:
         settings = effort_settings(
             candidates, task, headroom, lam=lam, k=k, catalog=cat, benchmarks=raw_bench
@@ -1587,11 +1738,19 @@ def rank(
             ref = others[0]
             band = _aa_band(bench, cat)
 
-            def aa(c: Candidate) -> float | None:
-                return _evidence(bench, c.model_id, FRONTIER_INDEX, c.evidence_level)
-
             backup = min(
-                (c for c in others if _near_tied(c, aa(c), ref, aa(ref), task.category, band)),
+                (
+                    c
+                    for c in others
+                    if _near_tied(
+                        c,
+                        _candidate_aa(c, bench),
+                        ref,
+                        _candidate_aa(ref, bench),
+                        task.category,
+                        band,
+                    )
+                ),
                 key=lambda c: (c.effective_cost_usd, -c.score, c.model_id),
             )
         if backup is None:
@@ -1765,12 +1924,7 @@ def frontier(candidates: list[Candidate], bench: dict[str, Any]) -> list[Frontie
     A candidate at a measured effort (``evidence_level``) is placed by its
     index at that effort and its :func:`frontier_price`, so one model can
     hold several points, one per effort worth its price."""
-    measured = [
-        (c, aa)
-        for c in candidates
-        for aa in [_evidence(bench, c.model_id, FRONTIER_INDEX, c.evidence_level)]
-        if aa is not None
-    ]
+    measured = [(c, aa) for c in candidates for aa in [_candidate_aa(c, bench)] if aa is not None]
     measured.sort(key=lambda m: (frontier_price(m[0]), -m[1], m[0].model_id))
     out: list[FrontierPoint] = []
     best = -math.inf
@@ -1885,7 +2039,7 @@ def _specialist(
         return None
 
     def aa(c: Candidate) -> float:
-        v = _evidence(bench, c.model_id, FRONTIER_INDEX, c.evidence_level)
+        v = _candidate_aa(c, bench)
         return -1.0 if v is None else v
 
     # A category with no AA evidence (multimodal) rates a model's every effort
@@ -2139,6 +2293,8 @@ def ladder(
 
     def rung(tier: str, p: FrontierPoint) -> Rung:
         c = p.candidate
+        if c.configuration_index is not None:
+            return Rung(tier, p, c.effort)
         if c.evidence_level is not None:
             effort = c.evidence_level
         else:
@@ -2362,6 +2518,8 @@ def _backup_for(
     ]
     chosen = min(peers, key=lambda p: (p.price_usd, -p.candidate.score))
     c = chosen.candidate
+    if c.configuration_index is not None:
+        return Backup(chosen, c.effort)
     if c.evidence_level is not None:
         effort = c.evidence_level
     else:
@@ -2403,6 +2561,8 @@ class _Pick:
 
     def at(self, c: Candidate, level: str | None) -> Candidate:
         """``c`` read at ``level`` (None: its headline row; see :func:`_at_level`)."""
+        if c.configuration_index is not None:
+            return c
         return _at_level(
             c,
             level,
@@ -2450,20 +2610,28 @@ def _pick(
         )
 
     ranking = ranked(True)
-    picked = next((c for c in ranking.candidates if c.model_id == model_id), None)
+    picked = next(
+        (
+            c
+            for c in ranking.candidates
+            if c.model_id == model_id or c.model_name.casefold() == model.casefold()
+        ),
+        None,
+    )
     if picked is None:
         picked = next((c for c in ranked(False).candidates if c.model_id == model_id), None)
     models = {str(m.get("id", "")): m for m in cat.get("models", []) if isinstance(m, dict)}
-    if picked is None or model_id not in models:
+    if picked is None or (picked.configuration_index is None and model_id not in models):
         raise ValueError(f"{model!r} is not a model this user-context can reach")
+    if picked.configuration_index is not None and normalize_level(effort) != picked.effort:
+        raise ValueError(f"{picked.model_name} is evaluated at {picked.effort} effort")
     composite = with_composites(bench)
     scales = (
         _evidence_scale(cat, composite, CATEGORY_EVIDENCE[base.category]),
         _evidence_scale(cat, composite, CATEGORY_EVIDENCE["planning"]),
     )
-    return _Pick(
-        picked, _scorer_level(effort), ranking, base, models, bench, composite, scales, cat
-    )
+    level = picked.effort if picked.configuration_index is not None else _scorer_level(effort)
+    return _Pick(picked, level, ranking, base, models, bench, composite, scales, cat)
 
 
 def backup_for_pick(
@@ -2498,9 +2666,7 @@ def backup_for_pick(
     )
     model_id = p.candidate.model_id
     at = p.at(p.candidate, p.level if p.measured(model_id) else None)
-    point = FrontierPoint(
-        at, _evidence(p.bench, model_id, FRONTIER_INDEX, at.evidence_level), frontier_price(at)
-    )
+    point = FrontierPoint(at, _candidate_aa(at, p.bench), frontier_price(at))
     tier = next(t for t, b in TIER_BUDGET.items() if b == task.budget)
     return _backup_for(
         Rung(tier, point, p.level),
@@ -2551,6 +2717,8 @@ def successor_for_pick(
     older one."""
     p = _pick(task, user_context_text, model, effort, unavailable_models, catalog, benchmarks)
     old = p.candidate
+    if old.configuration_index is not None:
+        return None
     unavailable = {m.strip() for m in (unavailable_models or [])}
     method = next(
         (
@@ -2589,6 +2757,7 @@ _DIAL_NAMES: Final[dict[str, str | None]] = {
     "cursor": None,
 }
 _LEVEL_WORDS: Final[dict[str, str]] = {
+    "fixed": "Fixed",
     "minimal": "Minimal",
     "low": "Low",
     "medium": "Medium",
@@ -2606,7 +2775,11 @@ def backup_cell(backup: Backup | Successor) -> str:
     c = backup.candidate
     dial = _DIAL_NAMES.get(c.platform_id, "Effort")
     level = _LEVEL_WORDS.get(normalize_level(backup.level), backup.level)
-    head = f"{c.model_name} — {c.platform_name}"
+    head = f"{c.configuration_picker_model or c.model_name} — {c.platform_name}"
+    if c.effort == "fixed":
+        return f"{head} · Fixed"
+    if c.configuration_settings.get("ultracode") == "On":
+        return f"{head} · {dial} {level} · Ultracode On"
     return head if dial is None else f"{head} · {dial} {level}"
 
 
@@ -2619,6 +2792,8 @@ def _effort_cell(c: Candidate, level: str) -> str:
     """The Effort row's cell for a ladder column: the platform's own dial and
     level (``Intelligence Medium``, ``Effort High``), or ``—`` where the
     surface has no reasoning dial (Cursor)."""
+    if level == "fixed":
+        return "Fixed"
     dial = _DIAL_NAMES.get(c.platform_id, "Effort")
     if dial is None:
         return "—"
@@ -2761,6 +2936,47 @@ def ladder_price_by_name(
     return price
 
 
+def _configuration_value_score(
+    c: Candidate, bench: dict[str, Any], catalog: dict[str, Any]
+) -> float | None:
+    """Compare the configuration to the same per-tier fit as the /models Score."""
+    if c.configuration_index is None or c.configuration_output_price is None:
+        return None
+    tier = next(
+        (
+            name
+            for bound, name in ((10, "low"), (15, "medium"), (25, "high"))
+            if c.configuration_output_price < bound
+        ),
+        "very-high",
+    )
+    groups: dict[str, list[tuple[float, float]]] = {}
+    for m in catalog.get("models", []):
+        mid = str(m["id"])
+        row = bench.get(mid)
+        if not isinstance(row, dict) or _unmeasured(row):
+            continue
+        aa = _evidence(bench, mid, FRONTIER_INDEX)
+        level = row.get("aa_effort")
+        mult = token_multiplier(mid, level) if isinstance(level, str) else 1.0
+        price = effort_price(blended_price(m), output_share(m), mult)
+        if aa is not None and price > 0:
+            groups.setdefault(str(m["tier_cost"]), []).append((math.log10(price), aa))
+    if tier not in groups or sum(map(len, groups.values())) < 3:
+        return None
+    means = {
+        t: (sum(x for x, _ in points) / len(points), sum(y for _, y in points) / len(points))
+        for t, points in groups.items()
+    }
+    centered = [(x - means[t][0], y - means[t][1]) for t, pts in groups.items() for x, y in pts]
+    variance = sum(x * x for x, _ in centered)
+    if not variance:
+        return None
+    slope = sum(x * y for x, y in centered) / variance
+    x, y = means[tier]
+    return c.configuration_index - (y + slope * (math.log10(c.blended_price_usd) - x))
+
+
 def _option(
     c: Candidate,
     level: str,
@@ -2781,9 +2997,18 @@ def _option(
         level,
         dial=bool(native_levels(c.platform_id, c.model_id, catalog=catalog)),
     )
+    extra: dict[str, Any] = {}
+    if c.configuration_index is not None:
+        aa, aa_estimated = c.configuration_index, c.aa_estimated
+        price = (c.blended_price_usd, True)
+        extra = {
+            "value_score": _configuration_value_score(c, bench, catalog),
+            "task_grade": c.letter,
+            "ultracode": c.configuration_settings.get("ultracode"),
+        }
     return {
         "model_id": c.model_id,
-        "model": c.model_name,
+        "model": c.configuration_picker_model or c.model_name,
         "platform_id": c.platform_id,
         "platform": c.platform_name,
         "effort": normalize_level(level),
@@ -2797,6 +3022,7 @@ def _option(
         "price_measured": None if price is None else price[1],
         "thinking_cell": _thinking_cell(c, catalog),
         "stepped_down": stepped_down,
+        **extra,
     }
 
 
@@ -2804,6 +3030,8 @@ def _layout_option(o: dict[str, Any] | None) -> _layout.Option | None:
     """A ranked option (:func:`_option`) as the ladder table prints it."""
     if o is None:
         return None
+    score = o.get("value_score")
+    mark = _layout.ESTIMATE_MARK if o.get("aa_estimated") else ""
     return _layout.Option(
         model=str(o["model"]),
         platform=str(o["platform"]),
@@ -2812,6 +3040,9 @@ def _layout_option(o: dict[str, Any] | None) -> _layout.Option | None:
         price=o["price_usd_per_1m"],
         price_measured=bool(o["price_measured"]),
         stepped_down=bool(o.get("stepped_down")),
+        score=f"{mark}{score:+.1f}" if score is not None else None,
+        grade=o.get("task_grade"),
+        ultracode=o.get("ultracode"),
     )
 
 
@@ -2820,6 +3051,8 @@ def _dial(c: Candidate, catalog: dict[str, Any]) -> list[str]:
     (:func:`native_levels`), else the levels the model's own API offers
     (:func:`settable_levels`), else the scorer's whole ladder. Antigravity
     documents no dial, and Gemini 4 Argon has no level above high."""
+    if c.configuration_index is not None:
+        return [c.effort]
     native = native_levels(c.platform_id, c.model_id, catalog=catalog)
     return native or settable_levels().get(c.model_id) or list(EFFORT_LADDER)
 
@@ -2911,6 +3144,11 @@ def settings_ladder(
         mid = str(m.get("id", ""))
         maker = _cost.model_provider(mid, cat) or str(m.get("provider", "unknown"))
         by_maker.setdefault(maker, set()).add(mid)
+    for entry in _configurations.configurations():
+        for method in cat.get("access_methods", []):
+            if method.get("id") == entry["platform_id"]:
+                by_maker.setdefault(str(method["provider"]), set()).add(entry["id"])
+                break
 
     def level_of(tier: str, r: Rung) -> str:
         return _deepest_level(r.candidate, cat) if phase and tier == "quality" else r.level
@@ -2977,7 +3215,11 @@ def _below(lower: Rung, upper: Rung, catalog: dict[str, Any]) -> Rung:
     (Gemini's dial tops out at high, where the scorer's xhigh and max land
     too); elsewhere on the scorer's ladder."""
     lc, uc = lower.candidate, upper.candidate
-    if (lc.model_id, lc.platform_id) != (uc.model_id, uc.platform_id) or lc.scarcity == 0:
+    if (
+        (lc.model_id, lc.platform_id) != (uc.model_id, uc.platform_id)
+        or lc.scarcity == 0
+        or lc.configuration_index is not None
+    ):
         return lower
     levels = native_levels(lc.platform_id, lc.model_id, catalog=catalog)
     if levels and lower.native in levels and upper.native in levels:

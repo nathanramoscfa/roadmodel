@@ -113,6 +113,7 @@ class ScoreBackup(BaseModel):
     platform_id: str
     platform_name: str
     effort: str
+    ultracode: bool = False
 
 
 class ScoreRung(BaseModel):
@@ -122,6 +123,7 @@ class ScoreRung(BaseModel):
     platform_id: str
     platform_name: str
     effort: str
+    ultracode: bool = False
     specialist: bool = False
     backup: ScoreBackup | None = None
     terms: Terms
@@ -220,18 +222,22 @@ def _rung(tier: str, r: Any, task: scoring.Task) -> ScoreRung:
     return ScoreRung(
         priority=tier,
         model_id=c.model_id,
-        model_name=c.model_name,
+        model_name=getattr(c, "configuration_picker_model", None) or c.model_name,
         platform_id=c.platform_id,
         platform_name=c.platform_name,
         effort=r.level,
+        ultracode=getattr(c, "configuration_settings", {}).get("ultracode") == "On",
         specialist=bool(getattr(r, "specialist", False)),
         backup=(
             ScoreBackup(
                 model_id=b.candidate.model_id,
-                model_name=b.candidate.model_name,
+                model_name=getattr(b.candidate, "configuration_picker_model", None)
+                or b.candidate.model_name,
                 platform_id=b.candidate.platform_id,
                 platform_name=b.candidate.platform_name,
                 effort=b.level,
+                ultracode=getattr(b.candidate, "configuration_settings", {}).get("ultracode")
+                == "On",
             )
             if b is not None
             else None

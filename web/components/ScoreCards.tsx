@@ -334,7 +334,14 @@ export function IndexCard({
       </div>
       <p className={"mt-1 text-xs leading-[1.125rem] " + MUTED}>
         Artificial Analysis&rsquo;s weighted average over its evaluation suite, 0&ndash;100.{" "}
-        {m.aa_index_source === "cited"
+        {m.configuration?.evidenceSource ? (
+          <>
+            {m.aa_index_source === "estimated"
+              ? `Roadmodel estimate (±${m.aa_index_band} points) for this configuration. `
+              : "Measured for this configuration. "}
+            <a href={m.configuration.evidenceSource} target="_blank" rel="noopener noreferrer" className="text-brand-accent hover:underline">Evidence</a>
+          </>
+        ) : m.aa_index_source === "cited"
           ? "As cited in the catalog; this model is not in the Artificial Analysis data snapshot yet."
           : m.aa_index_source === "inherited"
             ? `An estimate: ${m.aa_inherited_from}'s index from the snapshot of ${snapshot}, which ${m.name} stands on until Artificial Analysis measures it. The recommender ranks it the same way.`
@@ -560,7 +567,12 @@ export function ScoreBreakdownCard({
       <div className={"mt-3 space-y-1.5 border-t pt-2.5 text-xs leading-[1.125rem] " + RULE}>
         <p>{bandSentence}</p>
         <p className={MUTED}>
-          {m.aa_index_source === "cited"
+          {m.configuration?.evidenceSource ? (
+            <>
+              This Score uses the full configuration&rsquo;s index and normalized usage cost.{" "}
+              <a href={m.configuration.evidenceSource} target="_blank" rel="noopener noreferrer" className="text-brand-accent hover:underline">Evidence</a>
+            </>
+          ) : m.aa_index_source === "cited"
             ? "AA Index as cited in the catalog; this model is not in the Artificial Analysis data snapshot yet."
             : m.aa_index_source === "inherited"
               ? `AA Index estimated from ${m.aa_inherited_from}'s in the Artificial Analysis snapshot of ${snapshot}.`

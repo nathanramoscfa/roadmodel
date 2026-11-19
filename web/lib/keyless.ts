@@ -75,6 +75,7 @@ export interface KeylessRung {
   platform_id: string;
   platform_name: string;
   effort: string;
+  ultracode?: boolean;
   specialist: boolean;
   backup: {
     model_id: string;
@@ -82,6 +83,7 @@ export interface KeylessRung {
     platform_id: string;
     platform_name: string;
     effort: string;
+    ultracode?: boolean;
   } | null;
   terms: { quality: number; requirement_shortfall: number; cost: number };
   why: { quality: string; requirement_shortfall: string; cost: string };

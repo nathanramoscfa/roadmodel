@@ -40,6 +40,7 @@ BUNDLED_DOCS: dict[str, str] = {
     "settings-display.md": "settings-display.md",
     "user-context.example.md": "user-context.example.md",
     "catalog.json": "catalog.json",
+    "agent-configurations.json": "agent-configurations.json",
     "benchmarks.json": "benchmarks.json",
     "context-windows.json": "context-windows.json",
     "effort-tokens.json": "effort-tokens.json",
