@@ -113,10 +113,10 @@ export function CatalogLegend({ id }: { id?: string }) {
             </p>
             <p className="mt-1">
               <strong>One price per model</strong>: what 1M tokens cost when three of every four
-              are input, the standard mix Artificial Analysis prices with. It always sits between
-              the Input and Output columns, so it reads well below the output price: $5 input and
-              $25 output blend to $10. Cost tiers are set by output price; the Score, the charts
-              and the frontier all use the blended price.
+              are input, the standard mix Artificial Analysis prices with ($5 input and $25 output
+              blend to $10). Cost tiers are set by list output price; the Score, the charts, and
+              the frontier scale output by the model&rsquo;s token multiplier at its headline
+              Effort, (3 &times; input + <em>m</em> &times; output) &divide; 4.
             </p>
           </div>
         </div>

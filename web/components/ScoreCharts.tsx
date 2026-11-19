@@ -32,12 +32,12 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import {
-  blendedPrice,
   formatScore,
   formatUsd,
   type ScoreFit,
 } from "@/lib/benchmark-grid";
 import { COST_TIER_DEFS, COST_TIER_DOT, type CostTier, type ModelRow } from "@/lib/catalog-fields";
+import { headlinePrice } from "@/lib/pick-effort";
 import type { Grouping } from "@/lib/models-prefs";
 import {
   DOT_R,
@@ -117,7 +117,7 @@ function TierChart({
             r.aa_index_source !== "inherited",
         )
         .map((r) => {
-          const price = blendedPrice(r.input_price_per_1m, r.output_price_per_1m);
+          const price = headlinePrice(r);
           const x = Math.log10(price);
           return {
             row: r,
@@ -257,7 +257,7 @@ function TierChart({
           </span>
           {" · "}
           <span className="whitespace-nowrap">
-            blended {range(Math.min(...blends), Math.max(...blends))} per 1M
+            effort-adjusted {range(Math.min(...blends), Math.max(...blends))} per 1M
           </span>
         </span>
       </figcaption>
@@ -592,11 +592,10 @@ export function ScoreCharts({
         <p className="max-w-4xl text-sm leading-6 text-brand-slate-600 dark:text-brand-slate-300">
           Pricier models score higher on average, so &ldquo;is this model good?&rdquo; and
           &ldquo;is it good <em>for its price</em>?&rdquo; are different questions. Each chart
-          answers the second for one cost tier: every model sits at its blended price (across) and
-          AA Intelligence Index (up), and the line is what a model of that tier typically scores
-          at each price. The blended price is (3&nbsp;&times;&nbsp;input + 1&nbsp;&times;&nbsp;output)
-          &divide;&nbsp;4, one price per model, which is why it reads below the output prices
-          that set the tier. <strong>A model&rsquo;s Score is its vertical distance from the line</strong>
+          answers the second for one cost tier: every model sits at its effort-adjusted blended
+          price (across) and AA Intelligence Index (up), and the line is what a model of that tier
+          typically scores at each price. Output is scaled by the tokens drawn at the model&rsquo;s
+          headline Effort, (3&nbsp;&times;&nbsp;input + m&nbsp;&times;&nbsp;output)&nbsp;&divide;&nbsp;4. <strong>A model&rsquo;s Score is its vertical distance from the line</strong>
           , in index points: above it (+) buys more intelligence than the price predicts, below it
           (&minus;) buys less.
         </p>
@@ -671,7 +670,7 @@ export function ScoreCharts({
 
         <p className="text-xs leading-5 text-brand-slate-500 dark:text-brand-slate-400">
           One least-squares fit over all {fit.n} AA-measured models: AA Index = α<sub>tier</sub>
-          {" "}+ β&thinsp;×&thinsp;log<sub>10</sub>(blended price), with a separate intercept
+          {" "}+ β&thinsp;×&thinsp;log<sub>10</sub>(effort-adjusted price), with a separate intercept
           α for each cost tier and one shared slope β&nbsp;=&nbsp;{fit.slope.toFixed(1)} index
           points per 10&times; price (R&sup2;&nbsp;{fit.r2.toFixed(2)}, residual
           σ&nbsp;{sigma}). A dot inside the shaded band is level with its line: treat scores that

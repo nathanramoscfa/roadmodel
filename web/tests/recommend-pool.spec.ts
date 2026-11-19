@@ -12,8 +12,8 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import catalog from "../data/catalog.json";
-import { blendedPrice } from "../lib/benchmark-grid";
 import { getModelRows } from "../lib/catalog-models";
+import { headlinePrice } from "../lib/pick-effort";
 import { reachableModelIds } from "../lib/funding";
 import { picksData, viewerPool } from "../lib/recommend-picks";
 import { fundedSurfacesForSubscription } from "../lib/subscriptions";
@@ -98,9 +98,7 @@ test("the frontier is redrawn over the pool: every mark and every leader is a mo
     const leader = data.rows[row.value_beaten_by!];
     expect(pool.has(leader.id), `${row.id} is beaten by ${leader.id}, a model in the pool`).toBe(true);
     expect(leader.aa_index!).toBeGreaterThanOrEqual(row.aa_index);
-    expect(blendedPrice(leader.input_price_per_1m, leader.output_price_per_1m)).toBeLessThanOrEqual(
-      blendedPrice(row.input_price_per_1m, row.output_price_per_1m),
-    );
+    expect(headlinePrice(leader)).toBeLessThanOrEqual(headlinePrice(row));
   }
   expect(onFrontier).toBeGreaterThanOrEqual(2);
 });

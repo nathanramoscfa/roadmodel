@@ -112,7 +112,7 @@ import {
   SupersededCard,
   type RatingEvidence,
 } from "./ScoreCards";
-import { effortWord } from "@/lib/pick-effort";
+import { effortWord, headlinePrice, headlineTokenShare } from "@/lib/pick-effort";
 
 
 
@@ -661,10 +661,9 @@ export function ModelCatalog({
           <strong className="text-brand-slate-900 dark:text-brand-slate-50">
             Blended price = (3 &times; input + 1 &times; output) &divide; 4.
           </strong>{" "}
-          One price per model: what 1M tokens cost when three of every four are input, Artificial
-          Analysis&rsquo;s standard mix. It sits between the Input and Output prices ($5 in and $25
-          out blend to $10). Cost tiers go by output price; the Score, the charts and the frontier
-          use blended.
+          Cost tiers go by list output price; the Score, the charts, and the frontier scale output
+          by the tokens drawn at each row&rsquo;s headline Effort, (3 &times; input +{" "}
+          <em>m</em> &times; output) &divide; 4.
         </p>
       </div>
 
@@ -1370,6 +1369,17 @@ function ModelDetail({ model: m }: { model: ModelRow }) {
               (3 &times; input + 1 &times; output) &divide; 4
             </span>
           </dd>
+          {m.aa_index_effort && headlineTokenShare(m) !== null && (
+            <>
+              <dt>At {effortWord(m.aa_index_effort)}</dt>
+              <dd className="text-brand-slate-900 dark:text-brand-slate-50">
+                {formatBlended(headlinePrice(m))}{" "}
+                <span className="text-xs text-brand-slate-500 dark:text-brand-slate-400">
+                  ({headlineTokenShare(m)!.toFixed(2)}&times; output multiplier for Score &amp; frontier)
+                </span>
+              </dd>
+            </>
+          )}
           <dt>Cache read</dt>
           <dd className="text-brand-slate-900 dark:text-brand-slate-50">
             {m.cache_read_per_1m === null ? "not published" : formatPrice(m.cache_read_per_1m)}

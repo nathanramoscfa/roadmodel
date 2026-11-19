@@ -9,7 +9,7 @@
 // its AA Index and Score at the effort it runs, and whether anything the
 // viewer can run beats it there.
 import { blendedPrice, scoreFor } from "@/lib/benchmark-grid";
-import { inPool, type PicksData, type SlimRow } from "@/lib/recommend-picks";
+import type { PicksData, SlimRow } from "@/lib/recommend-picks";
 
 // Expected output tokens at each effort, relative to a typical model at high,
 // for a model or effort not measured (docs/effort-tokens.json). Mirrors
@@ -40,6 +40,42 @@ export function tokenMultiplier(row: SlimRow, level: EffortLevel): number {
 export function effortPrice(row: SlimRow, level: EffortLevel): number {
   const input = 3 * row.input_price_per_1m;
   const output = row.output_price_per_1m * tokenMultiplier(row, level);
+  return (input + output) / 4;
+}
+
+export interface PriceableRow {
+  input_price_per_1m: number;
+  output_price_per_1m: number;
+  aa_index_effort?: string | null;
+  token_multiplier_by_effort?: Record<string, number>;
+}
+
+// The output-token multiplier at a model's headline effort (`aa_index_effort`),
+// matching scoring.token_multiplier (measured multiplier, else uniform table);
+// null when the row has no headline effort.
+export function headlineTokenShare(
+  row: Pick<PriceableRow, "aa_index_effort" | "token_multiplier_by_effort">,
+): number | null {
+  const level = row.aa_index_effort;
+  if (!level) return null;
+  const measured = row.token_multiplier_by_effort?.[level];
+  if (typeof measured === "number" && Number.isFinite(measured) && measured > 0) {
+    return measured;
+  }
+  if (level in EFFORT_TOKEN_MULTIPLIER) {
+    return EFFORT_TOKEN_MULTIPLIER[level as EffortLevel];
+  }
+  if (level === "minimal") return EFFORT_TOKEN_MULTIPLIER.low;
+  return 1;
+}
+
+// Blended price scaled by the output tokens drawn at the model's headline
+// effort: only the output share multiplies, keeping 3 × input intact.
+export function headlinePrice(row: PriceableRow): number {
+  const share = headlineTokenShare(row);
+  if (share === null) return blendedPrice(row.input_price_per_1m, row.output_price_per_1m);
+  const input = 3 * row.input_price_per_1m;
+  const output = row.output_price_per_1m * share;
   return (input + output) / 4;
 }
 
@@ -93,11 +129,15 @@ export interface EffortPoint {
 // A model's points on the frontier: one per effort AA measured, at its price
 // there (effortPrice), or its headline figure at list price.
 export function effortPoints(row: SlimRow): EffortPoint[] {
-  const blended = blendedPrice(row.input_price_per_1m, row.output_price_per_1m);
   const by = row.aa_index_by_effort ?? {};
   const levels = Object.keys(by).filter((l): l is EffortLevel => l in EFFORT_TOKEN_MULTIPLIER);
   if (levels.length === 0) {
-    return row.aa_index === null ? [] : [{ row, level: null, index: row.aa_index, price: blended }];
+    if (row.aa_index === null) return [];
+    const headLevel =
+      row.aa_index_effort && row.aa_index_effort in EFFORT_TOKEN_MULTIPLIER
+        ? (row.aa_index_effort as EffortLevel)
+        : null;
+    return [{ row, level: headLevel, index: row.aa_index, price: headlinePrice(row) }];
   }
   return levels.map((level) => ({
     row,
@@ -107,9 +147,9 @@ export function effortPoints(row: SlimRow): EffortPoint[] {
   }));
 }
 
-// The model's row read at one effort: named for it, its AA Index there.
+// The model's row read at one effort: named for it, its AA Index and effort there.
 export function named(row: SlimRow, level: EffortLevel, index: number): SlimRow {
-  return { ...row, name: `${row.name} · ${effortLabel(level)}`, aa_index: index };
+  return { ...row, name: `${row.name} · ${effortLabel(level)}`, aa_index: index, aa_index_effort: level };
 }
 
 export interface PickAtEffort {
@@ -137,9 +177,10 @@ export function pickAtEffort(data: PicksData, row: SlimRow, level: EffortLevel |
   const price = effortPrice(row, level);
   // The strongest point the viewer can run at this price or less that scores
   // higher; ties on index go to the cheaper.
+  const rowInPool = (r: SlimRow) => data.pool === null || data.pool.includes(r.id);
   const leader =
     Object.values(data.rows)
-      .filter((r) => inPool(data, r))
+      .filter(rowInPool)
       .flatMap(effortPoints)
       .filter((p) => p.price <= price + 1e-9 && p.index > index)
       .sort((a, b) => b.index - a.index || a.price - b.price)[0] ?? null;
@@ -150,7 +191,7 @@ export function pickAtEffort(data: PicksData, row: SlimRow, level: EffortLevel |
   const at: SlimRow = {
     ...named(row, level, index),
     value_score: scoreFor(data.fit, row.tier_cost, price, index),
-    value_frontier: inPool(data, row) && leader === null,
+    value_frontier: rowInPool(row) && leader === null,
     value_beaten_by: leader ? leader.row.id : null,
   };
   return {

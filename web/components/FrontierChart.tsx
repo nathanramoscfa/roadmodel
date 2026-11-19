@@ -31,7 +31,6 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import {
-  blendedPrice,
   formatQualityBand,
   formatUsd,
   QUALITY_BAND_WIDTH,
@@ -39,6 +38,7 @@ import {
   type ScoreFit,
 } from "@/lib/benchmark-grid";
 import { COST_TIER_DEFS, type CostTier, type ModelRow } from "@/lib/catalog-fields";
+import { headlinePrice } from "@/lib/pick-effort";
 import type { Grouping } from "@/lib/models-prefs";
 import {
   FilterNote,
@@ -87,7 +87,7 @@ function toPts(rows: readonly ModelRow[]): Pt[] {
   return rows
     .filter((r) => r.aa_index !== null)
     .map((r) => {
-      const price = blendedPrice(r.input_price_per_1m, r.output_price_per_1m);
+      const price = headlinePrice(r);
       return { row: r, x: Math.log10(price), price, index: r.aa_index as number };
     })
     .sort((a, b) => a.x - b.x || b.index - a.index);
@@ -734,7 +734,7 @@ export function FrontierChart({
         </ul>
 
         <p className="max-w-4xl text-sm leading-6 text-brand-slate-600 dark:text-brand-slate-300">
-          Every model with an AA Index, on one chart: blended price across (log scale) and AA
+          Every model with an AA Index, on one chart: effort-adjusted blended price across (log scale) and AA
           Intelligence Index up.{" "}
           <strong>
             The green models are the cost/quality frontier: each one scores higher than every other
@@ -757,13 +757,13 @@ export function FrontierChart({
 
         <p className="text-xs leading-5 text-brand-slate-500 dark:text-brand-slate-400">
           The frontier comes straight from the data: sort every{scope ? ` ${scope}` : ""} model by
-          blended price and keep each one that scores higher than every model at its price or less.
+          effort-adjusted blended price and keep each one that scores higher than every model at its price or less.
           That keeps {ringed} of the {pts.length} models plotted.
           {fit && (
             <>
               {" "}
               The grey lines are the Score&rsquo;s fit: AA Index = α<sub>tier</sub> + β&thinsp;×&thinsp;log
-              <sub>10</sub>(blended price), with β&nbsp;=&nbsp;{fit.slope.toFixed(1)} index points per
+              <sub>10</sub>(effort-adjusted price), with β&nbsp;=&nbsp;{fit.slope.toFixed(1)} index points per
               10&times; price shared by every tier, each line drawn over its own tier&rsquo;s prices.
             </>
           )}
