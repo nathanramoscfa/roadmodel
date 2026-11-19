@@ -86,7 +86,7 @@ test("saved filters map onto today's catalog: a new jurisdiction starts checked,
 
 test("every choice survives a reload, and the server renders it before any script runs", async ({ page }) => {
   await page.goto("/models");
-  const tier = "high";
+  const tier = "medium";
   await page.getByTestId("jurisdiction-cn").uncheck();
   await page.getByLabel("Filter by provider").selectOption("OpenAI");
   await page.getByTestId("weights-closed").click();
