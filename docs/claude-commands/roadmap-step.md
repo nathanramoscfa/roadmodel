@@ -124,7 +124,7 @@ the dials and make sure it is set.
   **Backup**) sits in a column of its own beside its Model, Platform, Level, AA and
   Price rows. Level is the bare level of that platform's own dial (`High`
   is Intelligence High on Codex, Effort High on Claude Code and
-  Antigravity). For `Orchestrator (Neon)`, select that exact Antigravity
+  Antigravity). For an Orchestrator preset, select its exact Antigravity
   picker entry and treat `Fixed` as a built-in level. If the option has
   `Ultracode` set to `On`, turn on the switch in Claude Code alongside
   the listed model and level. From roadmodel 0.2.97 the three ranks of a column come from

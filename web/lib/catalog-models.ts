@@ -259,6 +259,7 @@ interface RawConfiguration {
   source: string;
   availability: string;
   description: string;
+  benchmark_note?: AgentConfigurationRow["configuration"]["benchmarkNote"];
   evidence: {
     configuration_id: string;
     source: string;
@@ -304,6 +305,7 @@ function configurationRows(): AgentConfigurationRow[] {
         availability: entry.availability,
         source: entry.source,
         evidenceSource: evidence?.source ?? null,
+        benchmarkNote: entry.benchmark_note,
       },
       headline_benchmarks: "",
       pricing_notes: "",
@@ -331,13 +333,8 @@ function fullyRated(row: AgentConfigurationRow): row is AgentConfigurationRow & 
     CATEGORY_ORDER.every((cat) => row.tiers[cat] !== undefined);
 }
 
-export function getPendingConfigurations(fit: ScoreFit | null): AgentConfigurationRow[] {
-  return configurationRows().filter((row) => !fullyRated(row)).map((row) => ({
-    ...row,
-    value_score: row.tier_cost !== null && row.input_price_per_1m !== null && row.output_price_per_1m !== null
-      ? scoreFor(fit, row.tier_cost, (3 * row.input_price_per_1m + row.output_price_per_1m) / 4, row.aa_index)
-      : null,
-  }));
+export function getUnscoredConfigurations(): AgentConfigurationRow[] {
+  return configurationRows().filter((row) => !fullyRated(row));
 }
 
 // `now` decides which models carry the "New" tag (lib/benchmark-grid
