@@ -54,14 +54,6 @@
       "cache_read_per_1m": 0.01
     },
     {
-      "id": "gpt-6-sol",
-      "slug": "gpt-6-sol",
-      "name": "gpt-6-sol",
-      "input_price_per_1m": 2.0,
-      "output_price_per_1m": 10.0,
-      "cache_read_per_1m": 0.2
-    },
-    {
       "id": "gpt-5.6-sol",
       "slug": "gpt-5.6-sol",
       "name": "gpt-5.6-sol",
@@ -109,7 +101,6 @@
     "gpt-6.1-sol": "gpt-6.1-sol",
     "gpt-6.1-terra": "gpt-6.1-terra",
     "gpt-6-luna": "gpt-6-luna",
-    "gpt-6-sol": "gpt-6-sol",
     "gpt-5.6-sol": "gpt-5.6-sol",
     "gpt-5.6-terra": "gpt-5.6-terra",
     "gpt-5.6-luna": "gpt-5.6-luna",
@@ -125,5 +116,5 @@
     "gpt-5.4-mini",
     "gpt-5.4-nano"
   ],
-  "section_sha256": "4b18a587b911330470c27dace1dafe252c3b05fb23b2a8ac6804d0b53d4a96c6"
+  "section_sha256": "86afe7b9a6d73961f0fafc75ed8f01b97ae63674bf3972d8832244a0b540e466"
 }
