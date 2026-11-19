@@ -142,10 +142,16 @@ def test_a_measurement_overrides_the_estimate() -> None:
     assert {m.id: m.aa_estimate for m in parsed} == {"old": None, "new": None}
 
 
-def test_an_estimate_never_stands_in_for_the_older_model() -> None:
-    """The older model is superseded only against a figure of its own."""
-    models = [_model("old", 5, 25, None), _model("new", 4, 20, 50)]
-    assert _succ_est(models, _estimates(old=(30.0, 3.5))) == {}
+def test_an_unmeasured_incumbent_uses_its_upper_estimate_as_the_bar() -> None:
+    """An unmeasured incumbent with an estimate yields once a challenger's
+    standing clears its optimistic upper bound (index + band/2), while an
+    incumbent with neither measurement nor estimate still stays."""
+    models = [_model("old", 5, 25, None), _model("new", 4, 20, None)]
+    assert _succ_est(models, _estimates(old=(26.1, 4.5), new=(35.0, 3.5))) == {
+        "old": "new"
+    }  # 33.2 > 28.3
+    assert _succ_est(models, _estimates(old=(30.0, 3.5), new=(33.0, 3.5))) == {}  # 31.2 <= 31.8
+    assert _succ_est([_model("old", 5, 25, None), _model("new", 4, 20, 50)], {}) == {}
 
 
 def test_the_successor_with_the_best_standing_wins() -> None:
@@ -478,3 +484,32 @@ def test_delisted_model_retires_immediately_with_maker_fallback() -> None:
         "glm-5.3-flash", TODAY.isoformat(), TODAY.isoformat()
     )
     assert p.retired == ["glm-4.5-air"]
+
+
+def test_superseded_model_off_makers_pricing_page_retires_immediately() -> None:
+    methods = {
+        "openai-api": ("openai", ["gpt-5.1-codex-max", "gpt-5.6-terra", "gpt-6.1-terra"]),
+        "codex-api": ("openai", ["gpt-5.1-codex-max", "gpt-6.1-terra"]),
+    }
+    text = _selector(
+        [
+            _model("gpt-5.1-codex-max", 1.25, 10, None),
+            _model("gpt-5.6-terra", 2.0, 12, 42.1),
+            _model("gpt-6.1-terra", 1.0, 5, None),
+        ],
+        methods,
+    )
+    est = _estimates(**{"gpt-5.1-codex-max": (26.1, 4.5), "gpt-6.1-terra": (46.7, 3.5)})
+    p = supersede.plan(
+        text,
+        {},
+        TODAY,
+        estimates=est,
+        delisted={},
+        listed={"openai": {"gpt-5.6-terra", "gpt-6.1-terra"}},
+    )
+    assert p.tags["gpt-5.1-codex-max"] == supersede.Tags(
+        "gpt-6.1-terra", TODAY.isoformat(), TODAY.isoformat()
+    )
+    assert "gpt-5.1-codex-max" in p.retired
+    assert p.tags["gpt-5.6-terra"].retired is None

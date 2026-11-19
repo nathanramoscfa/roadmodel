@@ -64,6 +64,9 @@ FETCH_TIMEOUT = 30
 # silently treated as canonical. Mirrors the DeepSeek extractor's guard.
 KNOWN_MODELS = frozenset(
     {
+        "GLM-5.3",
+        "GLM-5.3-Flash",
+        "GLM-5.3-FlashX",
         "GLM-5.2",
         "GLM-5.1",
         "GLM-5",
@@ -85,6 +88,8 @@ KNOWN_MODELS = frozenset(
 # proven value coding workhorse, and the budget tier. Slug (as printed in the
 # pricing table) -> canonical selector id.
 CURATED = {
+    "GLM-5.3": "glm-5.3",
+    "GLM-5.3-Flash": "glm-5.3-flash",
     "GLM-5.2": "glm-5.2",
     "GLM-4.6": "glm-4.6",
     "GLM-4.5-Air": "glm-4.5-air",
@@ -165,21 +170,26 @@ def _section_table_rows(md: str, header: str) -> list[list[str]]:
 
 
 def parse_text_models(md: str) -> tuple[list[dict[str, object]], list[str]]:
-    """Parse the Text Models pricing table.
+    """Parse the Latest Models (when present) and Text Models pricing tables.
 
     Returns ``(curated_models, page_slugs)`` — ``curated_models`` are the CURATED
     rows with valid input + output prices; ``page_slugs`` is every text-model slug
     seen (for the unexpected-slug discovery flag).
     """
-    rows = _section_table_rows(md, "### Text Models")
+    rows: list[list[str]] = []
+    if "### Latest Models" in md:
+        rows.extend(_section_table_rows(md, "### Latest Models"))
+    rows.extend(_section_table_rows(md, "### Text Models"))
     page_slugs: list[str] = []
+    seen_slugs: set[str] = set()
     by_slug: dict[str, dict[str, object]] = {}
     for cells in rows:
         if len(cells) < 5:
             continue
         slug = cells[0].strip()
-        if not slug:
+        if not slug or slug in seen_slugs:
             continue
+        seen_slugs.add(slug)
         page_slugs.append(slug)
         in_price = _price(cells[1])
         cache_price = _price(cells[2])

@@ -6,6 +6,22 @@
   "overlay_mode": "whole-element",
   "models": [
     {
+      "id": "glm-5.3",
+      "slug": "GLM-5.3",
+      "name": "GLM-5.3",
+      "input_price_per_1m": 1.4,
+      "output_price_per_1m": 4.4,
+      "cache_read_per_1m": 0.26
+    },
+    {
+      "id": "glm-5.3-flash",
+      "slug": "GLM-5.3-Flash",
+      "name": "GLM-5.3-Flash",
+      "input_price_per_1m": 0.15,
+      "output_price_per_1m": 0.5,
+      "cache_read_per_1m": 0.03
+    },
+    {
       "id": "glm-5.2",
       "slug": "GLM-5.2",
       "name": "GLM-5.2",
@@ -25,7 +41,9 @@
   "slug_to_id": {
     "GLM-4.5-Air": "glm-4.5-air",
     "GLM-4.6": "glm-4.6",
-    "GLM-5.2": "glm-5.2"
+    "GLM-5.2": "glm-5.2",
+    "GLM-5.3": "glm-5.3",
+    "GLM-5.3-Flash": "glm-5.3-flash"
   },
   "unexpected_slugs": [
     "GLM-5.3-FlashX-Legal"
@@ -33,5 +51,5 @@
   "missing_mapped_models": [
     "glm-4.5-air"
   ],
-  "section_sha256": "1e99f340413e17487e691720c842555b4da084ef4e6c7cbe07888ae991e012c6"
+  "section_sha256": "ca5680a38b39836277675a2f8772d6fcb964b6f2e7cc1094d0204cd22e7a6212"
 }

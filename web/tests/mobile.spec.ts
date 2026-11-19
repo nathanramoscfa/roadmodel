@@ -164,12 +164,47 @@ test("Score HoverCard fits inside a small phone viewport, stays open on inner to
   expect(box.x + box.width).toBeLessThanOrEqual(375 - 7);
   expect(box.y + box.height).toBeLessThanOrEqual(667 - 7);
 
+  // Touch opens include a sticky close button for easy dismissal on narrow screens.
+  const closeBtn = card.getByTestId("floating-card-close");
+  await expect(closeBtn).toBeVisible();
+
   // Tapping inside the popup (e.g., to scroll) keeps it open.
   await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
   await expect(card).toBeVisible();
 
-  // Tapping outside the popup (in the 8px viewport margin) closes it.
-  const outY = box.y > 20 ? 2 : 665;
+  // Tapping the close button dismisses it cleanly.
+  await closeBtn.tap();
+  await expect(card).toHaveCount(0);
+
+  // Re-opening and tapping outside the popup (in the 8px viewport margin) also closes it.
+  await trigger.tap();
+  await expect(card).toBeVisible();
+  const box2 = (await card.boundingBox())!;
+  const outY = box2.y > 20 ? 2 : 665;
   await page.touchscreen.tap(2, outY);
   await expect(card).toHaveCount(0);
+});
+
+test("portaled GlossaryTerm opens on mobile tap with close button and source link without navigating", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.goto("/");
+
+  const aaInfo = page.getByRole("link", {
+    name: "Artificial Analysis Intelligence Index definition",
+  });
+  await aaInfo.scrollIntoViewIfNeeded();
+  await aaInfo.tap();
+
+  await expect(page).toHaveURL(/\/$/);
+  const glossary = page.getByTestId("glossary-card");
+  await expect(glossary).toBeVisible();
+  await expect(glossary).toContainText("View source");
+  const gBox = (await glossary.boundingBox())!;
+  expect(gBox.x).toBeGreaterThanOrEqual(7);
+  expect(gBox.x + gBox.width).toBeLessThanOrEqual(375 - 7);
+
+  const closeBtn = glossary.getByTestId("floating-card-close");
+  await expect(closeBtn).toBeVisible();
+  await closeBtn.tap();
+  await expect(glossary).toHaveCount(0);
 });

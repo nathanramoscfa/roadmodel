@@ -286,6 +286,11 @@ jobs:
             python update/merge_catalog.py --sync-method gemini-app --ids "${gemini_ids}"
             python update/merge_catalog.py --sync-method gemini-cli --ids "${gemini_ids}"
           fi
+          # z.ai's scraped pricing snapshot lists the curated GLM models on zai-api.
+          zai_ids="$(python -c "import json; print(','.join(m['id'] for m in json.load(open('update/catalog-zai.json'))['models']))" || true)"
+          if [ -n "${zai_ids}" ]; then
+            python update/merge_catalog.py --sync-method zai-api --ids "${zai_ids}"
+          fi
           # Cursor prices every model it runs on its Models & Pricing page; a
           # catalogued one belongs on the cursor method. Same pattern:
           # deterministic, additive, fail-open (update/extract_cursor_models.py).

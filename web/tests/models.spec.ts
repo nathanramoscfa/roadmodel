@@ -679,14 +679,27 @@ test("rating cells are letters only; the Score column is the cost-adjusted score
 
   // The header tooltips carry live statistics, never a typed-in figure: the
   // Score fit it just computed, and the AA snapshot the page just read.
+  const scoreInfo = page.getByRole("link", {
+    name: "Score (cost-adjusted intelligence within the cost tier) definition",
+  });
+  await scoreInfo.hover();
   await expect(
     page.locator('[role="tooltip"]').filter({ hasText: `Fit over ${fit!.n} measured models` }),
-  ).toHaveCount(1);
+  ).toBeVisible();
+  await page.mouse.move(2, 2);
+  await expect(page.getByTestId("glossary-card")).toHaveCount(0);
+
+  const aaInfo = page.getByRole("link", {
+    name: "Artificial Analysis Intelligence Index definition",
+  });
+  await aaInfo.hover();
   await expect(
     page
       .locator('[role="tooltip"]')
       .filter({ hasText: `${MEASURED_COUNT} of ${MODEL_COUNT} catalog models measured` }),
-  ).toHaveCount(1);
+  ).toBeVisible();
+  await page.mouse.move(2, 2);
+  await expect(page.getByTestId("glossary-card")).toHaveCount(0);
 
   // Grouped by cost tier (priciest first): one header row per tier present,
   // ordered by score inside each tier, unmeasured last.
@@ -1891,4 +1904,42 @@ test("Score HoverCard clamps inside short viewports and scrolls its own body", a
   });
   expect(scrollMetrics.overflowY).toBe("auto");
   expect(scrollMetrics.scrollHeight).toBeGreaterThan(scrollMetrics.clientHeight);
+});
+
+
+test("GlossaryTerm tooltips portal to document.body, stay open on pointer entry, and omit touch close button on desktop", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/models");
+
+  // Table column-header (i) link portals cleanly outside the scroll wrapper.
+  const aaInfo = page.getByRole("link", {
+    name: "Artificial Analysis Intelligence Index definition",
+  });
+  await aaInfo.hover();
+  const card = page.getByTestId("glossary-card");
+  await expect(card).toBeVisible();
+  await expect(card).toContainText("View source");
+  await expect(card.getByTestId("floating-card-close")).toHaveCount(0);
+  expect(await card.evaluate((el) => el.parentElement === document.body)).toBe(true);
+
+  const box = (await card.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 6 });
+  await page.waitForTimeout(220);
+  await expect(card).toBeVisible();
+  const outX = box.x > 24 ? box.x - 12 : box.x + box.width + 12;
+  await page.mouse.move(outX, box.y + box.height / 2);
+  await expect(card).toHaveCount(0);
+
+  // Jurisdiction cell tooltip inside the scrolled table body also portals to document.body.
+  const firstJuris = page
+    .getByTestId("model-row")
+    .first()
+    .locator("td")
+    .nth(3)
+    .locator('[tabindex="0"]');
+  await firstJuris.hover();
+  await expect(card).toBeVisible();
+  expect(await card.evaluate((el) => el.parentElement === document.body)).toBe(true);
+  await page.mouse.move(2, 2);
+  await expect(card).toHaveCount(0);
 });
