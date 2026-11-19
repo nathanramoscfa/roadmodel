@@ -29,7 +29,6 @@
   },
   "openai-api": {
     "GPT-5.6 Luna": "medium",
-    "GPT-5.6 Sol": "medium",
     "GPT-5.6 Terra": "medium",
     "GPT-6 Luna": "medium",
     "GPT-6 Sol": "medium",
