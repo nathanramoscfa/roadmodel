@@ -1,8 +1,9 @@
 ---
-description: Execute step M of phase P from its roadmap's <task> block (usage: /roadmap-step 1 3 [roadmap-path])
+description: Execute step M of phase P from its roadmap's <task> block (usage: /roadmap-step 1 3 [--worktree] [roadmap-path])
 ---
 Execute Step $ARGUMENTS of this project's phase roadmap. Parse
-"$ARGUMENTS" as: PHASE STEP [ROADMAP_PATH].
+"$ARGUMENTS" as: PHASE STEP [--worktree[=PATH]] [ROADMAP_PATH]
+(flags may appear in any order).
 
 ## 1. Locate the roadmap and the step
 
@@ -30,22 +31,34 @@ Execute Step $ARGUMENTS of this project's phase roadmap. Parse
 Each step's `**Status:**` line is `Not started` until the step's own
 PR flips it to `Complete — PR #n (YYYY-MM-DD)` (Stage 3 of the
 lifecycle), so the roadmap on `main` says a step is done exactly when
-its PR merged. Check it before touching anything:
+its PR merged. In `--worktree` mode, run `git fetch origin` first and
+read a tracked roadmap's status ledger from `origin/main` (e.g.
+`git show origin/main:<roadmap-path>`) rather than trusting whatever
+branch the primary checkout is on; git-excluded roadmaps (e.g.
+`private/`) are read on disk. Check it before touching anything:
 
 - **Step {{STEP}} already reads `Complete`** → stop. It has shipped;
   re-running would redo merged work. Say so, name the PR, and suggest
   `/roadmap-step {{PHASE}} {{STEP+1}}`. Proceed only if the operator
   replies that they want the step redone.
-- **Step {{STEP-1}} does not read `Complete`** (STEP > 1, and the
-  Execution Order does not draw the two steps in parallel) → stop.
-  Either the previous step's PR has not merged, or its session
-  skipped the mark. Check which with `gh pr list --state merged
-  --head <Step {{STEP-1}} Branch line> --json number,mergedAt`, and
-  report it. No merged PR → the operator finishes that step first
-  (`/roadmap-step {{PHASE}} {{STEP-1}}`). Merged PR but no mark → the
-  mark was skipped; when the operator says to proceed, backfill that
-  one line in THIS step's PR (Stage 3) and continue. Never mark a step
-  complete on your own judgement of the git history.
+- **Step {{STEP-1}} (or an upstream prerequisite) does not read `Complete`** →
+  check every upstream prerequisite drawn feeding into
+  `Step {{STEP}}` in the phase roadmap's **Execution Order** (by default
+  `Step {{STEP-1}}` when sequential; for steps drawn in parallel, their
+  shared upstream prerequisite(s); for a join step after parallel steps,
+  every parallel branch feeding into it). If `Step {{STEP-1}}` (when
+  STEP > 1 and the Execution Order does not draw the two steps in
+  parallel) or any upstream Execution Order prerequisite does not read
+  `Complete` → stop. Either the prerequisite step's PR has not merged, or
+  its session skipped the mark. Check each incomplete prerequisite with
+  `gh pr list --state merged --head <prereq Branch line> --json
+  number,mergedAt`, and report it. (Passing `--worktree` never bypasses
+  this status gate for steps not drawn in parallel.) No merged PR → the
+  operator finishes that prerequisite first (`/roadmap-step {{PHASE}}
+  <prereq>`). Merged PR but no mark → the mark was skipped; when the
+  operator says to proceed, backfill that one line in THIS step's PR
+  (Stage 3) and continue. Never mark a step complete on your own
+  judgement of the git history.
 - **No step in the roadmap carries a `**Status:**` line at all** →
   the roadmap predates roadmodel 0.2.37. Backfill once, as part of
   this step's PR: for every step, run the same `gh pr list --state
@@ -228,12 +241,15 @@ block once, in the PR body, not in chat:
 
 ## 5. Execute
 
-Run the `<task>` block exactly as if the operator had pasted it,
-starting at Stage 1 — `git checkout -b <the Branch line>` from a
-clean, up-to-date `main` is your first tool call. Treat every
-`<requirement>`, the `<security>` block, and the acceptance criteria
-as binding. Do not read ahead into other steps except where the task
-block tells you to.
+Run the `<task>` block exactly as if the operator had pasted it. When
+`--worktree` is NOT passed, Stage 1 starts with `git checkout -b <the
+Branch line>` from a clean, up-to-date `main` as your first tool call.
+If the current checkout is already on another step's branch or has
+uncommitted edits while the Execution Order draws `Step {{STEP}}` in
+parallel, stop and tell the operator to re-run with `--worktree` rather
+than disturbing the active working tree. Treat every `<requirement>`, the
+`<security>` block, and the acceptance criteria as binding. Do not read
+ahead into other steps except where the task block tells you to.
 
 If the only uncommitted edits to tracked files are under `planning/`,
 they are roadmodel's kit, re-exported by the daily updater. Carry them
@@ -271,3 +287,75 @@ any Markdown link to either heading's old anchor). A git-excluded roadmap (e.g.
 `private/`) needs the edit only. Stage 6's
 completion line presupposes this mark: do not emit it unless `main`
 now carries the step's `Complete` line.
+
+
+### Worktree mode (`--worktree`)
+
+When `--worktree` (or `--worktree=PATH`) is passed, execute this step in
+its own isolated git worktree and dedicated conversation:
+
+- **One conversation, one worktree.** This session owns only its own
+  linked worktree (`WORKTREE_PATH`). Never switch branches, pull, commit,
+  or edit tracked files in the primary checkout where the chat opened
+  (`PRIMARY_ROOT`), and never touch any sibling step's worktree.
+- **Resolve `<worktree-path>`:** Use `PATH` when `--worktree=PATH` was
+  given; otherwise follow the Worktree location recorded in the phase
+  roadmap's Worktree rule or parent ROADMAP's Worktree strategy
+  (`../<repo>--<slug>` or git-ignored `.worktrees/<slug>/`, where `<slug>`
+  is the branch name after its last `/`, e.g. `phase01-step02-api`);
+  otherwise default to sibling `../<repo>--<slug>`. Never nest a worktree
+  under a tracked path (confirm `.worktrees/` is git-ignored if used).
+  Stop if `<worktree-path>` already exists on disk or `<branch>` is
+  already checked out in `git worktree list` — never overwrite or reuse an
+  unrelated or active directory.
+- **Stage 1 (Create & bootstrap):** Run `git fetch origin && git worktree
+  add -b <branch> <worktree-path> origin/main` (substituting the repo's
+  default remote branch if not `main`). Bootstrap `<worktree-path>` before
+  any test or build: install worktree-local dependencies and copy or
+  create required local env/config files. Never point a worktree at the
+  primary tree's editable install or shared environment, or tests will
+  silently import the primary tree's source. If project hooks or checks
+  require git-excluded directories from `PRIMARY_ROOT` (such as
+  `private/`), link or bootstrap them per project convention without
+  bypassing hooks. Every subsequent read, edit, build, test, security
+  gate, `git` command, and `gh pr create` MUST target `<worktree-path>`
+  (never `PRIMARY_ROOT`). Pick non-default or free local ports for dev
+  servers and browser test suites so concurrent worktrees do not collide.
+  (The `planning/` and `AGENTS.md` commit rules above apply inside
+  `<worktree-path>` only, leaving `PRIMARY_ROOT` untouched.)
+- **Stage 3 (Parallel-safe PR mark):** Right after `gh pr create` returns
+  the PR number, run `git fetch origin` inside `<worktree-path>`. If
+  `origin/main` advanced (for example because a sibling parallel step
+  merged while this step was in flight), rebase onto `origin/main` (`git
+  rebase origin/main`) preserving every other step's `Complete` mark
+  while applying only this step's own mark, re-run affected checks if
+  needed, and push with `git push --force-with-lease`. Only set the
+  phase-level `**Status:**` line (and parent `ROADMAP.md` `### Phase`
+  line) to `In progress` if it still reads `Not started`, and only mark
+  the phase itself `Complete` (with ` ✅` on the phase roadmap title and
+  parent `### Phase` heading) once every step in the phase — including
+  any parallel sibling — already reads `Complete` on `origin/main`
+  (otherwise the last parallel step to merge closes the phase). For a
+  git-excluded roadmap (e.g. `private/`), apply the mark in place carefully
+  preserving every sibling step's status line.
+- **Stage 4 (Merge without disturbing the primary tree):** Wait for green
+  checks; if a sibling PR merges first and the PR falls behind `main`,
+  rebase onto `origin/main` (preserving other steps' `Complete` marks;
+  never merge `main` into the branch). From `<worktree-path>`, squash-merge
+  with `gh pr merge <PR_NUMBER> --squash` — omit `--delete-branch`, because
+  inside a linked worktree `--delete-branch` tries to check out `main`
+  locally and fails while `main` is checked out elsewhere. If the repo
+  does not auto-delete merged remote branches (`delete_branch_on_merge`),
+  run `git push origin --delete <branch>` after merge.
+- **Stage 5 (Retire only this worktree and branch):** Run cleanup from
+  outside `<worktree-path>` (e.g. via `git -C <PRIMARY_ROOT>`): `git
+  worktree remove <worktree-path>`, `git worktree prune`, `git fetch
+  --prune origin`, and `git branch -D <branch>`. Fast-forward
+  `PRIMARY_ROOT` (`git -C <PRIMARY_ROOT> pull --ff-only origin main`) ONLY
+  if `PRIMARY_ROOT` is already cleanly on `main` (clean working tree and
+  `HEAD` on `main`); otherwise leave `PRIMARY_ROOT` untouched. Never remove
+  or prune another step's active worktree.
+- **Stage 6 (Declare completion):** Dispose of every finding before
+  declaring completion, confirm `origin/main` (or the git-excluded
+  roadmap) carries this step's `Complete` line, then end with the final
+  completion line.
