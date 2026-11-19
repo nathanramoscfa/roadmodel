@@ -96,6 +96,8 @@ import {
   RATING_OUTLINE_COLORS,
   RATING_RANK,
   WEIGHTS_DEFS,
+  type AgentConfiguration,
+  type AgentConfigurationRow,
   type Category,
   type ModelRow,
 } from "@/lib/catalog-fields";
@@ -273,6 +275,7 @@ function scoreTone(score: number | null, fit: ScoreFit | null): string {
 export function ModelCatalog({
   models,
   shown,
+  configurations,
   filterSummary,
   onClearFilters,
   scope,
@@ -288,6 +291,7 @@ export function ModelCatalog({
   models: ModelRow[];
   // The rows the page's filters (CatalogFilterBar) keep.
   shown: ModelRow[];
+  configurations: AgentConfigurationRow[];
   // Every active filter in a line; null when none is.
   filterSummary: string | null;
   onClearFilters: () => void;
@@ -375,6 +379,12 @@ export function ModelCatalog({
     }
     return out;
   }, [models, columnValues]);
+
+  const needle = search.trim().toLowerCase();
+  const matchingConfigurations = configurations.filter((m) =>
+    [m.name, m.provider, m.configuration.platform, ...m.configuration.roles.map((role) => role.model)]
+      .some((label) => label?.toLowerCase().includes(needle)),
+  );
 
   const rows = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -774,7 +784,7 @@ export function ModelCatalog({
             </tr>
           </thead>
           <tbody className="divide-y divide-brand-slate-100 dark:divide-brand-slate-800">
-            {rows.length === 0 ? (
+            {rows.length === 0 && matchingConfigurations.length === 0 ? (
               <tr>
                 <td
                   colSpan={colSpan}
@@ -840,6 +850,7 @@ export function ModelCatalog({
                     <tr
                       data-testid="model-row"
                       data-model-id={m.id}
+                      data-agent-configuration={m.configuration ? m.id : undefined}
                       data-tier-cost={m.tier_cost}
                       data-weights={m.open_weights ? "open" : "closed"}
                       className="group/row align-middle hover:bg-brand-slate-50 dark:hover:bg-brand-slate-800/40"
@@ -867,7 +878,11 @@ export function ModelCatalog({
                           STICKY_CELL
                         }
                       >
-                        {provider ? (
+                        {m.configuration ? (
+                          <button type="button" aria-expanded={isOpen} onClick={() => toggleExpand(m.id)} className="text-left hover:text-brand-accent">
+                            {m.name}
+                          </button>
+                        ) : provider ? (
                           <a
                             href={provider.docUrl}
                             target="_blank"
@@ -963,7 +978,9 @@ export function ModelCatalog({
                                 data-testid="aa-index-estimate"
                                 data-source="estimated"
                                 title={
-                                  m.aa_estimate_method === "prior"
+                                  m.configuration
+                                    ? `Roadmodel estimate for this configuration (±${m.aa_index_band} points)`
+                                    : m.aa_estimate_method === "prior"
                                     ? `Estimated by roadmodel from measured catalog peers at ${m.name}'s price and role (±${m.aa_index_band}), until Artificial Analysis measures it`
                                     : m.aa_estimate_method === "predecessor"
                                       ? `Estimated by roadmodel from ${m.aa_estimate_anchors?.[0] ?? m.aa_inherited_from}'s measured AA Index (±${m.aa_index_band}), until Artificial Analysis measures ${m.name}`
@@ -985,7 +1002,9 @@ export function ModelCatalog({
                           data-effort={m.aa_index_effort ?? ""}
                           className={"whitespace-nowrap py-2 text-right text-xs text-brand-slate-600 dark:text-brand-slate-300 " + padX}
                         >
-                          {m.aa_index_effort ? (
+                          {m.configuration ? (
+                            configurationLevel(m.configuration)
+                          ) : m.aa_index_effort ? (
                             <HoverCard
                               label={`${m.name}: ${effortWord(m.aa_index_effort)} effort. Show scores and defaults by effort`}
                               card={<EffortCard model={m} />}
@@ -1114,7 +1133,7 @@ export function ModelCatalog({
                               <td key={cat} className="w-[3.25rem] px-1 py-2 text-center">
                                 <HoverCard
                                   label={`${m.name} ${CATEGORY_DEFS[cat].label}: ${r} (${derived ? "measured" : "estimated"})`}
-                                  card={
+                                  card={m.configuration ? <ConfigurationEvidence configuration={m.configuration} /> : (
                                     <RatingCard
                                       model={m}
                                       category={cat}
@@ -1122,7 +1141,7 @@ export function ModelCatalog({
                                       derived={derived}
                                       evidence={ratingEvidence}
                                     />
-                                  }
+                                  )}
                                   triggerTestId="rating-trigger"
                                   cardTestId="rating-card"
                                   className="border-b-0"
@@ -1196,7 +1215,7 @@ export function ModelCatalog({
                       >
                         <td />
                         <td colSpan={colSpan - 1} className="px-3 pb-4 pt-2">
-                          <ModelDetail model={m} />
+                          {m.configuration ? <ConfigurationDetail model={{ ...m, configuration: m.configuration }} /> : <ModelDetail model={m} />}
                         </td>
                       </tr>
                     )}
@@ -1204,6 +1223,49 @@ export function ModelCatalog({
                 );
               })
             )}
+            {matchingConfigurations.map((m) => {
+              const isOpen = expanded.has(m.id);
+              const key = `configuration-${m.id}`;
+              const estimated = m.aa_index_source === "estimated";
+              return (
+                <Fragment key={m.id}>
+                  <tr data-agent-configuration={m.id} className="group/row align-middle hover:bg-brand-slate-50 dark:hover:bg-brand-slate-800/40">
+                    <td className="px-1 py-2 text-center">
+                      <button type="button" aria-label={`${isOpen ? "Hide" : "Show"} details for ${m.name}`} aria-expanded={isOpen} aria-controls={isOpen ? key : undefined} onClick={() => toggleExpand(m.id)} className="rounded p-0.5 text-brand-slate-400 hover:text-brand-accent">
+                        {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      </button>
+                    </td>
+                    <td className={`whitespace-nowrap py-2 font-medium ${padX} ${STICKY_CELL}`}>
+                      <button type="button" aria-expanded={isOpen} onClick={() => toggleExpand(m.id)} className="text-left hover:text-brand-accent">{m.name}</button>
+                      <span className="block text-xs font-normal text-brand-slate-500 dark:text-brand-slate-400">{m.configuration.platform}</span>
+                    </td>
+                    {view === "ratings" && <>
+                      <td className="px-2 py-2 text-xs">{m.provider ?? "—"}</td>
+                      <td className="px-2 py-2 text-[11px] uppercase">{m.jurisdiction}</td>
+                      <td className="px-2 py-2 text-right tabular-nums">{formatPrice(m.input_price_per_1m)}</td>
+                    </>}
+                    <td className={`py-2 text-right tabular-nums ${padX}`}>{formatPrice(m.output_price_per_1m)}</td>
+                    <td data-testid="configuration-index" className={`py-2 text-right tabular-nums ${padX}`}>
+                      {m.aa_index === null ? <span title="Intelligence Index evidence for this configuration is pending">—</span> : `${estimated ? "≈" : ""}${m.aa_index}`}
+                    </td>
+                    {view === "ratings" && <td className={`py-2 text-right text-xs ${padX}`}>{configurationLevel(m.configuration)}</td>}
+                    <td data-testid="configuration-score" className={`py-2 text-right tabular-nums ${padX}`}>
+                      {m.value_score === null ? <span title="Score requires comparable cost and Intelligence Index evidence for this configuration">—</span> : `${estimated ? "≈" : ""}${formatScore(m.value_score)}`}
+                    </td>
+                    {view === "ratings" ? CATEGORY_ORDER.map((cat) => {
+                      const grade = m.tiers[cat];
+                      return <td key={cat} className="px-1 py-2 text-center" data-testid="configuration-grade">
+                        {grade ? <span className={`${BADGE_CLASS} ${RATING_OUTLINE_COLORS[grade]}`}>{grade}</span> : <span title={`${CATEGORY_DEFS[cat].label} evidence for this configuration is pending`}>—</span>}
+                      </td>;
+                    }) : GRID_BODY_COLUMNS.map((col) => <td key={col.key} className="px-1 py-2 text-center">—</td>)}
+                  </tr>
+                  {isOpen && <tr id={key} className="bg-brand-slate-50/60 dark:bg-brand-slate-800/30">
+                    <td />
+                    <td colSpan={colSpan - 1} className="px-3 pb-4 pt-2"><ConfigurationDetail model={m} /></td>
+                  </tr>}
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -1323,6 +1385,38 @@ function formatDay(iso: string): string {
 function formatLongDay(iso: string): string {
   const d = new Date(`${iso}T00:00:00Z`);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
+
+function configurationLevel(configuration: AgentConfiguration): string {
+  if (!configuration.effort) return "Fixed";
+  return configuration.settings.ultracode === "On"
+    ? `${effortWord(configuration.effort)} · Ultracode On`
+    : effortWord(configuration.effort);
+}
+
+function ConfigurationEvidence({ configuration }: { configuration: AgentConfiguration }) {
+  return configuration.evidenceSource ? (
+    <a href={configuration.evidenceSource} target="_blank" rel="noopener noreferrer" className="text-brand-accent hover:underline">Configuration evidence</a>
+  ) : <p>Comparable benchmarks and usage figures for this configuration are pending.</p>;
+}
+
+function ConfigurationDetail({ model }: { model: AgentConfigurationRow }) {
+  const { configuration } = model;
+  return (
+    <div className="space-y-2 text-sm text-brand-slate-600 dark:text-brand-slate-300" data-testid="configuration-detail">
+      <p>{model.best_for}</p>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+        <dt>Platform</dt><dd>{configuration.platform}</dd>
+        <dt>Level</dt><dd>{configurationLevel(configuration)}</dd>
+        {configuration.roles.map(({ role, model: name }) => (
+          <Fragment key={role}><dt>{role}</dt><dd>{name}</dd></Fragment>
+        ))}
+        <dt>Availability</dt><dd>{configuration.availability}</dd>
+      </dl>
+      <ConfigurationEvidence configuration={configuration} />
+      <a href={configuration.source} target="_blank" rel="noopener noreferrer" className="text-brand-accent hover:underline">Platform documentation</a>
+    </div>
+  );
 }
 
 // The expanded row: what the model is best for, the full price card (input /

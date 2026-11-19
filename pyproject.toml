@@ -75,6 +75,7 @@ sources = ["src"]
 include = [
     "src/roadmodel/__init__.py",
     "src/roadmodel/__main__.py",
+    "src/roadmodel/agent_configurations.py",
     "src/roadmodel/cli.py",
     "src/roadmodel/config.py",
     "src/roadmodel/cost.py",
@@ -101,6 +102,7 @@ include = [
 include = [
     "src/roadmodel/__init__.py",
     "src/roadmodel/__main__.py",
+    "src/roadmodel/agent_configurations.py",
     "src/roadmodel/cli.py",
     "src/roadmodel/config.py",
     "src/roadmodel/cost.py",
@@ -131,6 +133,7 @@ include = [
     "docs/templates/prompt-phase-roadmap.md",
     "docs/user-context.example.md",
     "docs/catalog.json",
+    "docs/agent-configurations.json",
     "docs/benchmarks.json",
     "docs/context-windows.json",
     "docs/effort-tokens.json",

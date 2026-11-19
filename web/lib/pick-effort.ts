@@ -9,6 +9,7 @@
 // its AA Index and Score at the effort it runs, and whether anything the
 // viewer can run beats it there.
 import { blendedPrice, scoreFor } from "@/lib/benchmark-grid";
+import type { AgentConfiguration } from "@/lib/catalog-fields";
 import type { PicksData, SlimRow } from "@/lib/recommend-picks";
 
 // Expected output tokens at each effort, relative to a typical model at high,
@@ -48,16 +49,17 @@ export interface PriceableRow {
   output_price_per_1m: number;
   aa_index_effort?: string | null;
   token_multiplier_by_effort?: Record<string, number>;
+  configuration?: AgentConfiguration;
 }
 
 // The output-token multiplier at a model's headline effort (`aa_index_effort`),
 // matching scoring.token_multiplier (measured multiplier, else uniform table);
 // null when the row has no headline effort.
 export function headlineTokenShare(
-  row: Pick<PriceableRow, "aa_index_effort" | "token_multiplier_by_effort">,
+  row: Pick<PriceableRow, "aa_index_effort" | "token_multiplier_by_effort" | "configuration">,
 ): number | null {
   const level = row.aa_index_effort;
-  if (!level) return null;
+  if (!level || row.configuration) return null;
   const measured = row.token_multiplier_by_effort?.[level];
   if (typeof measured === "number" && Number.isFinite(measured) && measured > 0) {
     return measured;

@@ -444,6 +444,8 @@ def _build_backup(result: dict[str, Any], access_guard: AccessGuard | None) -> B
     # backup is still the one it planned (the guard may have replaced it) and
     # the user can reach the model at all.
     plan = result.get("backup_plan")
+    if isinstance(plan, dict) and plan.get("configuration_id") and plan.get("model") == name:
+        return BackupPick(model=name, platform=plan["platform"], settings=plan["settings"])
     if (
         isinstance(plan, dict)
         and canonical_model_name(plan.get("model")) == name
@@ -500,8 +502,16 @@ def _pick_response(
     # settings / funding are derived, so every downstream field describes the
     # model actually returned. Mutates `result` in place; no-op when unset.
     planned_model = canonical_model_name(result.get("model"))
-    if access_guard is not None:
+    # Configuration metadata is attached only by the deterministic ladder after
+    # it has checked platform, plan, jurisdiction and evidence for this request.
+    configuration = result.get("configuration_id")
+    plan = result.get("backup_plan")
+    configuration_backup = isinstance(plan, dict) and bool(plan.get("configuration_id"))
+    if access_guard is not None and not configuration:
+        backup = result.pop("backup", None) if configuration_backup else None
         access_guard.enforce(result, priority)
+        if configuration_backup and result.get("model") == planned_model:
+            result["backup"] = backup
     # Normalize an ACCEPTED pick to its catalog display name ("Claude Fable 5" ->
     # "Fable 5"): when the guard substitutes it's already canonical, but when it
     # accepts the engine's pick the raw maker-prefixed name would otherwise leak
@@ -511,8 +521,11 @@ def _pick_response(
     # model the guard substituted is no specialist.
     specialist = bool(result.get("specialist")) and result["model"] == planned_model
     specialist_category = result.get("specialist_category")
-    session_cost_estimate, comparison_table = _session_cost(
-        result["model"], result["platform"], task_description
+    settings = _normalize_settings_contract(result["platform"], result["settings"])
+    session_cost_estimate, comparison_table = (
+        (None, [])
+        if configuration or str(settings.get("ultracode", "")).lower() == "on"
+        else _session_cost(result["model"], result["platform"], task_description)
     )
     rationale = result.get("rationale") or None
     rationale_sections = result.get("rationale_sections") or None
@@ -529,7 +542,7 @@ def _pick_response(
         # Deterministic PLATFORM-CONDITIONAL settings shape (output contract v2):
         # dials the chosen surface does not expose are DROPPED, and a v1
         # effort-in-THINKING value is split into EFFORT + the On/Off toggle.
-        settings=_normalize_settings_contract(result["platform"], result["settings"]),
+        settings=settings,
         # Carry the model's reasoning across the service boundary (#173);
         # empty string -> None so the web edge falls back cleanly.
         rationale=rationale,

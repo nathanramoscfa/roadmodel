@@ -10,6 +10,7 @@ import {
   getBenchmarkMeta,
   getCatalogGeneratedAt,
   getModelRows,
+  getPendingConfigurations,
   getScoreFit,
 } from "@/lib/catalog-models";
 import { parsePrefs, PREFS_COOKIE } from "@/lib/models-prefs";
@@ -54,6 +55,7 @@ export default async function HomePage() {
         <div className="mt-10 space-y-8">
           <ModelsExplorer
             models={models}
+            configurations={getPendingConfigurations(scoreFit)}
             generatedAt={generatedAt}
             benchmarksGeneratedAt={bench.generatedAt}
             measuredCount={bench.measuredCount}

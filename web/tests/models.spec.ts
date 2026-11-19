@@ -38,6 +38,24 @@ import { effortWord, headlinePrice } from "../lib/pick-effort";
 import { isNewer } from "../lib/series";
 import { liveCatalog } from "./fixtures/live-catalog";
 
+test("the catalog lists fixed and toggle configurations with their own evidence cells", async ({ page }) => {
+  await page.goto("/models");
+  const preset = page.locator('[data-agent-configuration="antigravity-orchestrator-neon"]');
+  await expect(preset).toContainText("Fixed");
+  await expect(preset.getByTestId("configuration-index")).toHaveText("—");
+  await expect(preset.getByTestId("configuration-score")).toHaveText("—");
+  await expect(preset.getByTestId("configuration-grade")).toHaveText(Array(7).fill("—"));
+  await preset.getByRole("button", { name: "Orchestrator (Neon)", exact: true }).click();
+  const detail = page.getByTestId("configuration-detail");
+  await expect(detail).toContainText("Planning and review");
+  await expect(detail).toContainText("Gemini 4 Neon");
+  await expect(detail).toContainText("Implementation and checks");
+  await expect(detail).toContainText("Gemini 4 Hydrogen");
+  await expect(page.locator('[data-agent-configuration="claude-code-opus-5-5-high-ultracode"]')).toContainText(
+    "High · Ultracode On",
+  );
+});
+
 // Expected row counts are DERIVED from the catalog the page renders, never
 // hardcoded. The catalog grows whenever the daily refresh cron picks up a new
 // upstream model, and a hardcoded count turns every one of those cron PRs red

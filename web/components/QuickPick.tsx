@@ -286,7 +286,8 @@ export function KeylessResult({
               <p className="text-[11px] text-brand-slate-400 dark:text-brand-slate-500">{RUNG_LABEL[r.priority].hint}</p>
               <h3 className="mt-1.5 text-lg font-bold text-brand-slate-900 dark:text-brand-slate-50">{r.model_name}</h3>
               <p className="text-sm text-brand-slate-600 dark:text-brand-slate-300">
-                on {r.platform_name} · Effort {r.effort}
+                on {r.platform_name} · {r.effort.toLowerCase() === "fixed" ? "Fixed" : `Effort ${r.effort}`}
+                {r.ultracode && " · Ultracode On"}
               </p>
             </header>
             <dl className="space-y-2 text-sm">
@@ -302,7 +303,8 @@ export function KeylessResult({
             {r.backup && (
               <p className="border-t border-brand-slate-100 pt-2 text-xs text-brand-slate-500 dark:border-brand-slate-700/70 dark:text-brand-slate-400">
                 Backup: <span className="font-semibold">{r.backup.model_name}</span> on {r.backup.platform_name} ·
-                Effort {r.backup.effort}
+                {r.backup.effort.toLowerCase() === "fixed" ? " Fixed" : ` Effort ${r.backup.effort}`}
+                {r.backup.ultracode && " · Ultracode On"}
               </p>
             )}
           </article>

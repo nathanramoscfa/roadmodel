@@ -428,7 +428,7 @@ function matrixRows(
 ): MatrixRow[] {
   const keys = settingKeys(recs);
   const showBackup = recs.some((r) => r.backup?.model);
-  const inCatalog = recs.some((r) => rowForPick(data, r.model));
+  const inCatalog = recs.some((r) => rowForPick(data, r.model, r.settings));
   const facts: MatrixRow[] = inCatalog
     ? [
         {
@@ -611,7 +611,7 @@ export function PicksMatrix({
 }) {
   const rows = matrixRows(recommendations, data);
   const pickRows = new Map(
-    recommendations.map((r) => [r.priority, rowForPick(data, r.model)]),
+    recommendations.map((r) => [r.priority, rowForPick(data, r.model, r.settings)]),
   );
   const n = recommendations.length;
   const cellBase =

@@ -25,7 +25,7 @@
 import { useMemo, useState } from "react";
 
 import type { ScoreFit } from "@/lib/benchmark-grid";
-import type { ModelRow } from "@/lib/catalog-fields";
+import type { AgentConfigurationRow, ModelRow } from "@/lib/catalog-fields";
 import {
   allFilters,
   filterSummary,
@@ -51,6 +51,7 @@ import { ScoreCharts } from "./ScoreCharts";
 
 export function ModelsExplorer({
   models,
+  configurations,
   generatedAt,
   benchmarksGeneratedAt,
   measuredCount,
@@ -58,6 +59,7 @@ export function ModelsExplorer({
   prefs,
 }: {
   models: ModelRow[];
+  configurations: AgentConfigurationRow[];
   generatedAt: string;
   benchmarksGeneratedAt: string;
   measuredCount: number;
@@ -115,6 +117,7 @@ export function ModelsExplorer({
         <ModelCatalog
           models={models}
           shown={shown}
+          configurations={configurations.filter((m) => inPool(m, filters) && (filters.cost === "all" || m.tier_cost === filters.cost))}
           filterSummary={summary}
           onClearFilters={clear}
           scope={scope}

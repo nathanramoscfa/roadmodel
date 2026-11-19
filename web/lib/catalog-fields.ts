@@ -24,6 +24,17 @@ export type Category =
 export type Rating = "S" | "A" | "B" | "C" | "D";
 export type CostTier = "low" | "medium" | "high" | "very-high";
 
+export interface AgentConfiguration {
+  platform: string;
+  pickerModel: string;
+  effort: string | null;
+  settings: Record<string, string>;
+  roles: { role: string; model: string }[];
+  availability: string;
+  source: string;
+  evidenceSource: string | null;
+}
+
 export interface ModelRow {
   id: string;
   name: string;
@@ -35,6 +46,7 @@ export interface ModelRow {
   cache_read_per_1m: number | null;
   tier_cost: CostTier;
   tiers: Record<Category, Rating>;
+  configuration?: AgentConfiguration;
   // The derived letters the model's run at each of its other measured efforts
   // earns (docs/effort-ratings.json, update/derive_ratings.py), keyed by level;
   // a category AA did not measure there keeps its headline letter in `tiers`.
@@ -120,6 +132,14 @@ export interface ModelRow {
   // newUntil) while the model is inside that window; null otherwise.
   new_until: string | null;
 }
+
+export type AgentConfigurationRow = Omit<ModelRow, "input_price_per_1m" | "output_price_per_1m" | "tier_cost" | "tiers" | "configuration"> & {
+  input_price_per_1m: number | null;
+  output_price_per_1m: number | null;
+  tier_cost: CostTier | null;
+  tiers: Partial<Record<Category, Rating>>;
+  configuration: AgentConfiguration;
+};
 
 export interface FieldDef {
   // Short visible column label.
@@ -416,6 +436,10 @@ export function modelProvider(id: string): ProviderInfo | null {
   if (s.includes("kimi")) return PROVIDERS.moonshot;
   if (s.includes("muse")) return PROVIDERS.meta;
   return null;
+}
+
+export function platformProvider(id: string): ProviderInfo | null {
+  return PROVIDERS[id] ?? null;
 }
 
 export function formatPrice(value: number | null): string {
