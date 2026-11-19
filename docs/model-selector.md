@@ -1490,9 +1490,9 @@ Billing types:
 #### Antigravity — `antigravity`
 
 - **Billing:** subscription-included (requires google-ai-pro-or-ultra-subscription)
-- **Supports models:** gemini-3.1-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,claude-sonnet-5-5,sonnet-4.6,gpt-oss-120b,gemini-4-argon
+- **Supports models:** gemini-3.1-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,claude-sonnet-5-5,sonnet-4.6,gpt-oss-120b,gemini-4-argon,gemini-4-hydrogen,gemini-4-neon
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
-- **Best for:** Google's agent-first coding surface: the Antigravity desktop IDE, its VS Code panel and the `agy` CLI, which replaced the Gemini CLI for personal Google accounts on 2026-06-18. Google AI Pro and Ultra pay for it: quota refreshes every five hours up to a weekly limit (the free tier refreshes weekly), and both can buy AI credits for overage. It serves the Gemini models and, on Google's quota, Claude Sonnet 4.6 and Claude Opus 4.6 with thinking and gpt-oss-120b (antigravity.google/docs/models); Claude Opus 4.6 is not in this catalog. Gemini models take a Low / Medium / High reasoning level, set in the model id (`<model>-low` / `-medium` / `-high`) or with `agy --effort`; the Claude and GPT-OSS models carry their own thinking setting. It bills a Google AI plan or a Google Cloud project, not a Gemini API key.
+- **Best for:** Google's agent-first coding surface: the Antigravity desktop IDE, its VS Code panel and the `agy` CLI, which replaced the Gemini CLI for personal Google accounts on 2026-06-18. Google AI Pro and Ultra pay for it: quota refreshes every five hours up to a weekly limit (the free tier refreshes weekly), and both can buy AI credits for overage. It serves the Gemini models and, on Google's quota, Claude Sonnet 4.6 and Claude Opus 4.6 with thinking and gpt-oss-120b (antigravity.google/docs/models); Claude Opus 4.6 is not in this catalog. Most adjustable Gemini models offer Low, Medium and High. Gemini 4 Hydrogen and Gemini 4 Neon also offer Extra (`xhigh` in the CLI). Set the level with `agy --effort` or in the model picker. The Antigravity model documentation lists each model’s plan eligibility (https://antigravity.google/docs/models). It bills a Google AI plan or a Google Cloud project, not a Gemini API key.
 
 ### xAI
 
