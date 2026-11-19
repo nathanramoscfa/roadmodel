@@ -29,8 +29,7 @@
   "unexpected_slugs": [
     "grok-4.20-0309-non-reasoning",
     "grok-4.20-0309-reasoning",
-    "grok-4.20-multi-agent-0309",
-    "grok-build-0.1"
+    "grok-4.20-multi-agent-0309"
   ],
   "missing_mapped_models": [],
   "section_sha256": "087b61168c7c80da6cbe17239fd89619c4520245188eb6ba49eff128cb16cbf5"
