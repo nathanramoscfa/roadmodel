@@ -308,7 +308,13 @@ export function IndexCard({
           : m.aa_index_source === "inherited"
             ? `An estimate: ${m.aa_inherited_from}'s index from the snapshot of ${snapshot}, which ${m.name} stands on until Artificial Analysis measures it. The recommender ranks it the same way.`
             : m.aa_index_source === "estimated"
-              ? `roadmodel's estimate, within about ${m.aa_index_band} points: ${m.aa_estimate_via ? `${m.name}'s scores in the launch benchmarks of ${listNames(m.aa_estimate_via)}` : `${m.name}'s launch benchmarks`} set beside ${listNames(m.aa_estimate_anchors ?? [])}, which Artificial Analysis has measured, until it measures ${m.name} too${m.aa_estimate_via ? "" : ", and adjusted by how its maker's earlier launch benchmarks compared with Artificial Analysis's measurements"}. The recommender ranks it on this estimate, ${Math.round((m.aa_index_band ?? 3.5) * 5) / 10} points lower for its uncertainty.`
+              ? m.aa_estimate_method === "prior"
+                ? `roadmodel's day-one estimate, within about ${m.aa_index_band} points: placed against measured catalog models at ${m.name}'s price and role until Artificial Analysis measures it or its vendor publishes a benchmark comparison table. The recommender ranks it on this estimate, ${Math.round((m.aa_index_band ?? 6) * 5) / 10} points lower for its uncertainty.`
+                : m.aa_estimate_method === "predecessor"
+                  ? `roadmodel's estimate, within about ${m.aa_index_band} points: ${m.aa_estimate_anchors?.[0] ?? m.aa_inherited_from}'s measured AA Index, until Artificial Analysis measures ${m.name}. The recommender ranks it on this estimate, ${Math.round((m.aa_index_band ?? 5) * 5) / 10} points lower for its uncertainty.`
+                  : (m.aa_estimate_anchors?.length ?? 0) === 0
+                    ? `roadmodel's estimate, within about ${m.aa_index_band} points: ${m.name}'s published component benchmarks placed on Artificial Analysis's scale until Artificial Analysis measures ${m.name}. The recommender ranks it on this estimate, ${Math.round((m.aa_index_band ?? 3.5) * 5) / 10} points lower for its uncertainty.`
+                    : `roadmodel's estimate, within about ${m.aa_index_band} points: ${m.aa_estimate_via ? `${m.name}'s scores in the launch benchmarks of ${listNames(m.aa_estimate_via)}` : `${m.name}'s launch benchmarks`} set beside ${listNames(m.aa_estimate_anchors ?? [])}, which Artificial Analysis has measured, until it measures ${m.name} too${m.aa_estimate_via ? "" : ", and adjusted by how its maker's earlier launch benchmarks compared with Artificial Analysis's measurements"}. The recommender ranks it on this estimate, ${Math.round((m.aa_index_band ?? 3.5) * 5) / 10} points lower for its uncertainty.`
               : `From the snapshot of ${snapshot}.`}
       </p>
       {m.bench && (
@@ -455,7 +461,11 @@ export function ScoreBreakdownCard({
         </p>
         <Row
           label="AA Intelligence Index"
-          value={m.aa_index_source === "estimated" ? indexText(m) : num(s.index)}
+          value={
+            m.aa_index_source === "estimated" || m.aa_index_source === "inherited"
+              ? indexText(m)
+              : num(s.index)
+          }
           valueClass={STRONG}
         />
         <Row
@@ -518,7 +528,11 @@ export function ScoreBreakdownCard({
             : m.aa_index_source === "inherited"
               ? `AA Index estimated from ${m.aa_inherited_from}'s in the Artificial Analysis snapshot of ${snapshot}.`
               : m.aa_index_source === "estimated"
-                ? `AA Index estimated by roadmodel from ${m.aa_estimate_via ? `the launch benchmarks of ${listNames(m.aa_estimate_via)}` : `${m.name}'s launch benchmarks`} (±${m.aa_index_band}), so this Score is an estimate too.`
+                ? m.aa_estimate_method === "prior"
+                  ? `AA Index estimated by roadmodel from measured catalog peers at ${m.name}'s price and role (±${m.aa_index_band}), so this Score is an estimate too.`
+                  : m.aa_estimate_method === "predecessor"
+                    ? `AA Index estimated by roadmodel from ${m.aa_estimate_anchors?.[0] ?? m.aa_inherited_from}'s measured AA Index (±${m.aa_index_band}), so this Score is an estimate too.`
+                    : `AA Index estimated by roadmodel from ${m.aa_estimate_via ? `the launch benchmarks of ${listNames(m.aa_estimate_via)}` : `${m.name}'s launch benchmarks`} (±${m.aa_index_band}), so this Score is an estimate too.`
                 : `AA Index from the Artificial Analysis snapshot of ${snapshot}.`}
         </p>
       </div>

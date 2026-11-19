@@ -67,7 +67,7 @@ MODEL_BUDGET_USD = 4.0
 WEEKLY_BUDGET_USD = 10.0
 SEARCH_USES = 5
 FETCH_USES = 6
-FETCH_TOKENS = 40_000
+FETCH_TOKENS = 100_000
 MAX_TOKENS = 16_000
 
 # Where a vendor publishes its launch materials: announcements, model and
@@ -114,22 +114,31 @@ SYSTEM = """You transcribe a newly released AI model's launch benchmark table.
 
 Find the model VENDOR's own launch materials: the announcement post, the model
 or system card (PDFs count), the evaluation methodology document, or the
-official model card or repository. Use web search only to locate them; read
+official model card or repository. For OpenAI releases whose announcement page
+is unreachable or omits capability tables, also check
+https://deploymentsafety.openai.com/. Use web search only to locate them; read
 values only from the vendor's pages. Never take a value from a third-party
 site, and never record an Artificial Analysis metric: skip any row labeled AA,
 "-AA", "(AA)", Artificial Analysis or AA Index, or footnoted as coming from
 Artificial Analysis, and set to null any cell footnoted as Artificial
 Analysis's run.
 
-Transcribe the headline comparison table or tables: every row and every
+Transcribe capability and reasoning benchmark tables first (skip safety-refusal,
+policy-compliance, jailbreak, or toxicity-only tables): every row and every
 column, the competitor and predecessor columns included; they are the point.
-Values exactly as printed, percentages as percentages (0-100). Leave out rows
-in other units (Elo, dollars, ratings, seconds). A blank, dash or "not
-reported" is null. Mark a lower-is-better row "higher_is_better": false.
-When the launching model has several columns (effort levels, Pro, Deep Think,
-Heavy, parallel or best-of-N, "without safeguards"), keep only the one at its
-highest standard effort as the model's own column; the others are null
-columns.
+If the vendor published no multi-column comparison table, a single-column list
+or table reporting the launching model's own capability scores still counts
+(with columns [model_id]). Values exactly as printed, percentages as
+percentages (0-100). Leave out rows in other units (Elo, dollars, ratings,
+seconds). A blank, dash or "not reported" is null. Mark a lower-is-better row
+"higher_is_better": false. When a row measures one of the five index
+components ("hle" for Humanity's Last Exam without tools, "terminalbench_v4_0"
+for Terminal-Bench 4.0, "scicode" for SciCode, "terminalbench_v2_1" for
+Terminal-Bench 2.1, "gpqa" for GPQA Diamond without tools), tag it
+"component": "<key>". When the launching model has several columns (effort
+levels, Pro, Deep Think, Heavy, parallel or best-of-N, "without safeguards"),
+keep only the one at its highest standard effort as the model's own column; the
+others are null columns.
 
 Name each column's model with an id from the roster in the request, or null
 when the column is a model the roster does not list or another configuration
@@ -139,10 +148,11 @@ Reply with ONE JSON object and nothing else:
 {"release_date": "YYYY-MM-DD" or null,
  "tables": [{"source": "https://...", "columns": [id or null, ...],
              "rows": [{"benchmark": "name", "values": [number or null, ...],
-                       "higher_is_better": true}]}]}
-Each row's values align one-to-one with its table's columns. Reply
-{"release_date": null, "tables": []} when the vendor published no comparison
-table you can read."""
+                       "higher_is_better": true, "component": "hle"}]}]}
+Omit "component" unless the row is one of those five components. Each row's
+values align one-to-one with its table's columns. Reply
+{"release_date": null, "tables": []} when the vendor published no capability
+benchmarks you can read."""
 
 
 def _today() -> dt.date:
@@ -186,13 +196,13 @@ def due(
     them, their own table does not place them yet, and they have no table, or
     their last try is RETRY_DAYS old, under MAX_ATTEMPTS tries and
     MODEL_BUDGET_USD."""
-    estimates = estimate.estimate_all(tables, bench)
+    estimates = estimate.estimate_all(tables, bench, catalog=catalog)
     out: list[tuple[str, str]] = []
     for m in catalog.get("models", []):
         mid = str(m.get("id", "")) if isinstance(m, dict) else ""
         if not mid or estimate.measured_index(bench, mid) is not None:
             continue
-        if mid in estimates and estimates[mid].method != estimate.OTHER_METHOD:
+        if mid in estimates and estimates[mid].method in estimate.OWN_METHODS:
             continue
         entry = tables.get(mid)
         date = str(
@@ -323,6 +333,11 @@ def collect(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--dry-run", action="store_true", help="list the models it would try")
+    parser.add_argument(
+        "--prune-only",
+        action="store_true",
+        help="drop retired catalog models from launch-tables.json and exit",
+    )
     args = parser.parse_args(argv)
     catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
     bench = json.loads(BENCHMARKS.read_text(encoding="utf-8"))["models"]
@@ -333,6 +348,9 @@ def main(argv: list[str] | None = None) -> int:
     # A model that left the catalog needs no table.
     for gone in sorted(set(tables) - set(names)):
         del tables[gone]
+    if args.prune_only:
+        TABLES.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
+        return 0
     targets = due(catalog, bench, tables, _today())
     print(
         f"launch tables due: {', '.join(targets) or 'none'} "

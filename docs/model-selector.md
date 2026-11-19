@@ -887,10 +887,10 @@ Tier ratings:
 #### GPT-6.2 Astra — `gpt-6.2-astra`
 
 - **Pricing:** Input $8.00/M · Output $40.00/M
-- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **B**
+- **Tier ratings:** Coding **A** · Planning **S** · Agentic **S** · Multimodal **B** · Long-context **S** · Knowledge **A** · Speed **B**
 - **Headline benchmarks:** Artificial Analysis has not measured GPT-6.2 Astra yet, so its letters are estimates
 - **Pricing notes:** Provider-direct OpenAI API per-token pricing (not via the Cursor pool)
-- **Best for:** Strong coding, planning, agentic work, long context and knowledge at a very high price.
+- **Best for:** Frontier-class planning, agentic work and long context, plus strong coding and knowledge, at a very high price.
 
 ### High Cost Tier
 
@@ -945,10 +945,10 @@ Tier ratings:
 #### Gemini 4 Neon — `gemini-4-neon`
 
 - **Pricing:** Input $3.00/M · Output $15.00/M
-- **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **B** · Long-context **B** · Knowledge **B** · Speed **B**
+- **Tier ratings:** Coding **S** · Planning **S** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **S** · Speed **B**
 - **Headline benchmarks:** Artificial Analysis has not measured Gemini 4 Neon yet, so its letters are estimates
 - **Pricing notes:** Provider-direct Google API per-token pricing (not via the Cursor pool)
-- **Best for:** Competent coding, planning, agentic work, multimodal input, long context and knowledge at a high price.
+- **Best for:** Frontier-class coding, planning, agentic work and knowledge, plus strong multimodal input and long context, at a high price.
 
 ### Medium Cost Tier
 
@@ -1035,10 +1035,10 @@ Tier ratings:
 #### GPT-5.1 Codex Max — `gpt-5.1-codex-max`
 
 - **Pricing:** Input $1.25/M · Output $10.00/M
-- **Tier ratings:** Coding **A** · Planning **B** · Agentic **A** · Multimodal **D** · Long-context **B** · Knowledge **B** · Speed **B**
+- **Tier ratings:** Coding **A** · Planning **B** · Agentic **A** · Multimodal **D** · Long-context **B** · Knowledge **C** · Speed **B**
 - **Headline benchmarks:** GPT-5.1 Codex Max variant at the same medium-tier pricing as gpt-5.1-codex; Codex-lineage terminal / tool-use profile; Artificial Analysis has not measured GPT-5.1 Codex Max yet, so its letters are estimates
 - **Pricing notes:** Hidden by default
-- **Best for:** Strong coding and agentic work at a medium price. Weakest at multimodal input (D).
+- **Best for:** Strong coding and agentic work at a medium price. Weakest at multimodal input (D), then knowledge (C).
 
 #### GPT-6 Sol — `gpt-6-sol`
 
@@ -1054,15 +1054,15 @@ Tier ratings:
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **D**
 - **Headline benchmarks:** AA Intelligence Index 51.8 (max); HLE 52.9%; SciCode 54.2; Terminal-Bench 4.0 56.1; AA-LCR 0.830; LMArena WebDev #4 (Elo 1757.8)
 - **Pricing notes:** Provider-direct OpenAI API per-token pricing (not via the Cursor pool)
-- **Best for:** Frontier-class agentic work, plus strong coding, planning, multimodal input, long context and knowledge, at a medium price. Its AA Intelligence Index of 51.8 ranks 7th of 35 measured models. Weakest at speed (D).
+- **Best for:** Frontier-class agentic work, plus strong coding, planning, multimodal input, long context and knowledge, at a medium price. Its AA Intelligence Index of 51.8 ranks 7th of 35 measured models. Weakest at speed (D). Superseded by GPT-6.2 Sol.
 
 #### GPT-6.2 Sol — `gpt-6.2-sol`
 
 - **Pricing:** Input $2.00/M · Output $10.00/M
-- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **D**
+- **Tier ratings:** Coding **A** · Planning **S** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **D**
 - **Headline benchmarks:** Artificial Analysis has not measured GPT-6.2 Sol yet, so its letters are estimates
 - **Pricing notes:** Provider-direct OpenAI API per-token pricing (not via the Cursor pool)
-- **Best for:** Strong coding, planning, agentic work, multimodal input, long context and knowledge at a medium price. Weakest at speed (D).
+- **Best for:** Frontier-class planning and agentic work, plus strong coding, multimodal input, long context and knowledge, at a medium price. Weakest at speed (D).
 
 #### Gemini 4 Argon — `gemini-4-argon`
 
@@ -1075,10 +1075,10 @@ Tier ratings:
 #### Gemini 4 Carbon — `gemini-4-carbon`
 
 - **Pricing:** Input $2.00/M · Output $10.00/M
-- **Tier ratings:** Coding **S** · Planning **S** · Agentic **S** · Multimodal **B** · Long-context **S** · Knowledge **S** · Speed **B**
+- **Tier ratings:** Coding **S** · Planning **S** · Agentic **S** · Multimodal **A** · Long-context **S** · Knowledge **S** · Speed **B**
 - **Headline benchmarks:** Artificial Analysis has not measured Gemini 4 Carbon yet, so its letters are estimates
 - **Pricing notes:** Provider-direct Google API per-token pricing (not via the Cursor pool)
-- **Best for:** Frontier-class coding, planning, agentic work, long context and knowledge at a medium price.
+- **Best for:** Frontier-class coding, planning, agentic work, long context and knowledge, plus strong multimodal input, at a medium price.
 
 ### Low Cost Tier
 
@@ -1373,10 +1373,10 @@ Tier ratings:
 #### Gemini 4 Hydrogen — `gemini-4-hydrogen`
 
 - **Pricing:** Input $1.50/M · Output $7.50/M
-- **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **B** · Long-context **B** · Knowledge **B** · Speed **B**
+- **Tier ratings:** Coding **S** · Planning **S** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **A**
 - **Headline benchmarks:** Artificial Analysis has not measured Gemini 4 Hydrogen yet, so its letters are estimates
 - **Pricing notes:** Provider-direct Google API per-token pricing (not via the Cursor pool)
-- **Best for:** Competent coding, planning, agentic work, multimodal input, long context and knowledge at a low price.
+- **Best for:** Frontier-class coding, planning and agentic work, plus strong multimodal input, long context and knowledge, with fast output, at a low price. It is the cheapest model in the catalog rated S for coding, planning and agentic work.
 
 ## Access Methods
 
@@ -1698,13 +1698,13 @@ Guardrails:
   - Never sacrifice quality to save cost — the cost step is a true-tie
     resolver, not a downgrade trigger.
   - For PRIMARY = `multimodal`, only consider models with tier-multimodal
-    of S or A (currently: gemini-3-flash, gemini-3.8-flash, claude-fable-5.2, claude-fable-5.1 at S; gemini-2.5-flash, gpt-6.1-terra, claude-sonnet-5-5, gpt-6-sol, gpt-6.1-sol, gpt-6.2-sol, gpt-5.6-terra, claude-opus-5-5, gpt-5.6-sol at A).
+    of S or A (currently: gemini-3-flash, gemini-3.8-flash, claude-fable-5.2, claude-fable-5.1 at S; gemini-2.5-flash, gpt-6.1-terra, gemini-4-hydrogen, claude-sonnet-5-5, gemini-4-carbon, gpt-6-sol, gpt-6.1-sol, gpt-6.2-sol, gpt-5.6-terra, gemini-4-neon, claude-opus-5-5, gpt-5.6-sol at A).
   - For PRIMARY = `long-context`, prefer models with native large
     context (opus-4.7 1M, opus-4.8 1M, claude-opus-5 1M, claude-opus-5-5 1M, gemini-3.1-pro 1M, gemini-3.5-flash-lite 1M) over forcing
     a smaller-context model into Max Mode truncation.
   - For PRIMARY = `coding` at S-tier requirement, the candidate set is
-    claude-sonnet-5-5, gemini-4-argon, gemini-4-carbon, claude-opus-5-5, muse-wonder, claude-fable-5.2, claude-fable-5.1; cost tie-breaker favors
-    claude-sonnet-5-5 when the ratings are equivalent for the prompt.
+    gemini-4-hydrogen, claude-sonnet-5-5, gemini-4-argon, gemini-4-carbon, gemini-4-neon, claude-opus-5-5, muse-wonder, claude-fable-5.2, claude-fable-5.1; cost tie-breaker favors
+    gemini-4-hydrogen when the ratings are equivalent for the prompt.
   - Default to composer-2.5 for routine multi-file implementation when a
     coding-A rating suffices; escalate only on a concrete capability
     gap.

@@ -41,7 +41,11 @@ def build(tables_raw: bytes, bench: dict[str, Any], catalog: dict[str, Any]) -> 
     vendor's launch table reports and the one the scorer places it at."""
     tables = json.loads(tables_raw)["models"]
     catalog_ids = {str(m["id"]) for m in catalog.get("models", []) if isinstance(m, dict)}
-    estimates = {m: e for m, e in estimate.estimate_all(tables, bench).items() if m in catalog_ids}
+    estimates = {
+        m: e
+        for m, e in estimate.estimate_all(tables, bench, catalog=catalog).items()
+        if m in catalog_ids
+    }
     return {
         "schema_version": 1,
         "about": (
@@ -78,12 +82,16 @@ def main(argv: list[str] | None = None) -> int:
     OUT.write_text(text)
     doc = json.loads(text)
     for mid, e in doc["models"].items():
-        print(
-            f"{mid}: ≈{e['index']} ±{e['band']} at {e['effort']} ({e['method']}; "
-            f"{len(e['anchors'])} anchors, {e['rows']} rows"
-            + (f"; from {', '.join(e['via'])}'s tables" if e.get("via") else "")
-            + ")"
-        )
+        effort_part = f" at {e['effort']}" if e.get("effort") else ""
+        details = [e["method"]]
+        if e.get("anchors") or e.get("rows"):
+            details.append(f"{len(e['anchors'])} anchors, {e['rows']} rows")
+        if e.get("via"):
+            details.append(f"from {', '.join(e['via'])}'s tables")
+        if e.get("letters"):
+            letters_str = " ".join(f"{k}={v}" for k, v in e["letters"].items())
+            details.append(f"letters: {letters_str}")
+        print(f"{mid}: ≈{e['index']} ±{e['band']}{effort_part} ({'; '.join(details)})")
     return 0
 
 

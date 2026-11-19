@@ -26,9 +26,21 @@ from typing import Any
 
 # The index components a launch-table row may be tagged with, and the figures
 # an estimate may carry (benchmarks.json keys, as fractions).
-COMPONENTS = ("hle", "terminalbench_v4_0")
+COMPONENTS = ("hle", "terminalbench_v4_0", "scicode", "terminalbench_v2_1", "gpqa")
 FIGURES = ("hle", "lcr", "scicode", "terminalbench_v4_0")
-METHODS = frozenset({"anchors", "components", "anchors+components", "other-tables"})
+METHODS = frozenset(
+    {
+        "anchors",
+        "components",
+        "anchors+components",
+        "pairwise",
+        "pairwise+components",
+        "other-tables",
+        "chained",
+        "predecessor",
+        "prior",
+    }
+)
 
 
 def _number(value: Any) -> float | None:
@@ -129,10 +141,12 @@ def _check_table(model_id: str, table: Any, roster: set[str]) -> None:
 
 
 _ESTIMATE_KEYS = frozenset(
-    {"index", "band", "method", "anchors", "rows", "effort", "via", "figures"}
+    {"index", "band", "method", "anchors", "rows", "effort", "via", "figures", "letters"}
 )
 _SHA256 = re.compile(r"[0-9a-f]{64}")
 _LEVEL = re.compile(r"[a-z]{2,12}")
+_LETTER_CATS = frozenset({"multimodal", "speed"})
+_LETTERS = frozenset({"S", "A", "B", "C", "D"})
 
 
 def check_index_estimates(doc: Any, roster: set[str], catalog_ids: set[str]) -> None:
@@ -183,4 +197,10 @@ def check_index_estimates(doc: Any, roster: set[str], catalog_ids: set[str]) -> 
             raise ValueError("index_estimates_entry")
         for v in figures.values():
             if (n := _number(v)) is None or not 0 <= n <= 1:
+                raise ValueError("index_estimates_value")
+        letters = e.get("letters", {})
+        if not isinstance(letters, dict) or not set(letters) <= _LETTER_CATS:
+            raise ValueError("index_estimates_entry")
+        for v in letters.values():
+            if not isinstance(v, str) or v not in _LETTERS:
                 raise ValueError("index_estimates_value")

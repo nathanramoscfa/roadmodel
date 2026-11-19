@@ -409,3 +409,32 @@ def test_a_measured_model_ignores_an_estimate() -> None:
     bench = _bench(**{"leader": {index: 60.0}, "unmeasured": {index: 20.0}})
     estimates = {"unmeasured": {"index": 59.0, "band": 4.0, "method": "anchors"}}
     assert dr.estimated_letters(bench, estimates, {"leader", "unmeasured"}) == {}
+
+
+def test_estimated_extra_letters_fill_multimodal_and_speed() -> None:
+    """Fallback multimodal/speed letters from docs/index-estimates.json apply
+    to unmeasured models without affecting measured ones."""
+    index = "artificial_analysis_intelligence_index"
+    bench = _bench(**{"leader": {index: 60.0}, "cheap-one": {index: 30.0}})
+    estimates = {
+        "unmeasured": {
+            "index": 58.0,
+            "band": 6.0,
+            "method": "prior",
+            "letters": {"multimodal": "C", "speed": "A"},
+        },
+        "leader": {
+            "index": 10.0,
+            "band": 6.0,
+            "method": "prior",
+            "letters": {"multimodal": "D", "speed": "D"},
+        },
+    }
+    changes, _ = dr.plan_changes(SELECTOR, bench, estimates)
+    by = {
+        (c["id"], c["category"]): (c["from"], c["to"], c.get("estimated", False)) for c in changes
+    }
+    assert by[("unmeasured", "multimodal")] == ("D", "C", True)
+    assert by[("unmeasured", "speed")] == ("B", "A", True)
+    assert ("leader", "multimodal") not in by
+    assert ("leader", "speed") not in by

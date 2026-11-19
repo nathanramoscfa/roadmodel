@@ -272,7 +272,13 @@ def split(base_dir: Path, hold: Path, paths: list[str], day: dt.date) -> str | N
     # snapshots, context windows and effort ratings go back to base too.
     held_data = [
         p
-        for p in (*ai.PROVIDER_SNAPSHOTS, ai.CONTEXT_WINDOWS, ai.EFFORT_RATINGS)
+        for p in (
+            *ai.PROVIDER_SNAPSHOTS,
+            ai.CONTEXT_WINDOWS,
+            ai.EFFORT_RATINGS,
+            ai.LAUNCH_TABLES,
+            ai.INDEX_ESTIMATES,
+        )
         if (base_dir / p).exists() and head_text(p) != base_text(p)
     ]
     for path in [*others, *held_data]:

@@ -889,7 +889,7 @@ export function ModelCatalog({
                           </span>
                         ) : (
                           <HoverCard
-                            label={`${m.name}: AA Index ${m.aa_index_source === "inherited" ? `about ${m.aa_index}, ${m.aa_inherited_from}'s until Artificial Analysis measures it` : m.aa_index_source === "estimated" ? `about ${m.aa_index} (±${m.aa_index_band}), roadmodel's estimate from ${m.aa_estimate_via ? `the launch benchmarks of ${m.aa_estimate_via.join(", ")}` : "its launch benchmarks"} until Artificial Analysis measures it` : m.aa_index}${m.aa_index_effort ? ` at ${effortWord(m.aa_index_effort)}` : ""}${m.value_frontier ? ", on the cost/quality frontier" : ""}. Show where it stands across every cost tier`}
+                            label={`${m.name}: AA Index ${m.aa_index_source === "inherited" ? `about ${m.aa_index}, ${m.aa_inherited_from}'s until Artificial Analysis measures it` : m.aa_index_source === "estimated" ? (m.aa_estimate_method === "prior" ? `about ${m.aa_index} (±${m.aa_index_band}), roadmodel's day-one estimate from measured catalog peers at its price and role until Artificial Analysis measures it` : m.aa_estimate_method === "predecessor" ? `about ${m.aa_index} (±${m.aa_index_band}), roadmodel's estimate from ${m.aa_estimate_anchors?.[0] ?? m.aa_inherited_from}'s measured AA Index until Artificial Analysis measures it` : `about ${m.aa_index} (±${m.aa_index_band}), roadmodel's estimate from ${m.aa_estimate_via ? `the launch benchmarks of ${m.aa_estimate_via.join(", ")}` : "its launch benchmarks"} until Artificial Analysis measures it`) : m.aa_index}${m.aa_index_effort ? ` at ${effortWord(m.aa_index_effort)}` : ""}${m.value_frontier ? ", on the cost/quality frontier" : ""}. Show where it stands across every cost tier`}
                             card={
                               <IndexCard
                                 model={m}
@@ -923,9 +923,13 @@ export function ModelCatalog({
                                 data-testid="aa-index-estimate"
                                 data-source="estimated"
                                 title={
-                                  m.aa_estimate_via
-                                    ? `Estimated by roadmodel from the launch benchmarks of ${m.aa_estimate_via.join(", ")}, which list ${m.name} beside models Artificial Analysis has measured (±${m.aa_index_band}), until Artificial Analysis measures it`
-                                    : `Estimated by roadmodel from ${m.name}'s launch benchmarks (±${m.aa_index_band}), until Artificial Analysis measures it`
+                                  m.aa_estimate_method === "prior"
+                                    ? `Estimated by roadmodel from measured catalog peers at ${m.name}'s price and role (±${m.aa_index_band}), until Artificial Analysis measures it`
+                                    : m.aa_estimate_method === "predecessor"
+                                      ? `Estimated by roadmodel from ${m.aa_estimate_anchors?.[0] ?? m.aa_inherited_from}'s measured AA Index (±${m.aa_index_band}), until Artificial Analysis measures ${m.name}`
+                                      : m.aa_estimate_via
+                                        ? `Estimated by roadmodel from the launch benchmarks of ${m.aa_estimate_via.join(", ")}, which list ${m.name} beside models Artificial Analysis has measured (±${m.aa_index_band}), until Artificial Analysis measures it`
+                                        : `Estimated by roadmodel from ${m.name}'s launch benchmarks (±${m.aa_index_band}), until Artificial Analysis measures it`
                                 }
                               >
                                 ≈
@@ -937,7 +941,9 @@ export function ModelCatalog({
                                 data-testid="aa-index-effort"
                                 title={
                                   m.aa_index_source === "estimated"
-                                    ? m.aa_estimate_via
+                                    ? m.aa_estimate_via ||
+                                      m.aa_estimate_method === "prior" ||
+                                      m.aa_estimate_method === "predecessor"
                                       ? `Estimated at ${effortWord(m.aa_index_effort)} effort, the top setting ${m.name} offers`
                                       : `Estimated at ${effortWord(m.aa_index_effort)} effort, the top setting ${m.name} offers and the one its launch benchmarks report`
                                     : `Measured at ${effortWord(m.aa_index_effort)} effort, the top one Artificial Analysis ran it at`
@@ -986,7 +992,7 @@ export function ModelCatalog({
                             cardTestId="score-card"
                             className="tabular-nums"
                           >
-                            {m.aa_index_source === "estimated" && (
+                            {(m.aa_index_source === "estimated" || m.aa_index_source === "inherited") && (
                               <span
                                 data-testid="score-estimate"
                                 title={`From ${m.name}'s estimated AA Index, until Artificial Analysis measures it`}

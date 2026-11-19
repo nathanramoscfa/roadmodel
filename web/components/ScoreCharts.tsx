@@ -108,7 +108,14 @@ function TierChart({
       rows
         // The charts show the fit through AA's measurements: an estimated
         // model's Score is in the table, not on these lines.
-        .filter((r) => r.tier_cost === tier && r.aa_index !== null && r.value_score !== null && r.aa_index_source !== "estimated")
+        .filter(
+          (r) =>
+            r.tier_cost === tier &&
+            r.aa_index !== null &&
+            r.value_score !== null &&
+            r.aa_index_source !== "estimated" &&
+            r.aa_index_source !== "inherited",
+        )
         .map((r) => {
           const price = blendedPrice(r.input_price_per_1m, r.output_price_per_1m);
           const x = Math.log10(price);
@@ -554,7 +561,12 @@ export function ScoreCharts({
   const fitted = TIER_ORDER.filter((t) => (fit.tiers[t]?.n ?? 0) >= 2);
   if (fitted.length === 0) return null;
   const plotted = rows.filter(
-    (r) => r.aa_index !== null && r.value_score !== null && r.aa_index_source !== "estimated" && fitted.includes(r.tier_cost),
+    (r) =>
+      r.aa_index !== null &&
+      r.value_score !== null &&
+      r.aa_index_source !== "estimated" &&
+      r.aa_index_source !== "inherited" &&
+      fitted.includes(r.tier_cost),
   );
   const tiers = fitted.filter((t) => plotted.some((r) => r.tier_cost === t));
   const byId = new Map(pool.map((r) => [r.id, r]));

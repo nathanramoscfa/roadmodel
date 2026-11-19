@@ -238,6 +238,8 @@ jobs:
         # Strict no-op when the docs already match the snapshots. See
         # update/merge_catalog.py.
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           set -euo pipefail
           git show HEAD:docs/model-selector.txt > /tmp/base-selector.txt
@@ -299,6 +301,13 @@ jobs:
           # step at a time, a new model from its computed placeholder). Edits
           # that break one are reverted; the report rides in the PR body.
           python update/rating_guard.py --apply --base /tmp/base-selector.txt --declarations update/.last-warnings.txt
+          # Launch-table estimates: build catalog so any newly admitted model is
+          # visible on the roster, collect its vendor launch tables (fail-open
+          # on transient API/budget limits), and compute day-one estimates +
+          # fallback multimodal/speed letters before derive_ratings runs.
+          python update/build_catalog.py
+          python update/collect_launch_tables.py || true
+          python update/build_index_estimates.py
           # Derived ratings overlay: tier-coding/agentic/long-context/knowledge
           # are a function of docs/benchmarks.json (update/derive_ratings.py),
           # so any Opus edit to them is reverted here and the coding S-tier
@@ -375,6 +384,7 @@ jobs:
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         run: |
           set -euo pipefail
+          python update/collect_launch_tables.py --prune-only
           python update/build_catalog.py
           cp docs/catalog.json /tmp/catalog-run1.json
           python update/build_catalog.py
@@ -383,6 +393,7 @@ jobs:
             diff /tmp/catalog-run1.json docs/catalog.json || true
             exit 1
           fi
+          python update/build_index_estimates.py
 
       - name: Catalog conformance + price-coverage report
         # G1-G4 are fatal here (schema, positive prices, tier mapping, composition,
@@ -412,7 +423,7 @@ jobs:
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          REFRESH_PATHS: docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json docs/context-windows.json docs/effort-ratings.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json
+          REFRESH_PATHS: docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json docs/context-windows.json docs/effort-ratings.json docs/index-estimates.json update/launch-tables.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json
         run: |
           set -euo pipefail
           nl=$'\n'  # joins sections: $( ) strips the trailing newlines of what it captures
@@ -431,7 +442,7 @@ jobs:
           python update/render_md.py
           # Validate final generated data before publishing or promoting source hashes.
           python update/automation_integrity.py
-          if git diff --quiet -- docs/ update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json; then
+          if git diff --quiet -- docs/ update/launch-tables.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json; then
             echo "No changes to commit."
             exit 0
           fi
@@ -462,7 +473,7 @@ jobs:
           if [ -s update/.last-held.md ]; then
             warnings="${warnings}${nl}${nl}$(cat update/.last-held.md)${nl}${nl}They wait in the draft PR from \`chore/catalog-review\`."
           fi
-          git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json docs/context-windows.json docs/effort-ratings.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json
+          git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json docs/context-windows.json docs/effort-ratings.json docs/index-estimates.json update/launch-tables.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json
           git commit -m "Automated catalog refresh: ${DATE}" -m "${summary}${warnings}"
           # Literal Markdown/jq syntax; shell expansion is not intended.
           # shellcheck disable=SC2016
@@ -499,7 +510,7 @@ jobs:
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          REFRESH_PATHS: docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json docs/context-windows.json docs/effort-ratings.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json
+          REFRESH_PATHS: docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json docs/context-windows.json docs/effort-ratings.json docs/index-estimates.json update/launch-tables.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json
         run: |
           set -euo pipefail
           # shellcheck disable=SC2086  # one path per word

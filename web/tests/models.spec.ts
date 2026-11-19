@@ -124,16 +124,16 @@ function shownIndexFor(m: ScoredModel): number | null {
   return typeof copied === "number" ? copied : null;
 }
 
-// The index a model's Score is read from: AA's own, else the estimate. An
-// earlier version's copy has no Score.
+// The index a model's Score is read from: AA's own, else the estimate (or
+// inherited fallback).
 function scoreIndexFor(m: ScoredModel): number | null {
-  return aaIndexFor(m) ?? estimateFor(m.id)?.index ?? null;
+  return shownIndexFor(m);
 }
 
 const WITH_AA = scored.find((m) => aaIndexFor(m) !== null)!;
 // An Anthropic model from today's catalog, for tests that need one by maker.
 const ANTHROPIC_MODEL = catalog.models.find((m) => /^(claude-|opus-|sonnet-|haiku-)/.test(m.id))!;
-const WITHOUT_ANY = scored.find((m) => shownIndexFor(m) === null)!;
+const WITHOUT_ANY = scored.find((m) => shownIndexFor(m) === null);
 const AA_VALUE = String(aaIndexFor(WITH_AA));
 
 // The frontier, computed independently of the page: every measured model at
@@ -290,11 +290,21 @@ test("Group by Cost tier: Score within each tier (priciest first); Output toggle
     await expect(header.getByTestId("score-group-prices")).toContainText(`output ${range(outs, 4)}`);
     await expect(header.getByTestId("score-group-prices")).toContainText(`blended ${range(blends, 2)}`);
   }
-  // Sorting by AA Index still puts the highest-index model on top, unmeasured last.
+  // Sorting by AA Index still puts the highest-index model on top, and the lowest/unmeasured last.
   await page.getByRole("button", { name: /^AA Index/ }).click();
-  const top = [...scored].filter((m) => shownIndexFor(m) !== null).sort((a, b) => shownIndexFor(b)! - shownIndexFor(a)!)[0];
+  const byIndex = [...scored]
+    .filter((m) => shownIndexFor(m) !== null)
+    .sort((a, b) => shownIndexFor(b)! - shownIndexFor(a)!);
+  const top = byIndex[0];
+  const bottom = byIndex[byIndex.length - 1];
   await expect(page.getByTestId("model-row").first()).toContainText(top.name);
-  await expect(page.getByTestId("model-row").last().getByTestId("aa-index")).toHaveText("—");
+  if (WITHOUT_ANY) {
+    await expect(page.getByTestId("model-row").last().getByTestId("aa-index")).toHaveText("—");
+  } else {
+    await expect(page.getByTestId("model-row").last().getByTestId("aa-index")).toContainText(
+      String(shownIndexFor(bottom)),
+    );
+  }
 
   await page.getByRole("button", { name: /Output/ }).click();
   await expect(page.getByTestId("model-row").first()).toContainText(PRICIEST_MODEL);
@@ -669,9 +679,9 @@ test("rating cells are letters only; the Score column is the cost-adjusted score
     const firstBlank = group.findIndex((c) => c.value === "");
     if (firstBlank !== -1) expect(group.slice(firstBlank).every((c) => c.value === "")).toBe(true);
   }
-  // Every fitted model has a Score, and so does every estimated one.
-  const estimated = scored.filter((m) => aaIndexFor(m) === null && estimateFor(m.id) !== null).length;
-  expect(measuredSeen).toBe(fit!.n + estimated);
+  // Every fitted model has a Score, and so does every unmeasured one with an estimate or inherited index.
+  const unmeasuredWithIndex = scored.filter((m) => aaIndexFor(m) === null && shownIndexFor(m) !== null).length;
+  expect(measuredSeen).toBe(fit!.n + unmeasuredWithIndex);
 });
 
 test("measured letters match the published bands; every other letter is marked estimated", async ({ page }) => {
@@ -1580,15 +1590,26 @@ test("a later version AA has not measured shows its earlier version's index, mar
   const row = page.locator(`[data-testid="model-row"][data-model-id="${heir!.id}"]`);
   await expect(row.getByTestId("aa-index")).toHaveText(`≈${shownIndexFor(heir!)}`);
   await expect(row.getByTestId("aa-index-estimate")).toHaveAttribute("title", `Estimated: ${sourceName}'s AA Index, until Artificial Analysis measures ${heir!.name}`);
-  // An estimate has no Score: the market comparison is for AA's own figures.
-  await expect(row.getByTestId("value-cell")).toHaveAttribute("data-value", "");
+  // An inherited index carries a Score too, marked ≈ as well.
+  await expect(row.getByTestId("value-cell")).not.toHaveAttribute("data-value", "");
+  await expect(row.getByTestId("score-estimate")).toHaveText("≈");
   await row.getByTestId("aa-index-trigger").hover();
   await expect(page.getByTestId("aa-index-card")).toContainText(`An estimate: ${sourceName}'s index`);
 });
 
 test("a model AA has not measured shows roadmodel's estimate, marked ≈, with a Score and a quality band", async ({ page }) => {
-  const est = scored.find((m) => aaIndexFor(m) === null && estimateFor(m.id));
-  test.skip(!est, "no unmeasured catalog model has an estimate today");
+  const est = scored.find((m) => {
+    if (aaIndexFor(m) !== null) return false;
+    const e = estimateFor(m.id);
+    return (
+      e !== null &&
+      e.anchors.length > 0 &&
+      e.via.length === 0 &&
+      e.method !== "predecessor" &&
+      e.method !== "prior"
+    );
+  });
+  test.skip(!est, "no unmeasured catalog model has an anchor estimate today");
   const e = estimateFor(est!.id)!;
   await page.goto("/models");
   const row = page.locator(`[data-testid="model-row"][data-model-id="${est!.id}"]`);
@@ -1622,4 +1643,26 @@ test("a model AA has not measured shows roadmodel's estimate, marked ≈, with a
     `xpath=preceding-sibling::tr[@data-testid="quality-group"][1]`,
   );
   await expect(header).toHaveAttribute("data-band", band);
+});
+
+test("every catalog model has an AA Index, Score, quality band, and differentiated rating letters from day one", async ({ page }) => {
+  await page.goto("/models");
+  await expect(page.locator('[data-testid="quality-group"][data-band="none"]')).toHaveCount(0);
+  const rows = await page.getByTestId("model-row").evaluateAll((els) =>
+    els.map((el) => ({
+      id: el.getAttribute("data-model-id"),
+      aaText: el.querySelector('[data-testid="aa-index"]')?.textContent?.trim() ?? "",
+      scoreValue: el.querySelector('[data-testid="value-cell"]')?.getAttribute("data-value") ?? "",
+      scoreText: el.querySelector('[data-testid="value-cell"]')?.textContent?.trim() ?? "",
+      ratings: Array.from(el.querySelectorAll('[data-testid="rating-cell"]')).map((r) => r.textContent?.trim() ?? ""),
+    })),
+  );
+  expect(rows).toHaveLength(MODEL_COUNT);
+  for (const r of rows) {
+    expect(r.aaText, `${r.id} aa-index`).not.toBe("—");
+    expect(r.aaText, `${r.id} aa-index`).not.toBe("");
+    expect(r.scoreValue, `${r.id} value-cell data-value`).not.toBe("");
+    expect(r.scoreText, `${r.id} value-cell text`).not.toBe("—");
+    expect(r.ratings.join(""), `${r.id} ratings`).not.toBe("BBBBBBB");
+  }
 });
