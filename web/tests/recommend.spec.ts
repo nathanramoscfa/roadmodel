@@ -101,6 +101,8 @@ test("a pick carries the catalog's facts: blended price, AA Index, Score, rating
   // the card that shows how it adds up.
   await cell("__aa").getByTestId("pick-aa-index").hover();
   await expect(page.getByTestId("frontier-point-card")).toBeVisible();
+  await page.mouse.move(2, 2);
+  await expect(page.getByTestId("frontier-point-card")).toHaveCount(0);
   await cell("__score").getByTestId("pick-score").hover();
   await expect(page.getByTestId("score-breakdown")).toBeVisible();
   // The pick runs at High: its Score prices the tokens it draws there, as the
