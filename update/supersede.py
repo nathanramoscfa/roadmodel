@@ -56,7 +56,7 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 UPDATE_DIR = Path(__file__).resolve().parent
 if str(UPDATE_DIR) not in sys.path:
@@ -71,6 +71,7 @@ from build_catalog import (  # noqa: E402
     _parse_price,
 )
 from selector_re import MODEL_RE  # noqa: E402
+from stale_claims import maker_of  # noqa: E402
 from validate_catalog_conformance import _model_makers  # noqa: E402
 
 REPO_ROOT = UPDATE_DIR.parent
@@ -84,6 +85,42 @@ RATING_RANK = {"S": 5, "A": 4, "B": 3, "C": 2, "D": 1}
 _OPTIONS_RE = re.compile(r"<model-options>(.*?)</model-options>", re.DOTALL)
 _CITED_AA_RE = re.compile(r"AA Intelligence Index\s+(\d+(?:\.\d+)?)")
 _TAG_ATTR_RE = re.compile(r'\s+(?:superseded-by|superseded-on|retired-on)="[^"]*"')
+
+AGGREGATOR_METHODS: Final[frozenset[str]] = frozenset({"cursor", "openrouter", "ollama"})
+
+# Series parser mirrored verbatim from src/roadmodel/series.py (keep in sync).
+_SIZE_RE: Final = re.compile(r"(?<![a-z0-9.])a?\d+(?:\.\d+)?[bmk](?![a-z0-9])")
+_VENDOR_WORDS: Final[frozenset[str]] = frozenset({"claude"})
+
+
+def _split(model_id: str) -> tuple[str, tuple[str, ...]]:
+    text = model_id.lower()
+    return _SIZE_RE.sub(" ", text), tuple(sorted(_SIZE_RE.findall(text)))
+
+
+def series(model_id: str) -> frozenset[str]:
+    """The id's name words, plus any size; empty when it has no name word."""
+    rest, sizes = _split(model_id)
+    words = frozenset(re.findall(r"[a-z]+", rest)) - _VENDOR_WORDS
+    if not words:
+        return frozenset()
+    return words | frozenset(f"size:{s}" for s in sizes)
+
+
+def version(model_id: str) -> tuple[int, ...]:
+    """The id's version numbers, in order: ``gpt-6.1-sol`` → (6, 1)."""
+    rest, _ = _split(model_id)
+    return tuple(int(n) for n in re.findall(r"\d+", rest))
+
+
+def is_newer(old: str, new: str) -> bool:
+    """Whether ``new`` is a later version of ``old``'s series."""
+    s = series(old)
+    return bool(s) and s == series(new) and version(new) > version(old)
+
+
+def _pad_version(model_id: str) -> tuple[int, ...]:
+    return tuple(-n for n in (version(model_id) + (0, 0, 0, 0))[:4])
 
 
 @dataclass(frozen=True)
@@ -189,6 +226,37 @@ def unavailable_ids(path: Path = AVAILABILITY_PATH) -> frozenset[str]:
     return frozenset(str(e.get("id") if isinstance(e, dict) else e) for e in entries if e)
 
 
+def _makers(selector_text: str, models: list[Model]) -> dict[str, str]:
+    """Each model's maker: first-party method provider, else its id prefix."""
+    out = _model_makers(selector_text)
+    for m in models:
+        if m.id not in out:
+            inferred = maker_of(m.id)
+            if inferred is not None:
+                out[m.id] = inferred
+    return out
+
+
+def _method_providers(selector_text: str) -> dict[str, str]:
+    return {
+        str(m["id"]): str(m["provider"])
+        for m in _parse_access_methods(selector_text)
+        if m.get("id") and m.get("provider")
+    }
+
+
+def delisted_by_provider(directory: Path = UPDATE_DIR) -> dict[str, set[str]]:
+    """Model ids each maker's scraped catalog marks missing from its API."""
+    out: dict[str, set[str]] = {}
+    for p in sorted(directory.glob("catalog-*.json")):
+        raw = json.loads(p.read_text())
+        provider = raw.get("provider")
+        missing = raw.get("missing_mapped_models") or []
+        if provider and missing:
+            out.setdefault(str(provider), set()).update(str(m) for m in missing if m)
+    return out
+
+
 def _offered(selector_text: str) -> dict[str, set[str]]:
     """Each model id -> the access methods whose supports-models list it."""
     offered: dict[str, set[str]] = {}
@@ -198,10 +266,24 @@ def _offered(selector_text: str) -> dict[str, set[str]]:
     return offered
 
 
+def _required_methods(
+    mid: str,
+    offered: dict[str, set[str]],
+    method_providers: dict[str, str],
+    delisted: dict[str, set[str]],
+) -> set[str]:
+    """Access methods a successor must cover: ignore aggregators when first-party
+    methods exist, and exclude provider-delisted channels."""
+    where = offered.get(mid, set())
+    first_party = where - AGGREGATOR_METHODS
+    req = first_party if first_party else where
+    return {m for m in req if mid not in delisted.get(method_providers.get(m, ""), ())}
+
+
 def _beats(old: Model, new: Model, makers: dict[str, str], unavailable: frozenset[str]) -> bool:
-    """Every supersession test but coverage: same maker, available, no
-    dearer, a higher AA Index (an unmeasured newcomer's discounted estimate),
-    rated at least as high everywhere."""
+    """Every supersession test but coverage: same maker, available, higher
+    AA Index (an unmeasured newcomer's discounted estimate), plus for cross-series
+    replacements no dearer blended price and ratings at least as high everywhere."""
     maker = makers.get(old.id)
     if maker is None or old.aa_index is None:
         return False
@@ -210,41 +292,59 @@ def _beats(old: Model, new: Model, makers: dict[str, str], unavailable: frozense
         return False
     if new.id in unavailable:
         return False
+    if is_newer(old.id, new.id):
+        return standing > old.aa_index
     if not (new.blended <= old.blended and standing > old.aa_index):
         return False
     return all(new.ratings[c] >= old.ratings[c] for c in TASK_CATEGORIES)
 
 
 def successors(
-    selector_text: str, models: list[Model], unavailable: frozenset[str] = frozenset()
+    selector_text: str,
+    models: list[Model],
+    unavailable: frozenset[str] = frozenset(),
+    delisted: dict[str, set[str]] | None = None,
 ) -> dict[str, str]:
-    """Each superseded model's id -> its successor's id. A benched model is
-    no successor."""
-    makers = _model_makers(selector_text)
+    """Each superseded model's id -> the active head of its superseding line.
+    A benched model is no successor."""
+    makers = _makers(selector_text, models)
     offered = _offered(selector_text)
+    method_providers = _method_providers(selector_text)
+    if delisted is None:
+        delisted = delisted_by_provider()
     out: dict[str, str] = {}
     for old in models:
-        where = offered.get(old.id, set())
+        req = _required_methods(old.id, offered, method_providers, delisted)
         best: Model | None = None
         for new in models:
             if not _beats(old, new, makers, unavailable):
                 continue
-            if not where <= offered.get(new.id, set()):
+            if not req <= offered.get(new.id, set()):
                 continue
-            if best is None or (-new.standing, new.blended, new.id) < (  # type: ignore[operator]
-                -best.standing,  # type: ignore[operator]
-                best.blended,
-                best.id,
-            ):
+            cand_key = (-new.standing, _pad_version(new.id), new.blended, new.id)  # type: ignore[operator]
+            best_key = (
+                (-best.standing, _pad_version(best.id), best.blended, best.id)  # type: ignore[operator]
+                if best is not None
+                else None
+            )
+            if best_key is None or cand_key < best_key:
                 best = new
         if best is not None:
             out[old.id] = best.id
+    # Resolve transitively so multi-hop supersession points directly at the active head.
+    for mid in list(out):
+        seen = {mid}
+        cur = out[mid]
+        while cur in out and out[cur] not in seen:
+            seen.add(cur)
+            cur = out[cur]
+        out[mid] = cur
     return out
 
 
 @dataclass(frozen=True)
 class NearMiss:
-    """A same-maker model that passes every supersession test against ``old``
+    """A same-maker model that passes every test against ``old``
     except coverage: the access methods in ``missing`` offer ``old`` and do
     not list ``new``, so ``old`` stays in the catalog."""
 
@@ -260,22 +360,28 @@ _NEAR_MISS_RE = re.compile(r"^NEAR-MISS (?P<old>\S+) -> (?P<new>\S+): missing on
 
 
 def near_misses(
-    selector_text: str, models: list[Model], unavailable: frozenset[str] = frozenset()
+    selector_text: str,
+    models: list[Model],
+    unavailable: frozenset[str] = frozenset(),
+    delisted: dict[str, set[str]] | None = None,
 ) -> list[NearMiss]:
     """Every near-miss among ``models`` whose old model has no successor yet
     (a model already superseded has nothing to wait for)."""
-    makers = _model_makers(selector_text)
+    makers = _makers(selector_text, models)
     offered = _offered(selector_text)
-    superseded = successors(selector_text, models, unavailable)
+    method_providers = _method_providers(selector_text)
+    if delisted is None:
+        delisted = delisted_by_provider()
+    superseded = successors(selector_text, models, unavailable, delisted)
     out: list[NearMiss] = []
     for old in models:
         if old.id in superseded:
             continue
-        where = offered.get(old.id, set())
+        req = _required_methods(old.id, offered, method_providers, delisted)
         for new in models:
             if not _beats(old, new, makers, unavailable):
                 continue
-            missing = where - offered.get(new.id, set())
+            missing = req - offered.get(new.id, set())
             if missing:
                 out.append(NearMiss(old.id, new.id, tuple(sorted(missing))))
     return out
@@ -328,6 +434,7 @@ def plan(
     base: dict[str, Tags] | None = None,
     unavailable: frozenset[str] = frozenset(),
     estimates: dict[str, Any] | None = None,
+    delisted: dict[str, set[str]] | None = None,
 ) -> Plan:
     """What each model's tags should be after this run. ``base`` holds the tags
     of the committed selector, so a tag a regenerated file dropped comes back
@@ -346,7 +453,11 @@ def plan(
             result.tags[m.id] = Tags(by, since, retired)
         else:
             live.append(m)
-    succ = successors(selector_text, live, unavailable)
+    if delisted is None:
+        delisted = delisted_by_provider()
+    delisted_ids = {mid for ids in delisted.values() for mid in ids}
+    makers = _makers(selector_text, live)
+    succ = successors(selector_text, live, unavailable, delisted)
     for m in live:
         recorded = base.get(m.id)
         if m.id not in succ:
@@ -357,7 +468,17 @@ def plan(
         if first_seen is None:
             first_seen = today.isoformat()
             result.newly.append(m.id)
-        if (today - dt.date.fromisoformat(first_seen)).days >= RETIRE_AFTER_DAYS:
+        newer_versions = sum(
+            1
+            for c in live
+            if c.id != m.id and makers.get(c.id) == makers.get(m.id) and is_newer(m.id, c.id)
+        )
+        retire_now = (
+            (today - dt.date.fromisoformat(first_seen)).days >= RETIRE_AFTER_DAYS
+            or m.id in delisted_ids
+            or newer_versions >= 2
+        )
+        if retire_now:
             result.tags[m.id] = Tags(succ[m.id], first_seen, today.isoformat())
             result.retired.append(m.id)
         else:

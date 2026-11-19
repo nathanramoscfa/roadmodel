@@ -12,12 +12,12 @@
       "medium": {
         "coding": "A",
         "planning": "A",
-        "agentic": "S",
+        "agentic": "A",
         "long-context": "S",
         "knowledge": "A"
       },
       "high": {
-        "coding": "S",
+        "coding": "A",
         "planning": "A",
         "agentic": "S",
         "long-context": "S",
@@ -176,36 +176,6 @@
         "knowledge": "B"
       }
     },
-    "gpt-5.6-sol": {
-      "low": {
-        "coding": "A",
-        "planning": "B",
-        "agentic": "B",
-        "long-context": "A",
-        "knowledge": "B"
-      },
-      "medium": {
-        "coding": "A",
-        "planning": "A",
-        "agentic": "A",
-        "long-context": "A",
-        "knowledge": "A"
-      },
-      "high": {
-        "coding": "A",
-        "planning": "A",
-        "agentic": "A",
-        "long-context": "A",
-        "knowledge": "A"
-      },
-      "xhigh": {
-        "coding": "A",
-        "planning": "A",
-        "agentic": "A",
-        "long-context": "A",
-        "knowledge": "A"
-      }
-    },
     "gpt-5.6-terra": {
       "low": {
         "coding": "A",
@@ -215,7 +185,7 @@
         "knowledge": "B"
       },
       "medium": {
-        "coding": "B",
+        "coding": "A",
         "planning": "B",
         "agentic": "B",
         "long-context": "A",
@@ -247,7 +217,7 @@
       "medium": {
         "coding": "A",
         "planning": "A",
-        "agentic": "S",
+        "agentic": "A",
         "long-context": "A",
         "knowledge": "A"
       },
@@ -296,36 +266,6 @@
         "knowledge": "B"
       }
     },
-    "gpt-6-sol": {
-      "low": {
-        "coding": "A",
-        "planning": "B",
-        "agentic": "B",
-        "long-context": "A",
-        "knowledge": "B"
-      },
-      "medium": {
-        "coding": "A",
-        "planning": "A",
-        "agentic": "A",
-        "long-context": "A",
-        "knowledge": "B"
-      },
-      "high": {
-        "coding": "A",
-        "planning": "A",
-        "agentic": "A",
-        "long-context": "S",
-        "knowledge": "A"
-      },
-      "xhigh": {
-        "coding": "A",
-        "planning": "A",
-        "agentic": "A",
-        "long-context": "A",
-        "knowledge": "A"
-      }
-    },
     "gpt-6.1-sol": {
       "low": {
         "coding": "A",
@@ -337,14 +277,14 @@
       "medium": {
         "coding": "A",
         "planning": "A",
-        "agentic": "S",
+        "agentic": "A",
         "long-context": "A",
         "knowledge": "A"
       },
       "high": {
         "coding": "A",
         "planning": "A",
-        "agentic": "S",
+        "agentic": "A",
         "long-context": "A",
         "knowledge": "A"
       },

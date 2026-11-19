@@ -263,6 +263,7 @@ jobs:
           if [ -n "${codex_ids}" ]; then
             python update/merge_catalog.py --sync-method codex-cli --ids "${codex_ids}"
             python update/merge_catalog.py --sync-method codex-api --ids "${codex_ids}"
+            python update/merge_catalog.py --sync-method chatgpt-app --ids "${codex_ids}"
           fi
           # Claude Code's docs list the models it runs in their effort table
           # (update/claude-code-effort.json, refreshed daily); a catalogued one
@@ -277,6 +278,13 @@ jobs:
             # Fable 5.2 and Haiku 5.5 never reached claude-web, and the models
             # they replace could never be superseded (update/supersede.py).
             python update/merge_catalog.py --sync-method claude-web --ids "${claude_code_ids}"
+          fi
+          # Google's Gemini app and Gemini CLI expose its non-lite Gemini models;
+          # mirror the scraped update/catalog-google.json roster onto both surfaces.
+          gemini_ids="$(python -c "import json; print(','.join(m['id'] for m in json.load(open('update/catalog-google.json'))['models'] if 'lite' not in m['id']))" || true)"
+          if [ -n "${gemini_ids}" ]; then
+            python update/merge_catalog.py --sync-method gemini-app --ids "${gemini_ids}"
+            python update/merge_catalog.py --sync-method gemini-cli --ids "${gemini_ids}"
           fi
           # Cursor prices every model it runs on its Models & Pricing page; a
           # catalogued one belongs on the cursor method. Same pattern:

@@ -27,7 +27,7 @@
       "anchors": [],
       "band": 6.0,
       "effort": null,
-      "index": 19.0,
+      "index": 20.3,
       "letters": {
         "speed": "A"
       },
@@ -38,7 +38,7 @@
       "anchors": [],
       "band": 6.0,
       "effort": null,
-      "index": 33.0,
+      "index": 34.4,
       "method": "prior",
       "rows": 0
     },
@@ -89,7 +89,7 @@
         "claude-opus-5-5"
       ],
       "band": 4.5,
-      "effort": null,
+      "effort": "xhigh",
       "figures": {
         "hle": 0.6038,
         "lcr": 0.8359,

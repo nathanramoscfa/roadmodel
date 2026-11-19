@@ -66,17 +66,35 @@ function liveModels(now: Date = new Date()): RawModel[] {
 }
 
 interface RawMethod {
+  id?: string;
+  name?: string;
   provider_jurisdiction: string;
   supports_models: string[];
+  default_effort_by_model?: Record<string, string>;
 }
+const RAW_METHODS = (catalog as { access_methods?: RawMethod[] }).access_methods ?? [];
+
 // The open-weight models: the ones a local method (Ollama, on the operator's
 // own hardware) serves. The selector curates that list by licence, so the
 // recommender's local option and this page's Weights filter read one list.
 const OPEN_WEIGHTS = new Set(
-  ((catalog as { access_methods?: RawMethod[] }).access_methods ?? [])
+  RAW_METHODS
     .filter((m) => m.provider_jurisdiction === "local")
     .flatMap((m) => m.supports_models),
 );
+
+function defaultEffortsFor(id: string): { surface: string; effort: string }[] | undefined {
+  const seen = new Set<string>();
+  const out: { surface: string; effort: string }[] = [];
+  for (const method of RAW_METHODS) {
+    const effort = method.default_effort_by_model?.[id];
+    const surface = method.name;
+    if (!effort || !surface || seen.has(surface)) continue;
+    seen.add(surface);
+    out.push({ surface, effort });
+  }
+  return out.length > 0 ? out : undefined;
+}
 
 interface RawBench {
   aa_slug: string;
@@ -271,9 +289,13 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
       aa_estimate_anchors: estimate ? estimate.anchors.map(nameOf) : null,
       aa_estimate_via: estimate && estimate.via.length ? estimate.via.map(nameOf) : null,
       aa_estimated_categories: estimate ? estimatedCategories(m.id) : null,
+      aa_estimated_figures: estimate
+        ? ((ESTIMATES[m.id]?.figures as Partial<Record<BenchKey, number>> | undefined) ?? null)
+        : null,
       aa_index_by_effort: indexByEffort(m.id),
       aa_index_effort: measured !== null ? (BENCH[m.id]?.aa_effort ?? null) : (estimate?.effort ?? null),
       token_multiplier_by_effort: multiplierByEffort(m.id),
+      default_efforts: defaultEffortsFor(m.id),
       tiers_by_effort: EFFORT_RATINGS[m.id],
       bench,
       value_score: null,

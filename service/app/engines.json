@@ -22,7 +22,7 @@
       "max_output_tokens": 2048,
       "ladder_max_output_tokens": 6144,
       "temperature": null,
-      "menu": "invited",
+      "menu": null,
       "notes": "The default from 2026-09-22 to 2026-10-02 (12-probe differential vs gpt-5-mini: 12/12 parsed, no cost-demotion of the Quality pick). Reasoning at its floor (low; the 5.6 generation has no minimal). Twice GPT-6 Luna's cold cost; still on the menu."
     },
     {
@@ -35,7 +35,7 @@
       "ladder_max_output_tokens": 6144,
       "temperature": null,
       "menu": "invited",
-      "notes": "The default since 2026-10-02. 12-probe engine eval (scripts/eval_recommend_engines.py): 12/12 parsed with every field and section, healthy ladders, $0.0015 per recommendation with the prompt cached ($0.0066 cold) — the cheapest engine — and Quality anchored on the flagship (Opus 5.5) on 11/12 probes even before the anchor-rule fix. Needs roadmodel >= 0.2.56 for its reasoning cap."
+      "notes": "The default since 2026-10-02. 12-probe engine eval (scripts/eval_recommend_engines.py): 12/12 parsed with every field and section, healthy ladders, $0.0015 per recommendation with the prompt cached ($0.0066 cold) \u2014 the cheapest engine \u2014 and Quality anchored on the flagship (Opus 5.5) on 11/12 probes even before the anchor-rule fix. Needs roadmodel >= 0.2.56 for its reasoning cap."
     },
     {
       "hint": "google-gemini-3.8-flash",
@@ -110,18 +110,6 @@
       "notes": "GPT-6 Luna through OpenRouter, for a visitor who pays with OpenRouter credits (Phase 4.11 Step 3): the OpenAI-compatible adapter's openrouter entry, OpenRouter's id for the model, at OpenAI's price. That entry forwards no reasoning dial, so the model runs at OpenRouter's default reasoning. Never on roadmodel's account: no operator key, menu null."
     },
     {
-      "hint": "openai-gpt-6-sol",
-      "catalog_id": "gpt-6-sol",
-      "provider": "openai",
-      "model": "gpt-6-sol",
-      "thinking_budget": 0,
-      "max_output_tokens": 2048,
-      "ladder_max_output_tokens": 6144,
-      "temperature": null,
-      "menu": null,
-      "notes": "Same price as GPT-6.1 Sol, which supersedes it. Runnable for comparison."
-    },
-    {
       "hint": "openai-gpt-5.6-terra",
       "catalog_id": "gpt-5.6-terra",
       "provider": "openai",
@@ -132,18 +120,6 @@
       "temperature": null,
       "menu": null,
       "notes": "One tier up from Luna in the 5.6 generation. Runnable for comparison."
-    },
-    {
-      "hint": "google-gemini-2.5-flash",
-      "catalog_id": "gemini-2.5-flash",
-      "provider": "google",
-      "model": "gemini-2.5-flash",
-      "thinking_budget": 0,
-      "max_output_tokens": 512,
-      "ladder_max_output_tokens": 1536,
-      "temperature": 0.0,
-      "menu": null,
-      "notes": "The original free engine. Thinking off (#132 latency); the 512-token cap bounds the runaway-rationale tail (#146); temperature 0 for determinism (#176). Kept for rollback."
     },
     {
       "hint": "anthropic-haiku-4-5",

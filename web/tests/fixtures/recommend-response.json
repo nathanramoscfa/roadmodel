@@ -17,7 +17,7 @@
       },
       "conversation": "New",
       "backup": {
-        "model": "GPT-5.6 Terra",
+        "model": "GPT-6 Luna",
         "platform": "ChatGPT (web / desktop)",
         "settings": {
           "effort": "Medium",
@@ -78,7 +78,7 @@
       "priority": "cheap"
     },
     {
-      "model": "GPT-5.6 Terra",
+      "model": "GPT-6 Luna",
       "platform": "Codex",
       "settings": {
         "intelligence": "High",
@@ -101,8 +101,8 @@
         }
       },
       "session_cost_estimate": {
-        "model_id": "gpt-5.6-terra",
-        "model_name": "GPT-5.6 Terra",
+        "model_id": "gpt-6-luna",
+        "model_name": "GPT-6 Luna",
         "platform_id": "codex-cli",
         "platform_name": "Codex",
         "input_tokens": 1000,
@@ -117,8 +117,8 @@
       },
       "comparison_table": [
         {
-          "model_id": "gpt-5.6-terra",
-          "model_name": "GPT-5.6 Terra",
+          "model_id": "gpt-6-luna",
+          "model_name": "GPT-6 Luna",
           "platform_id": "chatgpt-app",
           "platform_name": "ChatGPT (web / desktop)",
           "input_tokens": 1000,
@@ -134,8 +134,8 @@
           "funded": true
         },
         {
-          "model_id": "gpt-5.6-terra",
-          "model_name": "GPT-5.6 Terra",
+          "model_id": "gpt-6-luna",
+          "model_name": "GPT-6 Luna",
           "platform_id": "codex-cli",
           "platform_name": "Codex",
           "input_tokens": 1000,

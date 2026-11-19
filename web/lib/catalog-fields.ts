@@ -10,7 +10,7 @@
 // import from the client `ModelCatalog` component. The server page reads the
 // catalog, maps it to ModelRow[], and passes the rows down as props.
 
-import type { BenchRow } from "@/lib/benchmark-grid";
+import type { BenchKey, BenchRow } from "@/lib/benchmark-grid";
 
 export type Category =
   | "coding"
@@ -73,6 +73,8 @@ export interface ModelRow {
   // The derived categories whose letter roadmodel's launch-table estimate sets
   // (S included), until Artificial Analysis measures the model.
   aa_estimated_categories?: Category[] | null;
+  // Component figures from a launch-table estimate, keyed by benchmark column.
+  aa_estimated_figures?: Partial<Record<BenchKey, number>> | null;
   // The effort AA ran the headline figure at: the model's top measured effort
   // ("max", "xhigh", …); for an estimate, the top effort its dials offer, the
   // setting its launch table reports; null when AA names none or the figure
@@ -87,6 +89,8 @@ export interface ModelRow {
   // a typical model at high (docs/effort-tokens.json). An effort missing here
   // reads the uniform table (lib/pick-effort.ts EFFORT_TOKEN_MULTIPLIER).
   token_multiplier_by_effort?: Record<string, number>;
+  // Per-surface vendor default effort levels (from catalog access_methods).
+  default_efforts?: { surface: string; effort: string }[];
   // The uniform Artificial Analysis figures (lib/benchmark-grid.ts), or null
   // when AA has not measured the model at all.
   bench: BenchRow | null;
@@ -198,6 +202,7 @@ export type FieldKey =
   | "cache_read_per_1m"
   | "tier_cost"
   | "aa_index"
+  | "effort"
   | "value"
   | "benchmarks";
 
@@ -252,6 +257,13 @@ export const FIELD_DEFS: Record<FieldKey, FieldDef> = {
     definition:
       "The one published composite number: Artificial Analysis's index over its evaluation suite, independently measured on a 0–100 scale. The closest thing to a single numeric rating — use it to separate models that share a letter. '≈' marks a model AA has not measured yet: roadmodel's day-one estimate, placing the model's launch benchmarks beside those of models AA has measured (corrected for how far that maker's earlier launch tables ran ahead of AA's measurement), or, where its launch table is not available, chained through comparable launch tables, its measured earlier version, or pricing peers — each with a Score from it. AA's own figure replaces the estimate once published. Index versions are not comparable with each other; the snapshot this page carries is named below. A green ring beside the figure marks the cost/quality frontier: a model that scores higher than every other model at its price or less (blended price). Hover a figure for the top score at its price.",
     url: "https://artificialanalysis.ai/",
+  },
+  effort: {
+    label: "Effort",
+    fullName: "Reasoning effort level",
+    definition:
+      "The reasoning effort setting at which this row's headline AA Index and category figures apply (Max, Extra high, High, Medium, Low, or Minimal). Reasoning models trade output tokens and latency for deeper thinking across these levels; hover a model's effort to compare its AA Index, relative token draw, and platform defaults across levels.",
+    url: "/docs",
   },
   value: {
     label: "Score",
