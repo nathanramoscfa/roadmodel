@@ -250,6 +250,34 @@ If the AI reports the step is NOT complete, it names what is
 outstanding; nothing is silently carried. Then close the chat and
 `/roadmap-step 1 4` in a new one.
 
+### Parallel steps in separate worktrees (`--worktree`)
+
+When a phase roadmap's **Execution Order** draws two or more steps in
+parallel (side by side with shared prerequisites), you can execute each
+one concurrently in its own dedicated chat tab without leaving your
+project window:
+
+```
+# Chat tab 1 (Step 2's model and platform):
+/roadmap-step 1 2 --worktree
+
+# Chat tab 2 (Step 3's model and platform):
+/roadmap-step 1 3 --worktree
+```
+
+Pass `--worktree=<path>` to override the directory name, or plain
+`--worktree` to use the location recorded in the roadmap (defaulting to
+sibling `../<repo>--<slug>`). Each step keeps its own isolated
+conversation, git worktree, branch, and PR, while the checkout your
+window opened in (`main` or an unrelated branch) stays untouched. The
+Status gate still inspects every upstream Execution Order prerequisite
+on `origin/main` and blocks undeclared parallelism. At Stage 3 and
+Stage 4, whichever parallel PR merges second rebases onto `origin/main`
+preserving every other step's `Complete` mark, merges with `gh pr merge
+<PR> --squash` (omitting `--delete-branch`, since `main` is checked out
+in the primary tree), and removes only its own worktree and branch at
+Stage 5 without touching active sibling worktrees.
+
 ### Progress at a glance
 
 No "update the roadmaps" chore exists — the marks land with the

@@ -858,3 +858,52 @@ def test_roadmap_project_asks_for_the_brief_when_none_is_given() -> None:
     assert "`{{CONSTRAINTS}}` = the hard constraints the brief states" in flat
     # The old rule fell back to the prompt's default brief (README.md) silently.
     assert '`{{BRIEF}}` = "$ARGUMENTS" if given, else the prompt\'s default' not in flat
+
+
+def test_roadmap_step_supports_worktree_mode_for_parallel_steps() -> None:
+    """Parallel Execution Order steps run concurrently in separate chats, each
+    in its own git worktree via `--worktree`, without mutating the primary
+    checkout or colliding on Stage 3/4/5."""
+    text = STEP_COMMAND.read_text()
+    flat = re.sub(r"\s+", " ", text)
+    # Usage and argument parsing.
+    assert "(usage: /roadmap-step 1 3 [--worktree] [roadmap-path])" in text
+    assert "PHASE STEP [--worktree[=PATH]] [ROADMAP_PATH]" in flat
+    # Status gate checks Execution Order prerequisites from origin/main and never bypasses them.
+    assert "git fetch origin" in text and "origin/main:<roadmap-path>" in text
+    assert "every upstream prerequisite drawn feeding into `Step {{STEP}}`" in flat
+    assert "every parallel branch feeding into it" in flat
+    assert "Passing `--worktree` never bypasses this status gate" in flat
+    # Isolated worktree creation, bootstrap, and port isolation.
+    assert "One conversation, one worktree." in flat
+    assert "git worktree add -b <branch> <worktree-path> origin/main" in flat
+    assert "primary tree's editable install" in flat
+    assert "free local ports" in flat
+    # Stage 3/4/5 parallel-safe rebase, merge, and cleanup.
+    assert "preserving every other step's `Complete` mark" in flat
+    assert (
+        "once every step in the phase — including any parallel sibling — already reads `Complete` on `origin/main`"
+        in flat
+    )
+    assert "gh pr merge <PR_NUMBER> --squash` — omit `--delete-branch`" in flat
+    assert "git worktree remove <worktree-path>" in flat
+    assert "Never remove or prune another step's active worktree." in flat
+    assert "ONLY if `PRIMARY_ROOT` is already cleanly on `main`" in flat
+    # Portability across OpenCode and Gemini CLI.
+    for token in ("@", "!`", "!{", "@{", "'''"):
+        assert token not in text, token
+
+
+def test_templates_align_worktree_merge_and_cleanup_for_parallel_steps() -> None:
+    """Templates must not tell a linked worktree session to switch into the
+    primary tree or pass `--delete-branch`, nor wipe active sibling worktrees."""
+    for path in (PHASE, PROJECT):
+        flat = re.sub(r"\s+", " ", path.read_text())
+        assert "Merge from the primary tree" not in flat, path.name
+        assert "omit `--delete-branch`" in flat, path.name
+        assert "preserving every other step's `Complete` mark" in flat, path.name
+        assert (
+            "active sibling parallel worktree untouched" in flat
+            or "active sibling worktrees untouched" in flat
+        ), path.name
+        assert "cleanly on `main`" in flat, path.name
