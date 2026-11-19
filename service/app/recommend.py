@@ -383,9 +383,8 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
                 # response is intentionally NOT logged (it can echo user input);
                 # issue #132 adds bounded debug capture inside parse_response.
                 logger.warning(
-                    "provider hint %r returned an unparseable response; "
-                    "falling through to the next provider in the chain",
-                    hint,
+                    "provider returned an unparseable response; "
+                    "falling through to the next provider in the chain"
                 )
             continue
 
@@ -684,9 +683,8 @@ def recommend_ladder(req: RecommendRequest) -> LadderResponse:
             last_error = exc
             if isinstance(exc, MalformedResponseError):
                 logger.warning(
-                    "provider hint %r returned an unparseable LADDER response; "
-                    "falling through to the next provider in the chain",
-                    hint,
+                    "provider returned an unparseable LADDER response; "
+                    "falling through to the next provider in the chain"
                 )
             continue
 
