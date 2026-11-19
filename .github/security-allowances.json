@@ -460,7 +460,7 @@
         "language": "python",
         "rule_id": "py/clear-text-storage-sensitive-data",
         "rule_sha256": "6d2da207d4dd612a0dd14e77e1ec851e5136fe8f9481a5523ac94e9d438b6282",
-        "run_configuration_sha256": "1efd42843eaf6aa8596c2770ea58ed621e08c9b394525a84d3e1857393ca27f8",
+        "run_configuration_sha256": "7650b3e2502ec6d2170cf17c03462ada74cd72577b1bdfc0c7d64176c8936a33",
         "sources": [
           {
             "mode": "100644",
@@ -650,7 +650,7 @@
         "language": "python",
         "rule_id": "py/clear-text-storage-sensitive-data",
         "rule_sha256": "6d2da207d4dd612a0dd14e77e1ec851e5136fe8f9481a5523ac94e9d438b6282",
-        "run_configuration_sha256": "1efd42843eaf6aa8596c2770ea58ed621e08c9b394525a84d3e1857393ca27f8",
+        "run_configuration_sha256": "7650b3e2502ec6d2170cf17c03462ada74cd72577b1bdfc0c7d64176c8936a33",
         "sources": [
           {
             "mode": "100644",
@@ -829,7 +829,7 @@
         "language": "python",
         "rule_id": "py/clear-text-storage-sensitive-data",
         "rule_sha256": "6d2da207d4dd612a0dd14e77e1ec851e5136fe8f9481a5523ac94e9d438b6282",
-        "run_configuration_sha256": "1efd42843eaf6aa8596c2770ea58ed621e08c9b394525a84d3e1857393ca27f8",
+        "run_configuration_sha256": "7650b3e2502ec6d2170cf17c03462ada74cd72577b1bdfc0c7d64176c8936a33",
         "sources": [
           {
             "mode": "100644",
@@ -1008,7 +1008,7 @@
         "language": "python",
         "rule_id": "py/log-injection",
         "rule_sha256": "05c52d6c72cc5e2355ba2cc20d8a2d11c8ed1c2bce0627105bde1b370d9483f6",
-        "run_configuration_sha256": "1efd42843eaf6aa8596c2770ea58ed621e08c9b394525a84d3e1857393ca27f8",
+        "run_configuration_sha256": "7650b3e2502ec6d2170cf17c03462ada74cd72577b1bdfc0c7d64176c8936a33",
         "sources": [
           {
             "mode": "100644",
@@ -1157,7 +1157,7 @@
         "language": "python",
         "rule_id": "py/log-injection",
         "rule_sha256": "05c52d6c72cc5e2355ba2cc20d8a2d11c8ed1c2bce0627105bde1b370d9483f6",
-        "run_configuration_sha256": "1efd42843eaf6aa8596c2770ea58ed621e08c9b394525a84d3e1857393ca27f8",
+        "run_configuration_sha256": "7650b3e2502ec6d2170cf17c03462ada74cd72577b1bdfc0c7d64176c8936a33",
         "sources": [
           {
             "mode": "100644",
@@ -1306,7 +1306,7 @@
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
         "rule_sha256": "be450b52b48c5219aa316346a04f2300c37b6826603dc91627907194d7eea165",
-        "run_configuration_sha256": "9506d3f5f14b647cfa008b4ac7ce383f25b53b2d8dd0efa0426c61124cf187b5",
+        "run_configuration_sha256": "604c2ac05e31edb2c63ac41042aa9fd7022d25d0f3616cbdb0c4e677222265f5",
         "sources": [
           {
             "mode": "100644",
@@ -1367,7 +1367,7 @@
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
         "rule_sha256": "be450b52b48c5219aa316346a04f2300c37b6826603dc91627907194d7eea165",
-        "run_configuration_sha256": "9506d3f5f14b647cfa008b4ac7ce383f25b53b2d8dd0efa0426c61124cf187b5",
+        "run_configuration_sha256": "604c2ac05e31edb2c63ac41042aa9fd7022d25d0f3616cbdb0c4e677222265f5",
         "sources": [
           {
             "mode": "100644",
@@ -1428,7 +1428,7 @@
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
         "rule_sha256": "be450b52b48c5219aa316346a04f2300c37b6826603dc91627907194d7eea165",
-        "run_configuration_sha256": "9506d3f5f14b647cfa008b4ac7ce383f25b53b2d8dd0efa0426c61124cf187b5",
+        "run_configuration_sha256": "604c2ac05e31edb2c63ac41042aa9fd7022d25d0f3616cbdb0c4e677222265f5",
         "sources": [
           {
             "mode": "100644",
@@ -1507,7 +1507,7 @@
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
         "rule_sha256": "be450b52b48c5219aa316346a04f2300c37b6826603dc91627907194d7eea165",
-        "run_configuration_sha256": "9506d3f5f14b647cfa008b4ac7ce383f25b53b2d8dd0efa0426c61124cf187b5",
+        "run_configuration_sha256": "604c2ac05e31edb2c63ac41042aa9fd7022d25d0f3616cbdb0c4e677222265f5",
         "sources": [
           {
             "mode": "100644",
@@ -1568,7 +1568,7 @@
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
         "rule_sha256": "be450b52b48c5219aa316346a04f2300c37b6826603dc91627907194d7eea165",
-        "run_configuration_sha256": "9506d3f5f14b647cfa008b4ac7ce383f25b53b2d8dd0efa0426c61124cf187b5",
+        "run_configuration_sha256": "604c2ac05e31edb2c63ac41042aa9fd7022d25d0f3616cbdb0c4e677222265f5",
         "sources": [
           {
             "mode": "100644",
@@ -1629,7 +1629,7 @@
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
         "rule_sha256": "be450b52b48c5219aa316346a04f2300c37b6826603dc91627907194d7eea165",
-        "run_configuration_sha256": "9506d3f5f14b647cfa008b4ac7ce383f25b53b2d8dd0efa0426c61124cf187b5",
+        "run_configuration_sha256": "604c2ac05e31edb2c63ac41042aa9fd7022d25d0f3616cbdb0c4e677222265f5",
         "sources": [
           {
             "mode": "100644",
@@ -1690,7 +1690,7 @@
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
         "rule_sha256": "be450b52b48c5219aa316346a04f2300c37b6826603dc91627907194d7eea165",
-        "run_configuration_sha256": "9506d3f5f14b647cfa008b4ac7ce383f25b53b2d8dd0efa0426c61124cf187b5",
+        "run_configuration_sha256": "604c2ac05e31edb2c63ac41042aa9fd7022d25d0f3616cbdb0c4e677222265f5",
         "sources": [
           {
             "mode": "100644",
@@ -1733,7 +1733,7 @@
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
         "rule_sha256": "be450b52b48c5219aa316346a04f2300c37b6826603dc91627907194d7eea165",
-        "run_configuration_sha256": "9506d3f5f14b647cfa008b4ac7ce383f25b53b2d8dd0efa0426c61124cf187b5",
+        "run_configuration_sha256": "604c2ac05e31edb2c63ac41042aa9fd7022d25d0f3616cbdb0c4e677222265f5",
         "sources": [
           {
             "mode": "100644",
@@ -1794,7 +1794,7 @@
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
         "rule_sha256": "be450b52b48c5219aa316346a04f2300c37b6826603dc91627907194d7eea165",
-        "run_configuration_sha256": "9506d3f5f14b647cfa008b4ac7ce383f25b53b2d8dd0efa0426c61124cf187b5",
+        "run_configuration_sha256": "604c2ac05e31edb2c63ac41042aa9fd7022d25d0f3616cbdb0c4e677222265f5",
         "sources": [
           {
             "mode": "100644",
@@ -1864,7 +1864,7 @@
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
         "rule_sha256": "be450b52b48c5219aa316346a04f2300c37b6826603dc91627907194d7eea165",
-        "run_configuration_sha256": "9506d3f5f14b647cfa008b4ac7ce383f25b53b2d8dd0efa0426c61124cf187b5",
+        "run_configuration_sha256": "604c2ac05e31edb2c63ac41042aa9fd7022d25d0f3616cbdb0c4e677222265f5",
         "sources": [
           {
             "mode": "100644",
