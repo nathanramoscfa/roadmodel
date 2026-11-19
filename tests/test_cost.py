@@ -273,7 +273,7 @@ def test_maker_prefixed_names_resolve_to_the_catalog_model(
     assert cost.model_id_of("Claude Fable 5.1") == "claude-fable-5.1"
     assert cost.model_provider("Claude Fable 5.1") == "anthropic"
     assert cost.canonical_model_name("Anthropic Claude Opus 5.5") == "Opus 5.5"
-    assert cost.canonical_model_name("OpenAI GPT-6 Sol") == "GPT-6 Sol"
+    assert cost.canonical_model_name("OpenAI GPT-6.1 Sol") == "GPT-6.1 Sol"
     assert cost.canonical_model_name("Google Gemini 3 Flash") == "Gemini 3 Flash"
     # Only a leading maker word is dropped, and only after an exact miss.
     for ref in ("Claude", "Claude Nonexistent 9", "Cursor Fable 5.1", "Fable 5.1 Claude"):

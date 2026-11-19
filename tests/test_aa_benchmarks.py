@@ -12,13 +12,18 @@ from __future__ import annotations
 import datetime as dt
 import importlib.util
 import json
-import re
+import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT / "update") not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT / "update"))
+from build_catalog import _parse_attrs  # noqa: E402
+from selector_re import MODEL_RE  # noqa: E402
+
 _spec = importlib.util.spec_from_file_location(
     "fetch_aa_benchmarks", REPO_ROOT / "update" / "fetch_aa_benchmarks.py"
 )
@@ -164,13 +169,11 @@ def test_committed_layer_matches_the_committed_map_and_catalog() -> None:
     }
     # A retired model (update/supersede.py) leaves catalog.json but keeps its
     # measurements until the map drops it; it is still a real catalog id.
-    retired_ids = set(
-        re.findall(
-            r'<model\s+id="([^"]+)"[^>]*?retired-on="',
-            (REPO_ROOT / "docs" / "model-selector.txt").read_text(),
-            re.DOTALL,
-        )
-    )
+    retired_ids = {
+        attrs["id"]
+        for m in MODEL_RE.finditer((REPO_ROOT / "docs" / "model-selector.txt").read_text())
+        if (attrs := _parse_attrs(m.group(1))).get("retired-on") and attrs.get("id")
+    }
     assert set(doc["models"]) <= catalog_ids | retired_ids
     for cid, row in doc["models"].items():
         # The headline is the top measured effort: the mapped row, or that

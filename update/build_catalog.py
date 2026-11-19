@@ -95,7 +95,7 @@ DEFAULT_SOURCES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
 LEVEL_ORDER = ("none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra")
 
 # Days a superseded model stays before it retires (update/supersede.py).
-RETIRE_AFTER_DAYS = 30
+RETIRE_AFTER_DAYS = 14
 
 TASK_CATEGORIES = (
     "coding",

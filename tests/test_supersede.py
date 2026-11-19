@@ -228,12 +228,16 @@ def test_retirement_is_sticky_and_an_unretired_tag_clears() -> None:
     assert cleared.cleared == ["old"] and "old" not in cleared.tags
     assert "superseded-by" not in supersede.apply(pricier, cleared)
     # Once retired, it stays retired whatever changes.
-    retired = supersede.apply(tagged, _plan(tagged, TODAY + dt.timedelta(days=30)))
+    retire_day = TODAY + dt.timedelta(days=supersede.RETIRE_AFTER_DAYS)
+    retired = supersede.apply(tagged, _plan(tagged, retire_day))
     pricier_after = retired.replace(
         'input-price-per-1m="$4.00" output-price-per-1m="$20.00"',
         'input-price-per-1m="$9.00" output-price-per-1m="$40.00"',
     )
-    assert _plan(pricier_after, TODAY + dt.timedelta(days=40)).tags["old"].retired == "2026-10-24"
+    assert (
+        _plan(pricier_after, TODAY + dt.timedelta(days=40)).tags["old"].retired
+        == retire_day.isoformat()
+    )
 
 
 def test_a_tag_the_curation_pass_dropped_comes_back_with_its_date() -> None:
@@ -247,7 +251,7 @@ def test_a_tag_the_curation_pass_dropped_comes_back_with_its_date() -> None:
 def test_committed_tags_are_well_formed() -> None:
     """Stable invariants on the committed selector (not a re-run of the rule,
     which depends on the day's benchmarks): every tag names a real model,
-    carries ISO dates, and a retirement comes 30 days or more after the tag."""
+    carries ISO dates, and retirement date is never earlier than supersession."""
     text = (REPO_ROOT / "docs" / "model-selector.txt").read_text()
     models = {m.id: m for m in supersede.parse_models(text, {})}
     for m in models.values():
@@ -258,7 +262,7 @@ def test_committed_tags_are_well_formed() -> None:
         since = dt.date.fromisoformat(m.since or "")
         if m.retired:
             gap = (dt.date.fromisoformat(m.retired) - since).days
-            assert gap >= supersede.RETIRE_AFTER_DAYS, m.id
+            assert gap >= 0, m.id
 
 
 def _load(name: str) -> ModuleType:
@@ -385,3 +389,92 @@ def test_the_drift_check_still_catches_a_live_letter_off_the_derivation() -> Non
     assert n == 1
     changes, _ = derive.plan_changes(drifted, benchmarks)
     assert {(c["id"], c["category"]) for c in changes} == {(mid, "planning")}
+
+
+def test_series_parser_matches_roadmodel_package() -> None:
+    from roadmodel import series
+
+    pairs = [
+        ("gpt-6-sol", "gpt-6.2-sol"),
+        ("gpt-6-sol", "gpt-6-luna"),
+        ("claude-fable-5.1", "claude-fable-5.2"),
+        ("gemini-3-flash", "gemini-3.8-flash"),
+        ("gemini-3.1-flash-lite", "gemini-3.5-flash-lite"),
+        ("glm-4.5-air", "glm-5.3-flash"),
+        ("glm-5.2", "glm-5.3"),
+    ]
+    for old_id, new_id in pairs:
+        assert supersede.is_newer(old_id, new_id) == series.is_newer(old_id, new_id), (
+            old_id,
+            new_id,
+        )
+
+
+def test_aggregators_are_ignored_when_first_party_exists_and_checked_when_absent() -> None:
+    fp_methods = {
+        "openai-api": ("openai", ["gpt-6-sol", "gpt-6.1-sol"]),
+        "cursor": ("cursor", ["gpt-6-sol"]),
+    }
+    fp_text = _selector(
+        [_model("gpt-6-sol", 5, 25, 45), _model("gpt-6.1-sol", 4, 20, 52)],
+        fp_methods,
+    )
+    assert supersede.successors(fp_text, supersede.parse_models(fp_text, {}), delisted={}) == {
+        "gpt-6-sol": "gpt-6.1-sol"
+    }
+    assert supersede.near_misses(fp_text, supersede.parse_models(fp_text, {}), delisted={}) == []
+
+    agg_methods = {
+        "openrouter": ("openrouter", ["glm-5.1", "glm-5.2"]),
+        "cursor": ("cursor", ["glm-5.1"]),
+    }
+    agg_text = _selector(
+        [_model("glm-5.1", 2, 10, 35), _model("glm-5.2", 1, 5, 45)],
+        agg_methods,
+    )
+    assert supersede.successors(agg_text, supersede.parse_models(agg_text, {}), delisted={}) == {}
+
+
+def test_same_series_tolerance_transitive_head_and_immediate_retirement() -> None:
+    methods = {"openai-api": ("openai", ["gpt-5.6-sol", "gpt-6-sol", "gpt-6.2-sol"])}
+    # Newest costs more blended and has one lower category rating (long-context D vs S),
+    # yet higher AA Index on the same series supersedes both 1-behind and 2-behind versions.
+    m56 = _model("gpt-5.6-sol", 1, 5, 40, long_context="S")
+    m60 = _model("gpt-6-sol", 2, 10, 47, long_context="S")
+    m62 = _model(
+        "gpt-6.2-sol",
+        4,
+        20,
+        52,
+        coding="S",
+        planning="S",
+        agentic="S",
+        long_context="D",
+        knowledge="S",
+    )
+    text = _selector([m56, m60, m62], methods)
+    models = supersede.parse_models(text, {})
+    assert supersede.successors(text, models, delisted={}) == {
+        "gpt-5.6-sol": "gpt-6.2-sol",
+        "gpt-6-sol": "gpt-6.2-sol",
+    }
+    p = supersede.plan(text, {}, TODAY, delisted={})
+    # 5.6 is 2 versions behind (6 and 6.2) -> retires immediately; 6 is 1 behind -> waits 14 days.
+    assert "gpt-5.6-sol" in p.retired
+    assert p.tags["gpt-6-sol"].retired is None
+
+
+def test_delisted_model_retires_immediately_with_maker_fallback() -> None:
+    methods = {
+        "zai-api": ("zai", ["glm-4.5-air"]),
+        "openrouter": ("openrouter", ["glm-4.5-air", "glm-5.3-flash"]),
+    }
+    text = _selector(
+        [_model("glm-4.5-air", 0.5, 2, 11.1), _model("glm-5.3-flash", 0.3, 1, 41.8)],
+        methods,
+    )
+    p = supersede.plan(text, {}, TODAY, delisted={"zai": {"glm-4.5-air"}})
+    assert p.tags["glm-4.5-air"] == supersede.Tags(
+        "glm-5.3-flash", TODAY.isoformat(), TODAY.isoformat()
+    )
+    assert p.retired == ["glm-4.5-air"]

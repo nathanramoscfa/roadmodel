@@ -162,18 +162,17 @@ const TWO_TURN_MESSAGES = [
 // 1. Engine resolver — catalog derivation, FAIL escalation, overrides
 // ---------------------------------------------------------------
 
-test("pickFreeEngine returns Gemini 3 Flash for planning-B on current catalog", () => {
-  // Planning is measured on the AA Intelligence Index: Gemini 2.5 Flash
-  // (13.1) letters C, below the bar, and Gemini 3 Flash (26.3) is the
-  // cheapest Google model at B.
+test("pickFreeEngine returns Gemini 3.8 Flash for planning-B on current catalog", () => {
+  // Gemini 3 Flash is superseded by Gemini 3.8 Flash, and a superseded model
+  // never wins, so the cheapest eligible Google model at >= B is Gemini 3.8 Flash.
   const resolved = pickFreeEngine({
     surface: "roadmap",
     minTier: "B",
     allowedJurisdictions: ["us"],
   });
-  expect(resolved.engine).toBe("gemini-3-flash");
+  expect(resolved.engine).toBe("gemini-3.8-flash");
   expect(resolved.provider).toBe("google");
-  expect(resolved.force_provider).toBe("google-gemini-3-flash");
+  expect(resolved.force_provider).toBe("google-gemini-3.8-flash");
   expect(resolved.use_frontier).toBe(false);
 });
 
@@ -252,14 +251,14 @@ test(
     // pinned override and a cheaper synthetic in the catalog, the
     // override must win — the Phase 9 cron records the would-be
     // flip but the maintainer's pin holds.
-    ENGINE_OVERRIDES.roadmap = "gemini-3-flash";
+    ENGINE_OVERRIDES.roadmap = "gemini-3.5-flash-lite";
     try {
       const resolved = pickFreeEngine({
         surface: "roadmap",
         minTier: "B",
         allowedJurisdictions: ["us"],
       });
-      expect(resolved.engine).toBe("gemini-3-flash");
+      expect(resolved.engine).toBe("gemini-3.5-flash-lite");
       expect(resolved.provider).toBe("google");
     } finally {
       delete ENGINE_OVERRIDES.roadmap;
@@ -309,7 +308,7 @@ test(
       profile: profileWith({ frontier_roadmap_override: false }),
       envFrontierEnabled: true,
     });
-    expect(resolved.engine).toBe("gemini-3-flash");
+    expect(resolved.engine).toBe("gemini-3.8-flash");
     expect(resolved.provider).toBe("google");
     expect(resolved.use_frontier).toBe(false);
   },
@@ -328,7 +327,7 @@ test(
     });
     expect(resolved.provider).toBe("google");
     expect(resolved.use_frontier).toBe(false);
-    expect(resolved.engine).toBe("gemini-3-flash");
+    expect(resolved.engine).toBe("gemini-3.8-flash");
   },
 );
 

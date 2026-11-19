@@ -639,7 +639,7 @@ def test_engine_params_come_from_the_registry(
         run(hint)
         assert captured[spec.model] == spec.params(ladder=False), hint
 
-    assert engines["google-gemini-2.5-flash"].params(ladder=False) == (0, 512, 0.0)
+    assert engines["google-gemini-3.8-flash"].params(ladder=False) == (0, 2048, 0.0)
     assert engines["openai-gpt-5.6-luna"].params(ladder=False) == (0, 2048, None)
     assert engines["anthropic-haiku-4-5"].params(ladder=False) == (None, None, None)
 

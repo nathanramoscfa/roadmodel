@@ -154,7 +154,9 @@ export function CatalogLegend({ id }: { id?: string }) {
             Analysis lists it, added to this catalog in that time) and clears on its own.
             The <strong>AA Index</strong> column is the one published composite; hover it for the
             Artificial Analysis model it was measured as and that model&rsquo;s own benchmarks,
-            ranked in this catalog, with a check that they bear the index out.{" "}
+            ranked in this catalog, with a check that they bear the index out;{" "}
+            <strong>Effort</strong> shows the headline reasoning setting (hover for scores and
+            token multipliers by level).{" "}
             <strong>Score</strong> is the cost-adjusted figure: the AA Index minus what a
             model&rsquo;s price predicts <em>among its own cost tier</em>, from one market fit
             over every measured model (index against log&nbsp;price, with a baseline per tier),
@@ -212,10 +214,11 @@ export function CatalogLegend({ id }: { id?: string }) {
           </p>
           <p className="mt-3 text-xs text-brand-slate-500 dark:text-brand-slate-400" data-testid="legend-superseded">
             <strong className="text-brand-slate-700 dark:text-brand-slate-200">Superseded</strong>{" "}
-            marks a model whose newer sibling, from the same maker, costs the same or less, scores
-            higher on the AA Index, rates at least as high in every category, and runs on every
-            platform that offers it. The tag names that successor and the day the model leaves the
-            catalog, 30 days after it was first superseded.
+            marks a model replaced by a higher-scoring same-maker model (newer in the same series,
+            or a sibling that costs the same or less and rates at least as high in every category)
+            across its maker&rsquo;s surfaces. The tag names that successor and the day the model
+            leaves the catalog (14 days after it was first superseded; models withdrawn by their
+            maker or two or more versions behind retire immediately).
           </p>
         </div>
 

@@ -561,6 +561,12 @@ test("the benchmark-scores view is a uniform grid: one AA column per evaluation"
     page.getByTestId("model-row").filter({ hasText: bestHle.name }).first().locator('[data-bench="hle"]'),
   ).toHaveAttribute("data-band", "5");
 
+  await expect(row.locator('[data-bench="hle"]')).not.toHaveAttribute("title");
+  await row.locator('[data-bench="hle"] [data-testid="bench-trigger"]').hover();
+  const benchCard = page.getByTestId("bench-card");
+  await expect(benchCard).toContainText("Catalog rank");
+  await expect(benchCard).toContainText("Column leader");
+
   // Headers link to the source and are sortable; sorting Coding Index puts the
   // top value first and rows without one last.
   await page.getByRole("button", { name: "Sort by Artificial Analysis Coding Index" }).click();
@@ -684,13 +690,13 @@ test("rating cells are letters only; the Score column is the cost-adjusted score
   expect(measuredSeen).toBe(fit!.n + unmeasuredWithIndex);
 });
 
-test("measured letters match the published bands; every other letter is marked estimated", async ({ page }) => {
+test("measured letters match the published bands; every other letter is marked estimated with rich hover cards", async ({ page }) => {
   await page.goto("/models");
 
-  // Column order: chevron, model, provider, juris, input, output, AA index,
+  // Column order: chevron, model, provider, juris, input, output, AA index, effort,
   // value, then coding, planning, agentic, multimodal, long-context, knowledge, speed.
-  const CODING_TD = 8;
-  const KNOWLEDGE_TD = 8 + 5;
+  const CODING_TD = 9;
+  const KNOWLEDGE_TD = 9 + 5;
   const hleAll = Object.values(benchmarks.models)
     .map((m) => m.evaluations.hle)
     .filter((v): v is number => typeof v === "number");
@@ -708,43 +714,42 @@ test("measured letters match the published bands; every other letter is marked e
   const n = await rows.count();
   let derivedSeen = 0;
   let estimatedSeen = 0;
+  let sampleMeasuredKnowledge: string | null = null;
+  let sampleLaunchKnowledge: string | null = null;
+  let sampleCappedKnowledge: string | null = null;
+  let sampleMeasuredPlanning: string | null = null;
   for (let i = 0; i < n; i += 1) {
     const r = rows.nth(i);
     // The row's id, not the name cell's text (which can carry a superseded tag).
-    const id = await r.getAttribute("data-model-id");
+    const id = (await r.getAttribute("data-model-id"))!;
     const model = catalog.models.find((m) => m.id === id)!;
     const hle = benchmarks.models[model.id]?.evaluations.hle;
     const cell = r.locator("td").nth(KNOWLEDGE_TD).getByTestId("rating-cell");
+    await expect(cell).not.toHaveAttribute("title");
     if (typeof hle === "number") {
       await expect(cell).toHaveAttribute("data-basis", "measured");
       await expect(cell).toHaveText(band(leader - hle * 100));
-      await expect(cell).toHaveAttribute(
-        "title",
-        /Measured: derived from Humanity's Last Exam .* points behind the category leader/,
-      );
+      sampleMeasuredKnowledge ??= id;
       derivedSeen += 1;
     } else {
       // An estimate in a derived category names the benchmark: roadmodel's
       // launch-table estimate of it, or the one that would measure it.
       await expect(cell).toHaveAttribute("data-basis", "estimated");
-      await expect(cell).toHaveAttribute(
-        "title",
-        estimatedCategories(model.id).includes("knowledge")
-          ? /Estimated by roadmodel: .*Humanity's Last Exam as its launch benchmarks place it/
-          : /Estimated: set by the daily catalog automation.*Measured letters in this column come from Humanity's Last Exam/,
-      );
+      if (estimatedCategories(model.id).includes("knowledge")) {
+        sampleLaunchKnowledge ??= id;
+      } else {
+        sampleCappedKnowledge ??= id;
+      }
       estimatedSeen += 1;
     }
     // Planning is measured on the AA Intelligence Index wherever AA has it.
     const planning = r.locator("td").nth(CODING_TD + 1).getByTestId("rating-cell");
+    await expect(planning).not.toHaveAttribute("title");
     const index = indexOf(model.id);
     if (typeof index === "number") {
       await expect(planning).toHaveAttribute("data-basis", "measured");
       await expect(planning).toHaveText(band(indexLeader - index));
-      await expect(planning).toHaveAttribute(
-        "title",
-        /Measured: derived from Artificial Analysis Intelligence Index .* points behind the category leader/,
-      );
+      sampleMeasuredPlanning ??= id;
       planningMeasured += 1;
     } else {
       await expect(planning).toHaveAttribute("data-basis", "estimated");
@@ -752,7 +757,7 @@ test("measured letters match the published bands; every other letter is marked e
     // Multimodal is always an estimate: AA runs no multimodal evaluation.
     const multimodal = r.locator("td").nth(CODING_TD + 3).getByTestId("rating-cell");
     await expect(multimodal).toHaveAttribute("data-basis", "estimated");
-    await expect(multimodal).toHaveAttribute("title", /Estimated: set by the daily catalog automation/);
+    await expect(multimodal).not.toHaveAttribute("title");
   }
   expect(planningMeasured).toBe(catalog.models.filter((m) => typeof indexOf(m.id) === "number").length);
   expect(planningMeasured).toBeGreaterThan(0);
@@ -764,35 +769,76 @@ test("measured letters match the published bands; every other letter is marked e
   expect(derivedSeen).toBe(measuredOnHle);
   expect(derivedSeen).toBeGreaterThan(0);
   expect(estimatedSeen).toBeGreaterThan(0);
+
+  // Hover representative cells to verify structured RatingCard contents.
+  const rowOf = (mid: string) => page.locator(`[data-testid="model-row"][data-model-id="${mid}"]`);
+  if (sampleMeasuredKnowledge) {
+    await rowOf(sampleMeasuredKnowledge).locator("td").nth(KNOWLEDGE_TD).getByTestId("rating-trigger").hover();
+    const card = page.getByTestId("rating-card");
+    await expect(card).toContainText("Humanity's Last Exam");
+    await expect(card).toContainText("Gap to leader");
+  }
+  if (sampleLaunchKnowledge) {
+    await rowOf(sampleLaunchKnowledge).locator("td").nth(KNOWLEDGE_TD).getByTestId("rating-trigger").hover();
+    const card = page.getByTestId("rating-card");
+    await expect(card).toContainText("Humanity's Last Exam");
+    await expect(card).toContainText("launch benchmarks");
+  }
+  if (sampleCappedKnowledge) {
+    await rowOf(sampleCappedKnowledge).locator("td").nth(KNOWLEDGE_TD).getByTestId("rating-trigger").hover();
+    const card = page.getByTestId("rating-card");
+    await expect(card).toContainText("Humanity's Last Exam");
+    await expect(card).toContainText("unmeasured estimate stops at A");
+  }
+  if (sampleMeasuredPlanning) {
+    await rowOf(sampleMeasuredPlanning).locator("td").nth(CODING_TD + 1).getByTestId("rating-trigger").hover();
+    const card = page.getByTestId("rating-card");
+    await expect(card).toContainText("Artificial Analysis Intelligence Index");
+    await expect(card).toContainText("Gap to leader");
+  }
+  await rows.first().locator("td").nth(CODING_TD + 3).getByTestId("rating-trigger").hover();
+  await expect(page.getByTestId("rating-card")).toContainText(
+    "Artificial Analysis runs no uniform benchmark for multimodal.",
+  );
 });
 
 test("agentic letters are each model's rank on Terminal-Bench 4.0, with the letter spread held fixed", async ({ page }) => {
   await page.goto("/models");
   // Column order: chevron, model, provider, juris, input, output, AA index,
-  // value, then coding, planning, agentic, …
-  const AGENTIC_TD = 10;
+  // effort, value, then coding, planning, agentic, …
+  const AGENTIC_TD = 11;
   const shares = RANK_DERIVATION.agentic!;
   const tb = DERIVED_FIELD.terminalbench_v4_0;
   const rows = page.getByTestId("model-row");
   const n = await rows.count();
   const seen: Record<string, number> = {};
+  let sampleAgenticId: string | null = null;
   for (let i = 0; i < n; i += 1) {
     const r = rows.nth(i);
     const id = (await r.getAttribute("data-model-id"))!;
     const v = benchRowOf(id)?.values.terminalbench_v4_0 ?? null;
     const cell = r.locator("td").nth(AGENTIC_TD).getByTestId("rating-cell");
+    await expect(cell).not.toHaveAttribute("title");
     if (v === null) {
       await expect(cell).toHaveAttribute("data-basis", "estimated");
       continue;
     }
     const letter = rankLetter(v, tb, shares);
     seen[letter] = (seen[letter] ?? 0) + 1;
+    sampleAgenticId ??= id;
     await expect(cell).toHaveAttribute("data-basis", "measured");
     await expect(cell).toHaveText(letter);
-    await expect(cell).toHaveAttribute(
-      "title",
-      /Measured: (?:ranked #\d+|tied for #\d+–\d+) of \d+ on Terminal-Bench 4\.0 \(.*of every 40 measured models, the top 9 are S/,
-    );
+  }
+  if (sampleAgenticId) {
+    await page
+      .locator(`[data-testid="model-row"][data-model-id="${sampleAgenticId}"]`)
+      .locator("td")
+      .nth(AGENTIC_TD)
+      .getByTestId("rating-trigger")
+      .hover();
+    const card = page.getByTestId("rating-card");
+    await expect(card).toContainText("Terminal-Bench 4.0");
+    await expect(card).toContainText("of every 40 measured models, the top 9 are S");
   }
   // Every measured model is lettered, and the leader is S.
   expect(Object.values(seen).reduce((a, b) => a + b, 0)).toBe(
@@ -805,8 +851,8 @@ test("agentic letters are each model's rank on Terminal-Bench 4.0, with the lett
 test("coding letters are each model's rank on SciCode + Terminal-Bench 4.0, and only a launch-table estimate reaches S in a measured category", async ({ page }) => {
   await page.goto("/models");
   // Column order: chevron, model, provider, juris, input, output, AA index,
-  // value, then coding, planning, agentic, multimodal, long-context, knowledge, …
-  const TD: Record<string, number> = { coding: 8, planning: 9, agentic: 10, "long-context": 12, knowledge: 13 };
+  // effort, value, then coding, planning, agentic, multimodal, long-context, knowledge, …
+  const TD: Record<string, number> = { coding: 9, planning: 10, agentic: 11, "long-context": 13, knowledge: 14 };
   const composite = COMPOSITE_DERIVATION.coding!;
   const scores = compositeScores(
     RAW_MODELS.map((m) => ({ id: m.id, bench: benchRowOf(m.id) })),
@@ -817,36 +863,54 @@ test("coding letters are each model's rank on SciCode + Terminal-Bench 4.0, and 
   const rows = page.getByTestId("model-row");
   const n = await rows.count();
   let measured = 0;
+  let sampleCodingId: string | null = null;
+  let sampleLaunchCell: { id: string; td: number } | null = null;
+  let sampleCappedCell: { id: string; td: number } | null = null;
   for (let i = 0; i < n; i += 1) {
     const r = rows.nth(i);
     const id = (await r.getAttribute("data-model-id"))!;
     const coding = r.locator("td").nth(TD.coding).getByTestId("rating-cell");
+    await expect(coding).not.toHaveAttribute("title");
     const v = scores.get(id);
     if (v !== undefined) {
       measured += 1;
+      sampleCodingId ??= id;
       await expect(coding).toHaveAttribute("data-basis", "measured");
       await expect(coding).toHaveText(rankLetter(v, sorted, shares));
-      await expect(coding).toHaveAttribute(
-        "title",
-        /Measured: (?:ranked #\d+|tied for #\d+–\d+) of \d+ on SciCode \+ Terminal-Bench 4\.0 \(SciCode .*of every 40 measured models, the top 8 are S/,
-      );
     }
     // In a derived category an estimate stops at A, except where roadmodel's
     // launch-table estimate places the category's benchmark: that letter can be S.
     const launchEstimated = new Set<string>(estimatedCategories(id));
     for (const [cat, td] of Object.entries(TD)) {
       const cell = r.locator("td").nth(td).getByTestId("rating-cell");
+      await expect(cell).not.toHaveAttribute("title");
       if ((await cell.getAttribute("data-basis")) !== "estimated") continue;
       if (launchEstimated.has(cat)) {
-        await expect(cell).toHaveAttribute("title", /Estimated by roadmodel: .* as its launch benchmarks place it/);
+        sampleLaunchCell ??= { id, td };
       } else {
         await expect(cell).not.toHaveText("S");
-        await expect(cell).toHaveAttribute("title", /an estimate stops at A: S takes a measurement/);
+        sampleCappedCell ??= { id, td };
       }
     }
   }
   expect(measured).toBe(catalog.models.filter((m) => scores.has(m.id)).length);
   expect(measured).toBeGreaterThan(0);
+
+  const rowOf = (mid: string) => page.locator(`[data-testid="model-row"][data-model-id="${mid}"]`);
+  if (sampleCodingId) {
+    await rowOf(sampleCodingId).locator("td").nth(TD.coding).getByTestId("rating-trigger").hover();
+    const card = page.getByTestId("rating-card");
+    await expect(card).toContainText("SciCode + Terminal-Bench 4.0");
+    await expect(card).toContainText("of every 40 measured models, the top 8 are S");
+  }
+  if (sampleLaunchCell) {
+    await rowOf(sampleLaunchCell.id).locator("td").nth(sampleLaunchCell.td).getByTestId("rating-trigger").hover();
+    await expect(page.getByTestId("rating-card")).toContainText("launch benchmarks");
+  }
+  if (sampleCappedCell) {
+    await rowOf(sampleCappedCell.id).locator("td").nth(sampleCappedCell.td).getByTestId("rating-trigger").hover();
+    await expect(page.getByTestId("rating-card")).toContainText("unmeasured estimate stops at A");
+  }
 });
 
 test("every model off the frontier names the model that beats it, from any cost tier", async ({ page }) => {
@@ -1321,8 +1385,8 @@ test("sorting a category orders by letter, then AA Index", async ({ page }) => {
   await page.getByRole("button", { name: /^Sort by Knowledge/ }).click();
 
   // Column order: chevron, model, provider, juris, input, output, AA index,
-  // value, then the seven categories — knowledge is the sixth category.
-  const KNOWLEDGE_TD = 8 + 5;
+  // effort, value, then the seven categories — knowledge is the sixth category.
+  const KNOWLEDGE_TD = 9 + 5;
   const rows = page.getByTestId("model-row");
   const count = await rows.count();
   const seen: { rating: string; aa: number | null }[] = [];
@@ -1330,7 +1394,7 @@ test("sorting a category orders by letter, then AA Index", async ({ page }) => {
   for (let i = 0; i < count; i += 1) {
     const r = rows.nth(i);
     const cell = r.locator("td").nth(KNOWLEDGE_TD);
-    const rating = (await cell.locator("span").first().innerText()).trim();
+    const rating = (await cell.getByTestId("rating-cell").innerText()).trim();
     const aa = parse(await r.getByTestId("aa-index").innerText());
     seen.push({ rating, aa });
   }
@@ -1552,7 +1616,7 @@ test("the page never scrolls sideways, from a phone to a desktop", async ({ page
   }
 });
 
-test("each AA Index names the effort Artificial Analysis measured it at", async ({ page }) => {
+test("Effort column separates effort from AA Index, shows EffortCard on hover, and sorts cleanly", async ({ page }) => {
   await page.goto("/models");
   const withEffort = catalog.models.find(
     (m) => (benchmarks.models[m.id] as { aa_effort?: string | null } | undefined)?.aa_effort === "xhigh",
@@ -1560,14 +1624,48 @@ test("each AA Index names the effort Artificial Analysis measured it at", async 
   const without = catalog.models.find(
     (m) =>
       benchmarks.models[m.id] &&
-      !(benchmarks.models[m.id] as { aa_effort?: string | null }).aa_effort,
+      !(benchmarks.models[m.id] as { aa_effort?: string | null }).aa_effort &&
+      !estimateFor(m.id)?.effort,
   );
   expect(withEffort, "a model AA headlines at xhigh").toBeTruthy();
   const row = page.locator(`[data-testid="model-row"][data-model-id="${withEffort!.id}"]`);
-  await expect(row.getByTestId("aa-index-effort")).toHaveText("Extra high");
+  await expect(row.getByTestId("aa-index").locator('[data-testid="aa-index-effort"]')).toHaveCount(0);
+  await expect(row.getByTestId("effort-cell")).toHaveAttribute("data-effort", "xhigh");
+  await expect(row.getByTestId("effort-cell")).toHaveText("Extra high");
+  await row.getByTestId("effort-trigger").hover();
+  const card = page.getByTestId("effort-card");
+  await expect(card).toContainText("Headline effort");
+  await expect(card).toContainText("AA Index by effort");
+
+  if (catalog.models.some((m) => m.id === "gemini-4-neon")) {
+    const neon = page.locator('[data-testid="model-row"][data-model-id="gemini-4-neon"]');
+    await expect(neon.getByTestId("effort-cell")).toHaveAttribute("data-effort", "xhigh");
+    await expect(neon.getByTestId("effort-cell")).toHaveText("Extra high");
+  }
   if (without) {
     const plain = page.locator(`[data-testid="model-row"][data-model-id="${without.id}"]`);
-    await expect(plain.getByTestId("aa-index-effort")).toHaveCount(0);
+    await expect(plain.getByTestId("effort-cell")).toHaveAttribute("data-effort", "");
+    await expect(plain.getByTestId("effort-cell")).toHaveText("—");
+  }
+
+  await page.getByRole("button", { name: "Effort", exact: true }).click();
+  const rank: Record<string, number> = { max: 6, xhigh: 5, high: 4, medium: 3, low: 2, minimal: 1 };
+  const efforts = await page
+    .getByTestId("model-row")
+    .evaluateAll((els) =>
+      els.map((el) => el.querySelector('[data-testid="effort-cell"]')?.getAttribute("data-effort") ?? ""),
+    );
+  let sawEmpty = false;
+  let prev = 99;
+  for (const eff of efforts) {
+    if (!eff) {
+      sawEmpty = true;
+      continue;
+    }
+    expect(sawEmpty, "empty effort rows stay last").toBe(false);
+    const cur = rank[eff] ?? 0;
+    expect(cur).toBeLessThanOrEqual(prev);
+    prev = cur;
   }
 });
 
@@ -1613,14 +1711,10 @@ test("a model AA has not measured shows roadmodel's estimate, marked ≈, with a
   const e = estimateFor(est!.id)!;
   await page.goto("/models");
   const row = page.locator(`[data-testid="model-row"][data-model-id="${est!.id}"]`);
-  await expect(row.getByTestId("aa-index")).toHaveText(
-    `≈${e.index}${e.effort ? effortWord(e.effort) : ""}`,
-  );
+  await expect(row.getByTestId("aa-index")).toHaveText(`≈${e.index}`);
   if (e.effort) {
-    await expect(row.getByTestId("aa-index-effort")).toHaveAttribute(
-      "title",
-      `Estimated at ${effortWord(e.effort)} effort, the top setting ${est!.name} offers and the one its launch benchmarks report`,
-    );
+    await expect(row.getByTestId("effort-cell")).toHaveText(effortWord(e.effort));
+    await expect(row.getByTestId("effort-cell")).toHaveAttribute("data-effort", e.effort);
   }
   const mark = row.getByTestId("aa-index-estimate");
   await expect(mark).toHaveAttribute("data-source", "estimated");

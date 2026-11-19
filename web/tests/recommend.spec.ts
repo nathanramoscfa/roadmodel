@@ -186,11 +186,11 @@ test("each pick's AA Index is read at the effort it runs", async ({ page }) => {
   await openFreeText(page);
   await ask(page);
   const cell = (pick: string) => page.locator(`[data-pick="${pick}"][data-row="__aa"]`).first();
-  // Gemini 3.8 Flash at Medium (its headline row is High); GPT-5.6 Terra at
+  // Gemini 3.8 Flash at Medium (its headline row is High); GPT-6 Luna at
   // High on Codex's Intelligence dial (headline Max).
   await expect(cell("cheap")).toContainText(at("gemini-3.8-flash", "medium"));
   await expect(cell("cheap").getByTestId("pick-aa-effort")).toHaveText("at Medium");
-  await expect(cell("balanced")).toContainText(at("gpt-5.6-terra", "high"));
+  await expect(cell("balanced")).toContainText(at("gpt-6-luna", "high"));
   await expect(cell("balanced").getByTestId("pick-aa-effort")).toHaveText("at High");
 });
 

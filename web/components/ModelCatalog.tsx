@@ -50,7 +50,7 @@
 import { Fragment, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Info } from "lucide-react";
 
-import { RATING_SCALE, segmentRationale } from "@/lib/glossary";
+import { segmentRationale } from "@/lib/glossary";
 import {
   AA_HOME,
   bandFor,
@@ -103,18 +103,18 @@ import { savePrefs, type Grouping, type View } from "@/lib/models-prefs";
 import { INPUT_CLASS, LABEL_CLASS, SEGMENTED_CLASS } from "./CatalogFilterBar";
 import { HoverCard } from "./FloatingCard";
 import { GlossaryTerm } from "./GlossaryTerm";
-import { IndexCard, ScoreBreakdownCard, SupersededCard } from "./ScoreCards";
+import {
+  BenchCellCard,
+  EffortCard,
+  IndexCard,
+  RatingCard,
+  ScoreBreakdownCard,
+  SupersededCard,
+  type RatingEvidence,
+} from "./ScoreCards";
 import { effortWord } from "@/lib/pick-effort";
 
-const RATING_MEANING: Record<string, string> = Object.fromEntries(
-  RATING_SCALE.map((r) => [r.rating, r.meaning]),
-);
 
-// The basis of a letter no benchmark measures for the model: the class the
-// daily catalog automation assigns. Measured letters (the derived
-// categories, where AA has the figure) come from update/derive_ratings.py.
-const ESTIMATED_BASIS =
-  "Estimated: set by the daily catalog automation from each provider's published results; a new model starts from its predecessor's letter.";
 
 // Grid cell tint by within-column quintile, on the same palette as the letter
 // badges so green/blue/grey/amber/rose mean the same thing in both views.
@@ -140,12 +140,26 @@ type SortKey =
   | "input_price_per_1m"
   | "output_price_per_1m"
   | "aa_index"
+  | "effort"
   | "value"
   | Category
   | BenchKey;
 type SortDir = "asc" | "desc";
 
 const BENCH_KEYS = new Set<string>(GRID_COLUMNS.map((c) => c.key));
+
+const EFFORT_RANK: Record<string, number> = {
+  max: 6,
+  xhigh: 5,
+  high: 4,
+  medium: 3,
+  low: 2,
+  minimal: 1,
+};
+
+function effortRank(row: ModelRow): number | null {
+  return row.aa_index_effort ? (EFFORT_RANK[row.aa_index_effort] ?? null) : null;
+}
 
 function isBenchKey(key: SortKey): key is BenchKey {
   return BENCH_KEYS.has(key);
@@ -192,6 +206,8 @@ function valueFor(row: ModelRow, key: SortKey): number | string {
       return row.output_price_per_1m;
     case "aa_index":
       return row.aa_index ?? -1;
+    case "effort":
+      return effortRank(row) ?? -1;
     case "value":
       // Sorted via compareNullable above; this branch is only reached by the
       // generic path, where a missing score must sort last.
@@ -315,16 +331,26 @@ export function ModelCatalog({
     const out: Partial<
       Record<
         Category,
-        { label: string; sorted: number[]; valueOf: (m: ModelRow) => number | null; detail: (m: ModelRow) => string }
+        {
+          label: string;
+          sorted: number[];
+          leaderName: string;
+          valueOf: (m: ModelRow) => number | null;
+          detail: (m: ModelRow) => string;
+        }
       >
     > = {};
     for (const cat of CATEGORY_ORDER) {
       const composite = COMPOSITE_DERIVATION[cat];
       if (composite) {
         const scores = compositeScores(models, composite.parts);
+        const sorted = [...scores.values()].sort((x, y) => x - y);
+        const top = sorted[sorted.length - 1];
+        const leader = models.find((m) => scores.get(m.id) === top);
         out[cat] = {
           label: composite.label,
-          sorted: [...scores.values()].sort((x, y) => x - y),
+          sorted,
+          leaderName: leader?.name ?? "Leader",
           valueOf: (m) => scores.get(m.id) ?? null,
           detail: (m) =>
             composite.parts
@@ -336,9 +362,13 @@ export function ModelCatalog({
       const key = CATEGORY_FIGURE[cat];
       if (!key) continue;
       const col = GRID_COLUMN_BY_KEY[key];
+      const sorted = columnValues[key];
+      const top = sorted[sorted.length - 1];
+      const leader = models.find((m) => benchSortValue(m.bench, key) === top);
       out[cat] = {
         label: col.label,
-        sorted: columnValues[key],
+        sorted,
+        leaderName: leader?.name ?? "Leader",
         valueOf: (m) => benchSortValue(m.bench, key),
         detail: (m) => formatBench(benchSortValue(m.bench, key), col.unit),
       };
@@ -366,6 +396,13 @@ export function ModelCatalog({
         // Nullable figure: unmeasured rows last in either direction.
         const t = compareNullable(a.aa_index, b.aa_index, dir);
         if (t !== 0) return t;
+        return a.name.localeCompare(b.name);
+      }
+      if (sortKey === "effort") {
+        const t = compareNullable(effortRank(a), effortRank(b), dir);
+        if (t !== 0) return t;
+        const aaTie = compareNullable(a.aa_index, b.aa_index, dir);
+        if (aaTie !== 0) return aaTie;
         return a.name.localeCompare(b.name);
       }
       if (sortKey === "value") {
@@ -403,8 +440,7 @@ export function ModelCatalog({
   const grouping: Grouping | null = sortKey === "value" ? groupChoice : null;
   // The benchmark-scores view spends its width on eleven evaluation columns,
   // so its leading columns (model, output, AA Index, Score) pad tighter.
-  const dense = view !== "ratings";
-  const padX = dense ? "px-2" : "px-3";
+    const padX = "px-2";
   const scoreOrder = sortDir === "desc" ? "highest Score first" : "lowest Score first";
 
   // What each group header says about the rows under it: how many, their
@@ -450,7 +486,7 @@ export function ModelCatalog({
     savePrefs({ view: v });
     // A sort on a column the other view does not show would be invisible;
     // fall back to the shared default.
-    const hiddenInGrid = ["provider", "jurisdiction", "input_price_per_1m"].includes(sortKey);
+    const hiddenInGrid = ["provider", "jurisdiction", "input_price_per_1m", "effort"].includes(sortKey);
     if ((v === "benchmarks" && (isCategory(sortKey) || hiddenInGrid)) || (v === "ratings" && isBenchKey(sortKey))) {
       setSortKey("aa_index");
       setSortDir("desc");
@@ -471,7 +507,7 @@ export function ModelCatalog({
   // and pricing is the ratings view's job) so the evaluation columns fit.
   const colSpan =
     view === "ratings"
-      ? 8 + CATEGORY_ORDER.length
+      ? 9 + CATEGORY_ORDER.length
       : 5 + GRID_COLUMNS.length - 1;
 
   return (
@@ -655,8 +691,7 @@ export function ModelCatalog({
                 sortKey={sortKey}
                 dir={sortDir}
                 onSort={toggleSort}
-                className={"min-w-[9rem] " + STICKY_HEAD}
-                dense={dense}
+                className={"min-w-[8.5rem] " + STICKY_HEAD}
               />
               {view === "ratings" && (
                 <>
@@ -687,7 +722,6 @@ export function ModelCatalog({
                 dir={sortDir}
                 onSort={toggleSort}
                 align="right"
-                dense={dense}
               />
               <SortHeader
                 field="aa_index"
@@ -695,16 +729,23 @@ export function ModelCatalog({
                 dir={sortDir}
                 onSort={toggleSort}
                 align="right"
-                dense={dense}
                 detail={`This page carries the Artificial Analysis snapshot of ${benchmarksGeneratedAt}: ${measuredCount} of ${models.length} catalog models measured, ${GRID_COLUMNS.length - 1} of its evaluations shown as columns in the benchmark-scores view.`}
               />
+              {view === "ratings" && (
+                <SortHeader
+                  field="effort"
+                  sortKey={sortKey}
+                  dir={sortDir}
+                  onSort={toggleSort}
+                  align="right"
+                />
+              )}
               <SortHeader
                 field="value"
                 sortKey={sortKey}
                 dir={sortDir}
                 onSort={toggleSort}
                 align="right"
-                dense={dense}
                 detail={
                   scoreFit
                     ? `Fit over ${scoreFit.n} measured models in ${Object.keys(scoreFit.tiers).length} cost tiers: ${scoreFit.slope.toFixed(1)} index points per 10× price, R² ${scoreFit.r2.toFixed(2)}, residual σ ${scoreFit.sigma.toFixed(1)} — treat gaps under about ${Math.round(scoreFit.sigma)} points as ties.`
@@ -847,17 +888,17 @@ export function ModelCatalog({
                       </td>
                       {view === "ratings" && (
                         <>
-                          <td className="whitespace-nowrap px-3 py-2 text-xs text-brand-slate-600 dark:text-brand-slate-300">
+                          <td className="whitespace-nowrap px-2 py-2 text-xs text-brand-slate-600 dark:text-brand-slate-300">
                             {m.provider ?? <span className="text-brand-slate-400">—</span>}
                           </td>
-                          <td className="px-3 py-2">
+                          <td className="px-2 py-2">
                             <GlossaryTerm definition={jurisdictionDef(m.jurisdiction)}>
                               <span className="text-[11px] font-semibold uppercase tracking-wide text-brand-slate-600 dark:text-brand-slate-300">
                                 {m.jurisdiction}
                               </span>
                             </GlossaryTerm>
                           </td>
-                          <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums text-brand-slate-700 dark:text-brand-slate-200">
+                          <td className="whitespace-nowrap px-2 py-2 text-right tabular-nums text-brand-slate-700 dark:text-brand-slate-200">
                             {formatPrice(m.input_price_per_1m)}
                           </td>
                         </>
@@ -936,26 +977,32 @@ export function ModelCatalog({
                               </span>
                             )}
                             {m.aa_index}
-                            {m.aa_index_effort && (
-                              <span
-                                data-testid="aa-index-effort"
-                                title={
-                                  m.aa_index_source === "estimated"
-                                    ? m.aa_estimate_via ||
-                                      m.aa_estimate_method === "prior" ||
-                                      m.aa_estimate_method === "predecessor"
-                                      ? `Estimated at ${effortWord(m.aa_index_effort)} effort, the top setting ${m.name} offers`
-                                      : `Estimated at ${effortWord(m.aa_index_effort)} effort, the top setting ${m.name} offers and the one its launch benchmarks report`
-                                    : `Measured at ${effortWord(m.aa_index_effort)} effort, the top one Artificial Analysis ran it at`
-                                }
-                                className="ml-1 text-[11px] font-normal text-brand-slate-400 dark:text-brand-slate-500"
-                              >
-                                {effortWord(m.aa_index_effort)}
-                              </span>
-                            )}
                           </HoverCard>
                         )}
                       </td>
+                      {view === "ratings" && (
+                        <td
+                          data-testid="effort-cell"
+                          data-effort={m.aa_index_effort ?? ""}
+                          className={"whitespace-nowrap py-2 text-right text-xs text-brand-slate-600 dark:text-brand-slate-300 " + padX}
+                        >
+                          {m.aa_index_effort ? (
+                            <HoverCard
+                              label={`${m.name}: ${effortWord(m.aa_index_effort)} effort. Show scores and defaults by effort`}
+                              card={<EffortCard model={m} />}
+                              triggerTestId="effort-trigger"
+                              cardTestId="effort-card"
+                              className="text-xs font-medium text-brand-slate-700 dark:text-brand-slate-200"
+                            >
+                              {effortWord(m.aa_index_effort)}
+                            </HoverCard>
+                          ) : (
+                            <span className="text-brand-slate-400 dark:text-brand-slate-500" title="No reasoning effort dial reported">
+                              —
+                            </span>
+                          )}
+                        </td>
+                      )}
                       <td
                         className={"whitespace-nowrap py-2 text-right tabular-nums " + padX + " " + scoreTone(m.value_score, scoreFit)}
                         data-testid="value-cell"
@@ -1010,46 +1057,96 @@ export function ModelCatalog({
                             const ev = DERIVED_CATEGORIES.has(cat) ? categoryEvidence[cat] : undefined;
                             const v = ev ? ev.valueOf(m) : null;
                             const derived = ev !== undefined && v !== null;
-                            let basis = ESTIMATED_BASIS;
                             const rankRule = RANK_DERIVATION[cat];
                             const figureKey = CATEGORY_FIGURE[cat];
+                            let ratingEvidence: RatingEvidence = { kind: "automation-estimated" };
                             if (ev && v !== null && rankRule) {
                               const st = standing(v, ev.sorted);
                               const tied = ev.sorted.filter((x) => x === v).length;
-                              basis =
-                                tied > 1
-                                  ? `Measured: tied for #${st.rank}–${st.rank + tied - 1} of ${st.of} on ${ev.label} (${ev.detail(m)}; a tie is lettered at its middle place); ${rankRuleText(rankRule)}.`
-                                  : `Measured: ranked #${st.rank} of ${st.of} on ${ev.label} (${ev.detail(m)}); ${rankRuleText(rankRule)}.`;
+                              ratingEvidence = {
+                                kind: "rank",
+                                benchmarkLabel: ev.label,
+                                detail: ev.detail(m),
+                                rank: st.rank,
+                                tiedEnd: tied > 1 ? st.rank + tied - 1 : undefined,
+                                of: st.of,
+                                ruleText: rankRuleText(rankRule),
+                              };
                             } else if (ev && v !== null && figureKey) {
                               const col = GRID_COLUMN_BY_KEY[figureKey];
                               const leader = ev.sorted[ev.sorted.length - 1];
-                              const gap = benchPoints(leader, col.unit) - benchPoints(v, col.unit);
-                              basis = `Measured: derived from ${col.label} ${formatBench(v, col.unit)}, ${gap.toFixed(1)} points behind the category leader (${formatBench(leader, col.unit)}).`;
+                              const gapPoints = benchPoints(leader, col.unit) - benchPoints(v, col.unit);
+                              ratingEvidence = {
+                                kind: "gap",
+                                benchmarkLabel: col.label,
+                                modelValue: formatBench(v, col.unit),
+                                leaderName: ev.leaderName,
+                                leaderValue: formatBench(leader, col.unit),
+                                gapPoints,
+                              };
                             } else if (ev && m.aa_estimated_categories?.includes(cat)) {
-                              basis = `Estimated by roadmodel: ${m.name}'s ${ev.label} as its launch benchmarks place it, lettered by the same rule as the measured letters, until Artificial Analysis measures it.`;
+                              const partKeys = COMPOSITE_DERIVATION[cat]?.parts ?? (figureKey ? [figureKey] : []);
+                              const launchFigures =
+                                partKeys.length > 0
+                                  ? partKeys
+                                      .map((k) => {
+                                        const val = m.aa_estimated_figures?.[k];
+                                        if (typeof val !== "number") return null;
+                                        const c = GRID_COLUMN_BY_KEY[k];
+                                        return { label: c.label, value: `≈${formatBench(val, c.unit)}` };
+                                      })
+                                      .filter((x): x is { label: string; value: string } => x !== null)
+                                  : m.aa_index !== null
+                                    ? [{ label: "AA Intelligence Index", value: `≈${Math.round(m.aa_index)}` }]
+                                    : [];
+                              ratingEvidence = {
+                                kind: "launch-estimated",
+                                benchmarkLabel: ev.label,
+                                launchFigures,
+                              };
                             } else if (ev) {
-                              basis = `${ESTIMATED_BASIS} In this category an estimate stops at ${ESTIMATE_CEILING}: S takes a measurement. Measured letters in this column come from ${ev.label}, which Artificial Analysis publishes for ${ev.sorted.length} of these models.`;
+                              ratingEvidence = {
+                                kind: "capped-estimated",
+                                benchmarkLabel: ev.label,
+                                measuredCount: ev.sorted.length,
+                              };
                             }
                             return (
-                              <td key={cat} className="w-14 px-1 py-2 text-center">
-                                <span
-                                  data-testid="rating-cell"
-                                  data-basis={derived ? "measured" : "estimated"}
-                                  className={
-                                    BADGE_CLASS +
-                                    " " +
-                                    (derived ? RATING_COLORS[r] : `${ESTIMATED_BADGE} ${RATING_OUTLINE_COLORS[r]}`)
+                              <td key={cat} className="w-[3.25rem] px-1 py-2 text-center">
+                                <HoverCard
+                                  label={`${m.name} ${CATEGORY_DEFS[cat].label}: ${r} (${derived ? "measured" : "estimated"})`}
+                                  card={
+                                    <RatingCard
+                                      model={m}
+                                      category={cat}
+                                      rating={r}
+                                      derived={derived}
+                                      evidence={ratingEvidence}
+                                    />
                                   }
-                                  title={`${CATEGORY_DEFS[cat].fullName}: ${r} — ${RATING_MEANING[r]} ${basis}`}
+                                  triggerTestId="rating-trigger"
+                                  cardTestId="rating-card"
+                                  className="border-b-0"
                                 >
-                                  {r}
-                                </span>
+                                  <span
+                                    data-testid="rating-cell"
+                                    data-basis={derived ? "measured" : "estimated"}
+                                    className={
+                                      BADGE_CLASS +
+                                      " " +
+                                      (derived ? RATING_COLORS[r] : `${ESTIMATED_BADGE} ${RATING_OUTLINE_COLORS[r]}`)
+                                    }
+                                  >
+                                    {r}
+                                  </span>
+                                </HoverCard>
                               </td>
                             );
                           })
                         : GRID_BODY_COLUMNS.map((col) => {
                             const v = benchSortValue(m.bench, col.key);
-                            const band = bandFor(v, columnValues[col.key]);
+                            const colSorted = columnValues[col.key];
+                            const band = bandFor(v, colSorted);
                             return (
                               <td
                                 key={col.key}
@@ -1057,23 +1154,37 @@ export function ModelCatalog({
                                 data-bench={col.key}
                                 data-band={band ?? ""}
                                 className="whitespace-nowrap px-1 py-1.5 text-right tabular-nums"
-                                title={
-                                  v === null
-                                    ? `${col.label}: not measured by Artificial Analysis`
-                                    : `${col.label}: ${formatBench(v, col.unit)} — ${BAND_LABEL[band!]} (Artificial Analysis${m.bench ? `, ${m.bench.aa_name}` : ""})`
-                                }
+                                title={v === null ? `${col.label}: not measured by Artificial Analysis` : undefined}
                               >
                                 {v === null ? (
                                   <span className="text-brand-slate-300 dark:text-brand-slate-600">—</span>
                                 ) : (
-                                  <span
-                                    className={
-                                      "inline-block min-w-[3rem] rounded px-1.5 py-0.5 text-xs font-semibold " +
-                                      BAND_CLASS[band!]
+                                  <HoverCard
+                                    label={`${m.name} ${col.label}: ${formatBench(v, col.unit)}`}
+                                    card={
+                                      <BenchCellCard
+                                        model={m}
+                                        column={col}
+                                        value={v}
+                                        rank={standing(v, colSorted).rank}
+                                        of={colSorted.length}
+                                        leaderValue={formatBench(colSorted[colSorted.length - 1], col.unit)}
+                                        bandLabel={BAND_LABEL[band!]}
+                                      />
                                     }
+                                    triggerTestId="bench-trigger"
+                                    cardTestId="bench-card"
+                                    className="border-b-0"
                                   >
-                                    {formatBench(v, col.unit)}
-                                  </span>
+                                    <span
+                                      className={
+                                        "inline-block min-w-[3rem] rounded px-1.5 py-0.5 text-xs font-semibold " +
+                                        BAND_CLASS[band!]
+                                      }
+                                    >
+                                      {formatBench(v, col.unit)}
+                                    </span>
+                                  </HoverCard>
                                 )}
                               </td>
                             );
@@ -1137,7 +1248,7 @@ function NewTag({ model: m }: { model: ModelRow }) {
   const added = released ? null : m.added_on;
   return (
     <span
-      className="mt-0.5 block max-w-[11rem] whitespace-normal text-[11px] font-normal leading-4 text-brand-slate-500 dark:text-brand-slate-400"
+      className="mt-0.5 block max-w-[10.5rem] whitespace-normal text-[11px] font-normal leading-4 text-brand-slate-500 dark:text-brand-slate-400"
       data-testid="new-tag"
       data-new-until={m.new_until ?? ""}
     >
@@ -1186,7 +1297,7 @@ function SupersededTag({ model: m, successor }: { model: ModelRow; successor: Mo
   const name = successor?.name ?? m.superseded_by ?? "";
   return (
     <span
-      className="mt-0.5 block max-w-[11rem] whitespace-normal text-[11px] font-normal leading-4 text-brand-slate-500 dark:text-brand-slate-400"
+      className="mt-0.5 block max-w-[10.5rem] whitespace-normal text-[11px] font-normal leading-4 text-brand-slate-500 dark:text-brand-slate-400"
       data-testid="superseded-tag"
       data-superseded-by={m.superseded_by ?? ""}
     >
@@ -1296,7 +1407,6 @@ function SortHeader({
   align = "left",
   className = "",
   detail,
-  dense = false,
 }: {
   field: Exclude<SortKey, Category | BenchKey>;
   sortKey: SortKey;
@@ -1306,9 +1416,6 @@ function SortHeader({
   className?: string;
   // Extra sentence appended to the definition (e.g. live fit statistics).
   detail?: string;
-  // The benchmark-scores view: eleven evaluation columns share the 1280px
-  // budget, so the leading columns give up some padding.
-  dense?: boolean;
 }) {
   const def = FIELD_DEFS[field];
   const active = sortKey === field;
@@ -1316,7 +1423,7 @@ function SortHeader({
     <th
       className={
         "whitespace-nowrap py-2 font-semibold " +
-        (dense ? "px-2 " : "px-3 ") +
+        "px-2 " +
         (align === "right" ? "text-right " : "text-left ") +
         className
       }
@@ -1379,7 +1486,7 @@ function CategoryHeader({
         : `${def.definition} Estimated by the daily catalog automation from each provider's published results (dashed outline).`;
   return (
     <th
-      className="w-14 px-1 py-2 text-center align-bottom font-semibold"
+      className="w-[3.25rem] px-1 py-2 text-center align-bottom font-semibold"
       aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
     >
       <span className="inline-flex flex-col items-center gap-0.5">

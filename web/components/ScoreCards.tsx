@@ -24,17 +24,36 @@ import { createContext, useContext, type ReactNode } from "react";
 
 import {
   blendedPrice,
+  DERIVATION_BANDS,
+  ESTIMATE_CEILING,
   formatBench,
   formatScore,
   formatUsd,
   GRID_COLUMN_BY_KEY,
   scoreBreakdown,
+  type BenchColumn,
   type EvidenceVerdict,
   type IndexEvidence,
   type ScoreFit,
 } from "@/lib/benchmark-grid";
-import { COST_TIER_DEFS, COST_TIER_DOT, type CostTier, type ModelRow } from "@/lib/catalog-fields";
-import { effortWord } from "@/lib/pick-effort";
+import {
+  CATEGORY_DEFS,
+  COST_TIER_DEFS,
+  COST_TIER_DOT,
+  ESTIMATED_BADGE,
+  RATING_COLORS,
+  RATING_OUTLINE_COLORS,
+  type Category,
+  type CostTier,
+  type ModelRow,
+  type Rating,
+} from "@/lib/catalog-fields";
+import { RATING_SCALE } from "@/lib/glossary";
+import { EFFORT_TOKEN_MULTIPLIER, effortWord, type EffortLevel } from "@/lib/pick-effort";
+
+const RATING_MEANING: Record<string, string> = Object.fromEntries(
+  RATING_SCALE.map((r) => [r.rating, r.meaning]),
+);
 
 // Which models the frontier compares (lib/catalog-filter poolScope), as a
 // modifier for "every ___ model": null for the whole catalog, else "US + EU"
@@ -246,6 +265,7 @@ export function SupersededCard({ model: m, successor }: { model: ModelRow; succe
   const successorPrice = successor
     ? blendedPrice(successor.input_price_per_1m, successor.output_price_per_1m)
     : null;
+  const samePriceOrLess = successorPrice !== null && successorPrice <= price;
   // A successor Artificial Analysis has not measured supersedes on its
   // estimate less half the estimate's margin (update/supersede.py).
   const unmeasured =
@@ -259,12 +279,12 @@ export function SupersededCard({ model: m, successor }: { model: ModelRow; succe
       <CardHeader name={m.name} tier={m.tier_cost} />
       <p className={"mt-2 text-xs leading-[1.125rem] " + STRONG}>
         <span className="font-semibold">Superseded by {name}.</span> {name}, from the same
-        maker, costs the same or less, {score}, rates at least as high in every category, and
-        runs on every platform that offers {m.name}.
+        maker, {samePriceOrLess ? `costs the same or less, ${score}` : `${score} in the next version of this series`}, and
+        replaces {m.name} across its maker&rsquo;s surfaces.
       </p>
-      {successor && successor.aa_index !== null && successor.aa_index_source !== "inherited" && successor.aa_index_source !== "estimated" && m.aa_index !== null && successorPrice !== null && (
+      {successor && successor.aa_index !== null && m.aa_index !== null && successorPrice !== null && (
         <div className="mt-2 space-y-0.5 text-xs">
-          <Row label="AA Index" value={`${num(successor.aa_index)} vs ${num(m.aa_index)}`} valueClass={STRONG} />
+          <Row label="AA Index" value={`${indexText(successor)} vs ${indexText(m)}`} valueClass={STRONG} />
           <Row label="Blended price" value={`${usd(successorPrice)} vs ${usd(price)}`} valueClass={STRONG} />
         </div>
       )}
@@ -662,6 +682,276 @@ export function PriceLineCard({
         Least squares over {fit.n} AA-measured models. R² {fit.r2.toFixed(2)}: price and tier
         explain {Math.round(fit.r2 * 100)}% of the spread in AA Index. Residual σ {num(fit.sigma)}{" "}
         is the shaded band. A model&rsquo;s Score is its height above (+) or below (−) this line.
+      </p>
+    </div>
+  );
+}
+
+
+export type RatingEvidence =
+  | {
+      kind: "rank";
+      benchmarkLabel: string;
+      detail: string;
+      rank: number;
+      tiedEnd?: number;
+      of: number;
+      ruleText: string;
+    }
+  | {
+      kind: "gap";
+      benchmarkLabel: string;
+      modelValue: string;
+      leaderName: string;
+      leaderValue: string;
+      gapPoints: number;
+    }
+  | {
+      kind: "launch-estimated";
+      benchmarkLabel: string;
+      launchFigures: { label: string; value: string }[];
+    }
+  | {
+      kind: "capped-estimated";
+      benchmarkLabel: string;
+      measuredCount: number;
+    }
+  | {
+      kind: "automation-estimated";
+    };
+
+// A category rating cell's hover card: the category + styled letter badge,
+// scale meaning, and the benchmark measurement (or estimation basis) behind it.
+export function RatingCard({
+  model: m,
+  category,
+  rating,
+  derived,
+  evidence,
+}: {
+  model: ModelRow;
+  category: Category;
+  rating: Rating;
+  derived: boolean;
+  evidence: RatingEvidence;
+}) {
+  const def = CATEGORY_DEFS[category];
+  return (
+    <div className="w-[21rem] max-w-full" data-testid="rating-card-body">
+      <CardHeader name={m.name} tier={m.tier_cost} />
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className={"text-xs font-semibold " + STRONG}>{def.fullName}</span>
+          <span
+            className={
+              "rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide " +
+              (derived
+                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200"
+                : "bg-brand-slate-100 text-brand-slate-600 dark:bg-brand-slate-700 dark:text-brand-slate-300")
+            }
+          >
+            {derived ? "Measured" : "Estimated"}
+          </span>
+        </div>
+        <span
+          className={
+            "inline-flex min-w-[1.75rem] items-center justify-center rounded px-1.5 py-0.5 text-xs font-semibold " +
+            (derived ? RATING_COLORS[rating] : `${ESTIMATED_BADGE} ${RATING_OUTLINE_COLORS[rating]}`)
+          }
+        >
+          {rating}
+        </span>
+      </div>
+      <p className={"mt-1 text-xs leading-[1.125rem] " + MUTED}>
+        <span className={"font-semibold " + STRONG}>{rating}:</span> {RATING_MEANING[rating]}
+      </p>
+      <div
+        className="mt-2.5 rounded-md bg-brand-slate-50 px-3 py-2 text-xs leading-[1.125rem] dark:bg-brand-slate-900/70"
+        data-testid="rating-evidence"
+      >
+        <p className={"mb-1 text-[11px] font-semibold uppercase tracking-wide " + MUTED}>
+          {derived ? "Measured evidence" : "Rating basis"}
+        </p>
+        {evidence.kind === "rank" && (
+          <>
+            <Row label="Benchmark" value={evidence.benchmarkLabel} valueClass={STRONG} />
+            <Row label={m.name} value={evidence.detail} valueClass={STRONG} />
+            <Row
+              label="Catalog rank"
+              value={
+                evidence.tiedEnd
+                  ? `Tied #${evidence.rank}–${evidence.tiedEnd} of ${evidence.of}`
+                  : `#${evidence.rank} of ${evidence.of}`
+              }
+              valueClass={"font-semibold " + STRONG}
+            />
+            <div className={"my-1.5 border-t " + RULE} />
+            <p className={MUTED}>
+              Rule: {evidence.ruleText}
+              {evidence.tiedEnd ? ". Ties take their middle place." : "."}
+            </p>
+          </>
+        )}
+        {evidence.kind === "gap" && (
+          <>
+            <Row label="Benchmark" value={evidence.benchmarkLabel} valueClass={STRONG} />
+            <Row label={m.name} value={evidence.modelValue} valueClass={STRONG} />
+            <Row label={`Leader (${evidence.leaderName})`} value={evidence.leaderValue} valueClass={STRONG} />
+            <Row
+              label="Gap to leader"
+              value={`${evidence.gapPoints.toFixed(1)} pts`}
+              valueClass={"font-semibold " + STRONG}
+            />
+            <div className={"my-1.5 border-t " + RULE} />
+            <p className={MUTED}>
+              Bands: {DERIVATION_BANDS.map((b) => `${b.letter} ≤ ${b.max}`).join(", ")} pts, else D.
+            </p>
+          </>
+        )}
+        {evidence.kind === "launch-estimated" && (
+          <>
+            <Row label="Benchmark" value={evidence.benchmarkLabel} valueClass={STRONG} />
+            {evidence.launchFigures.map((f) => (
+              <Row key={f.label} label={`${f.label} (launch est.)`} value={f.value} valueClass={STRONG} />
+            ))}
+            <p className={(evidence.launchFigures.length > 0 ? "mt-1.5 border-t pt-1.5 " + RULE + " " : "") + MUTED}>
+              roadmodel placed {m.name}&rsquo;s launch benchmarks onto Artificial Analysis&rsquo;s scale and
+              lettered it by the same rule until Artificial Analysis measures it.
+            </p>
+          </>
+        )}
+        {evidence.kind === "capped-estimated" && (
+          <>
+            <Row label="Benchmark" value={evidence.benchmarkLabel} valueClass={STRONG} />
+            <Row label="Catalog measured" value={`${evidence.measuredCount} models`} valueClass={STRONG} />
+            <Row label="Unmeasured ceiling" value={ESTIMATE_CEILING} valueClass={STRONG} />
+            <p className={"mt-1.5 border-t pt-1.5 " + RULE + " " + MUTED}>
+              Estimated by the daily catalog automation from each provider&rsquo;s published results
+              until Artificial Analysis measures {m.name}; an unmeasured estimate stops at{" "}
+              {ESTIMATE_CEILING} because S takes a measurement.
+            </p>
+          </>
+        )}
+        {evidence.kind === "automation-estimated" && (
+          <p className={MUTED}>
+            Estimated by the daily catalog automation from each provider&rsquo;s published results;
+            a new model starts from its predecessor&rsquo;s letter. Artificial Analysis runs no
+            uniform benchmark for {def.label.toLowerCase()}.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const EFFORT_LEVEL_ORDER = ["max", "xhigh", "high", "medium", "low", "minimal"] as const;
+
+// The Effort cell's hover card: the headline reasoning setting, AA Index across
+// measured efforts with relative output-token multipliers, and per-surface vendor defaults.
+export function EffortCard({ model: m }: { model: ModelRow }) {
+  const byEffort = m.aa_index_by_effort ?? {};
+  const multByEffort = m.token_multiplier_by_effort ?? {};
+  const levelSet = new Set([...Object.keys(byEffort), ...Object.keys(multByEffort)]);
+  const levels = EFFORT_LEVEL_ORDER.filter((lvl) => levelSet.has(lvl));
+  if (!m.aa_index_effort && levels.length === 0 && !(m.default_efforts?.length)) return null;
+  const isEstimate = m.aa_index_source === "estimated" || m.aa_index_source === "inherited";
+  return (
+    <div className="w-[20rem] max-w-full" data-testid="effort-card-body">
+      <CardHeader name={m.name} tier={m.tier_cost} />
+      {m.aa_index_effort && (
+        <div className="mt-2">
+          <Row
+            label={<span className={"font-semibold " + STRONG}>Headline effort</span>}
+            value={effortWord(m.aa_index_effort)}
+            valueClass={"text-sm font-bold " + STRONG}
+          />
+          <p className={"mt-1 text-xs leading-[1.125rem] " + MUTED}>
+            {isEstimate
+              ? `Top setting ${m.name} offers and the level its launch estimates target.`
+              : `Reasoning setting Artificial Analysis ran for ${m.name}'s headline row.`}
+          </p>
+        </div>
+      )}
+      {levels.length > 0 && (
+        <div
+          className="mt-2.5 rounded-md bg-brand-slate-50 px-3 py-2 text-xs leading-[1.125rem] dark:bg-brand-slate-900/70"
+          data-testid="effort-variants"
+        >
+          <p className={"mb-1 text-[11px] font-semibold uppercase tracking-wide " + MUTED}>
+            AA Index by effort
+          </p>
+          {levels.map((lvl) => {
+            const idx = byEffort[lvl];
+            const mult =
+              multByEffort[lvl] ??
+              (lvl in EFFORT_TOKEN_MULTIPLIER ? EFFORT_TOKEN_MULTIPLIER[lvl as EffortLevel] : undefined);
+            const parts: string[] = [];
+            if (typeof idx === "number") parts.push(num(idx));
+            if (typeof mult === "number") parts.push(`${mult.toFixed(1)}× tokens`);
+            return (
+              <Row
+                key={lvl}
+                label={
+                  <span>
+                    {effortWord(lvl)}
+                    {lvl === m.aa_index_effort && (
+                      <span className={"ml-1.5 text-[10px] " + MUTED}>(headline)</span>
+                    )}
+                  </span>
+                }
+                value={parts.join(" · ") || "—"}
+                valueClass={lvl === m.aa_index_effort ? "font-semibold " + STRONG : STRONG}
+              />
+            );
+          })}
+        </div>
+      )}
+      {m.default_efforts && m.default_efforts.length > 0 && (
+        <div
+          className="mt-2 rounded-md bg-brand-slate-50 px-3 py-2 text-xs leading-[1.125rem] dark:bg-brand-slate-900/70"
+          data-testid="effort-defaults"
+        >
+          <p className={"mb-1 text-[11px] font-semibold uppercase tracking-wide " + MUTED}>
+            Default setting by surface
+          </p>
+          {m.default_efforts.map((d) => (
+            <Row key={d.surface} label={d.surface} value={effortWord(d.effort)} valueClass={STRONG} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// A Benchmark-scores cell's hover card: the measured value, rank, percentile band, and leader.
+export function BenchCellCard({
+  model: m,
+  column,
+  value,
+  rank,
+  of,
+  leaderValue,
+  bandLabel,
+}: {
+  model: ModelRow;
+  column: BenchColumn;
+  value: number;
+  rank: number;
+  of: number;
+  leaderValue: string;
+  bandLabel: string;
+}) {
+  return (
+    <div className="w-[19rem] max-w-full" data-testid="bench-card-body">
+      <CardHeader name={m.name} tier={m.tier_cost} />
+      <div className="mt-2.5 rounded-md bg-brand-slate-50 px-3 py-2 text-xs leading-[1.125rem] dark:bg-brand-slate-900/70">
+        <Row label={column.label} value={formatBench(value, column.unit)} valueClass={"font-semibold " + STRONG} />
+        <Row label="Catalog rank" value={`#${rank} of ${of}`} valueClass={STRONG} />
+        <Row label="Percentile band" value={bandLabel} valueClass={STRONG} />
+        <Row label="Column leader" value={leaderValue} valueClass={STRONG} />
+      </div>
+      <p className={"mt-2 text-xs leading-[1.125rem] " + MUTED}>
+        Measured by Artificial Analysis{m.bench ? ` as ${m.bench.aa_name}` : ""}.
       </p>
     </div>
   );
