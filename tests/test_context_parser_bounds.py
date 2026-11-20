@@ -8,7 +8,12 @@ import sys
 import pytest
 
 from roadmodel.cost import _canonical_tier_name
-from roadmodel.scoring import BASELINE_JURISDICTIONS, allowed_jurisdictions, platform_filters
+from roadmodel.scoring import (
+    BASELINE_JURISDICTIONS,
+    allowed_jurisdictions,
+    platform_filters,
+    roadmap_platforms,
+)
 
 
 @pytest.mark.parametrize(
@@ -44,15 +49,21 @@ def test_platform_grammar():
         "\t**platforms.allowed:** `claude-code`, cursor\nplatforms.excluded: api"
     ) == ({"claude-code", "cursor"}, {"api"})
     assert platform_filters("platforms.allowed: (none declared)") == (set(), set())
+    assert roadmap_platforms("\t**platforms.roadmap:** `claude-code`, antigravity") == {
+        "claude-code",
+        "antigravity",
+    }
+    assert roadmap_platforms("platforms.roadmap: (none declared)") == set()
 
 
 def test_large_malformed_context_completes_without_backtracking():
     source = """
 from roadmodel.cost import _canonical_tier_name
-from roadmodel.scoring import allowed_jurisdictions, platform_filters
+from roadmodel.scoring import allowed_jurisdictions, platform_filters, roadmap_platforms
 assert _canonical_tier_name(' ' * 1_000_000 + 'x') == 'x'
 allowed_jurisdictions('**Allowed jurisdictions**' + '\\t' * 1_000_000 + '!')
 platform_filters('platforms.allowed:' + '\\t' * 1_000_000 + '!')
+roadmap_platforms('platforms.roadmap:' + '\\t' * 1_000_000 + '!')
 """
     result = subprocess.run(
         [sys.executable, "-c", source], capture_output=True, text=True, timeout=10

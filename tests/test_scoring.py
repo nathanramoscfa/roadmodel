@@ -1064,3 +1064,101 @@ def test_cli_score_reads_an_exhausted_openrouter_reserve(monkeypatch, tmp_path):
     assert payload["candidates"] and all(
         c["funding"] == "unfunded" and c["pool_state"] == "exhausted" for c in payload["candidates"]
     )
+
+
+def test_roadmap_platforms_parses_fenced_bold_and_placeholder() -> None:
+    fenced = "```text\nplatforms.roadmap:   claude-code, codex-cli, antigravity\n```"
+    assert scoring.roadmap_platforms(fenced) == {"claude-code", "codex-cli", "antigravity"}
+    placeholder = "```text\nplatforms.roadmap:   (none declared)\n```"
+    assert scoring.roadmap_platforms(placeholder) == set()
+    bold = "**platforms.roadmap:** `claude-code`, `antigravity`"
+    assert scoring.roadmap_platforms(bold) == {"claude-code", "antigravity"}
+    assert scoring.roadmap_platforms("") == set()
+
+
+def test_platform_key_prefers_first_party_surface_over_host_with_dial() -> None:
+    """Alphabetically 'antigravity' < 'claude-code'; a first-party maker
+    surface must beat a third-party host even when the host exposes a dial."""
+    cat = {
+        "models": [
+            _model("claude-sonnet-5", "Sonnet 5", 2.0, 10.0, {"coding": "S", "planning": "S"}),
+        ],
+        "access_methods": [
+            {
+                "id": "antigravity",
+                "name": "Antigravity",
+                "provider": "google",
+                "provider_jurisdiction": "us",
+                "billing": "subscription-included",
+                "supports_models": ["claude-sonnet-5"],
+                "effort_levels": ["low", "medium", "high"],
+            },
+            {
+                "id": "claude-code",
+                "name": "Claude Code",
+                "provider": "anthropic",
+                "provider_jurisdiction": "us",
+                "billing": "subscription-or-key",
+                "supports_models": ["claude-sonnet-5"],
+            },
+            {
+                "id": "anthropic-api",
+                "name": "Anthropic API",
+                "provider": "anthropic",
+                "provider_jurisdiction": "us",
+                "billing": "per-token",
+                "supports_models": ["claude-sonnet-5"],
+            },
+        ],
+        "subscription_tiers": [
+            {
+                "provider": "Anthropic",
+                "tier": "claude.ai Max ($200)",
+                "monthly_usd": 200.0,
+                "surface_funded": ["claude-code"],
+            },
+            {
+                "provider": "Google",
+                "tier": "Google AI Ultra ($200)",
+                "monthly_usd": 200.0,
+                "surface_funded": ["antigravity"],
+            },
+        ],
+    }
+    text = _context(
+        subs=(
+            "| claude.ai Max ($200) | $200 | Anthropic | Claude Code |\n"
+            "| Google AI Ultra ($200) | $200 | Google | Antigravity |"
+        ),
+    )
+    r = scoring.rank(scoring.Task("coding", "medium"), text, catalog=cat, benchmarks=BENCH)
+    sonnet = next(c for c in r.candidates if c.model_id == "claude-sonnet-5")
+    assert sonnet.platform_id == "claude-code"
+
+
+def test_platforms_roadmap_does_not_restrict_rank_while_excluded_does() -> None:
+    cat = json.loads(json.dumps(CATALOG))
+    cat["access_methods"] = [m for m in cat["access_methods"] if m["id"] != "codex-cli"] + [
+        {
+            "id": "chatgpt-app",
+            "name": "ChatGPT (web / desktop)",
+            "provider": "openai",
+            "provider_jurisdiction": "us",
+            "billing": "subscription-included",
+            "supports_models": ["gpt-5.6-sol", "gpt-5.6-luna"],
+        }
+    ]
+    cat["subscription_tiers"][1]["surface_funded"] = ["chatgpt-app"]
+    text = _context(
+        subs=(
+            "| claude.ai Max ($200) | $200 | Anthropic | Claude Code |\n"
+            "| ChatGPT Pro ($100) | $100 | OpenAI | ChatGPT |"
+        ),
+        keys="| Google | Yes | Google AI Studio API |\n| OpenAI | Yes | OpenAI API |",
+        extra=("\nplatforms.roadmap:   claude-code, codex-cli\nplatforms.excluded:  chatgpt-app\n"),
+    )
+    r = scoring.rank(scoring.Task("coding", "low"), text, catalog=cat, benchmarks=BENCH)
+    by_id = {c.model_id: c for c in r.candidates}
+    assert by_id["gemini-3.8-flash"].platform_id == "google-api"
+    assert by_id["gpt-5.6-sol"].platform_id == "openai-api"
+    assert all(c.platform_id != "chatgpt-app" for c in r.candidates)

@@ -33,6 +33,7 @@ def test_antigravity_is_a_google_surface_serving_catalogued_models() -> None:
     makers = {m["id"]: m["id"].split("-")[0] for m in CATALOG["models"]}
     served = {makers[mid] for mid in ag["supports_models"]}
     assert "gemini" in served and served - {"gemini"}, served
+    assert "gemini-4-carbon" in ag["supports_models"]
 
 
 def test_google_plans_fund_the_surfaces_they_reach() -> None:

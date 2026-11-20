@@ -370,7 +370,7 @@ filters are worse than transparent ones.
 
 Step A00 of `<access-selection>` in
 [`model-selector.txt`](model-selector.txt) drives this filter — read
-that step first for the full rule. Two optional keys declare which
+that step first for the full rule. Three optional keys declare which
 access methods (platforms) the selector may recommend at all:
 
 - **`platforms.allowed`** — access-method ids the operator will
@@ -378,8 +378,15 @@ access methods (platforms) the selector may recommend at all:
   access method whose id is **not** on the list.
 - **`platforms.excluded`** — access-method ids the operator has opted
   out of. Step A00 drops every listed method.
+- **`platforms.roadmap`** — optional access-method ids eligible for
+  interactive roadmap Settings ladders (`settings_ladder` /
+  `roadmodel ladder`). When omitted, roadmap ladders default to your
+  subscription-funded interactive coding-agent surfaces (`claude-code`,
+  `codex-cli`, `cursor`, `antigravity`), falling back to the full pool
+  when none are funded, while API keys remain available for
+  automated / programmatic tasks outside roadmaps.
 
-Both are **HARD filters applied before any scoring**, exactly like the
+These are **HARD filters applied before any scoring**, exactly like the
 jurisdiction filter above — and unlike *Platform preference order*,
 which is a **soft** ranking that only reorders methods that already
 survived filtering. A soft preference can be overridden by a better
@@ -389,6 +396,7 @@ fit; these two cannot.
 
 ```text
 platforms.allowed:   (none declared)
+platforms.roadmap:   (none declared)
 platforms.excluded:  (none declared)
 ```
 
@@ -403,6 +411,11 @@ An operator who works only in the terminal might declare:
 platforms.allowed:   claude-code, codex-cli, anthropic-api
 platforms.excluded:  cursor
 ```
+
+An operator who uses coding agents for interactive roadmaps, keeps API
+keys for automated tasks, and never wants consumer web chat boxes
+recommended would set `platforms.roadmap: claude-code, codex-cli, antigravity`
+and `platforms.excluded: chatgpt-app, gemini-app, claude-web` in the block above.
 
 **An absent or empty section means "no opt-out declared" — never
 "allow nothing."** This section is optional. A `user-context.md`

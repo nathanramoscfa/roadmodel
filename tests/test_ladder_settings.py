@@ -1110,3 +1110,187 @@ def test_a_maker_ranks_its_cheaper_model_when_a_dearer_one_is_within_noise() -> 
         got = scoring.settings_ladder(task, text, catalog=catalog, benchmarks=bench)
         assert got is not None
         assert got["columns"]["quality"]["backup"]["model_id"] == "sol"
+
+
+def _multi_surface_google_catalog() -> tuple[dict[str, Any], dict[str, Any]]:
+    """Catalog with agent subscriptions (Claude Code, Codex, Antigravity) plus
+    non-agent / per-token surfaces (Google AI Studio API, Gemini CLI, Gemini
+    web, ChatGPT web) and a flagship Google model absent from Antigravity."""
+    tiers = [
+        t
+        for t in GOOGLE["subscription_tiers"]
+        if t["tier"] not in {"ChatGPT Pro ($100)", "Google AI Pro ($20)"}
+    ]
+    catalog = {
+        **GOOGLE,
+        "models": [
+            *GOOGLE["models"],
+            _model("carbon", "Carbon", 2.0, 10.0, "S", "google"),
+        ],
+        "access_methods": [
+            *GOOGLE["access_methods"],
+            {
+                "id": "google-api",
+                "name": "Google AI Studio API",
+                "provider": "google",
+                "provider_jurisdiction": "us",
+                "billing": "per-token",
+                "supports_models": ["argon", "carbon"],
+                "effort_levels": ["low", "medium", "high", "xhigh"],
+            },
+            {
+                "id": "gemini-cli",
+                "name": "Gemini CLI",
+                "provider": "google",
+                "provider_jurisdiction": "us",
+                "billing": "per-token",
+                "supports_models": ["argon", "carbon"],
+            },
+            {
+                "id": "gemini-app",
+                "name": "Gemini (web / app)",
+                "provider": "google",
+                "provider_jurisdiction": "us",
+                "billing": "subscription-included",
+                "supports_models": ["argon", "carbon"],
+            },
+            {
+                "id": "chatgpt-app",
+                "name": "ChatGPT (web / desktop)",
+                "provider": "openai",
+                "provider_jurisdiction": "us",
+                "billing": "subscription-included",
+                "supports_models": ["lite", "luna", "astra"],
+            },
+        ],
+        "subscription_tiers": [
+            *tiers,
+            {
+                "provider": "OpenAI",
+                "tier": "ChatGPT Pro ($100)",
+                "monthly_usd": 100.0,
+                "surface_funded": ["codex-cli", "chatgpt-app"],
+            },
+            {
+                "provider": "Google",
+                "tier": "Google AI Pro ($20)",
+                "monthly_usd": 20.0,
+                "surface_funded": ["antigravity", "gemini-app"],
+            },
+        ],
+    }
+    bench = {**BENCH, "argon": _aa(54), "carbon": _aa(57)}
+    return catalog, bench
+
+
+def _three_sub_with_google_key_context() -> str:
+    return (
+        _context().replace(
+            "| ChatGPT Pro ($100) | $100 | OpenAI | Codex |",
+            "| ChatGPT Pro ($100) | $100 | OpenAI | Codex |\n"
+            "| Google AI Pro ($20) | $20 | Google | Antigravity |",
+        )
+        + "\n## Active API keys\n\n| Provider | Key present | Notes |\n"
+        "| --- | --- | --- |\n| Google | Yes | |\n"
+    )
+
+
+def test_settings_ladder_defaults_to_funded_coding_agent_surfaces() -> None:
+    """When platforms.roadmap is omitted and the user funds coding-agent
+    subscriptions, settings_ladder sticks to those subscription-funded agent
+    surfaces (never spilling onto gemini-app, chatgpt-app, google-api, or
+    gemini-cli) while rank() still keeps API paths reachable."""
+    catalog, bench = _multi_surface_google_catalog()
+    text = _three_sub_with_google_key_context()
+    got = scoring.settings_ladder(PLANNING_MEDIUM, text, catalog=catalog, benchmarks=bench)
+    assert got is not None
+    allowed_names = {"Claude Code", "Codex", "Antigravity"}
+    for col in got["columns"].values():
+        for opt in _options(col):
+            assert opt is not None
+            assert opt["platform"] in allowed_names
+            assert opt["model_id"] != "carbon"
+    # Direct rank() for automated tasks still reaches the API-only flagship.
+    ranked = scoring.rank(PLANNING_MEDIUM, text, catalog=catalog, benchmarks=bench)
+    carbon = next(c for c in ranked.candidates if c.model_id == "carbon")
+    assert carbon.platform_id in {"gemini-app", "gemini-cli", "google-api"}
+
+
+def test_settings_ladder_honors_explicit_platforms_roadmap_and_interacts_with_allowed_excluded() -> (
+    None
+):
+    catalog, bench = _multi_surface_google_catalog()
+    base = _three_sub_with_google_key_context()
+
+    # 1. Explicit platforms.roadmap can admit an API method (e.g. google-api).
+    with_api = base + "\nplatforms.roadmap: claude-code, codex-cli, google-api\n"
+    got_api = scoring.settings_ladder(PLANNING_MEDIUM, with_api, catalog=catalog, benchmarks=bench)
+    assert got_api is not None
+    platforms_seen = {
+        opt["platform_id"]
+        for col in got_api["columns"].values()
+        for opt in _options(col)
+        if opt is not None
+    }
+    assert platforms_seen <= {"claude-code", "codex-cli", "google-api"}
+    assert "google-api" in platforms_seen
+
+    # 2. Explicit platforms.roadmap can narrow to a subset (no antigravity).
+    subset = base + "\nplatforms.roadmap: claude-code, codex-cli\n"
+    got_sub = scoring.settings_ladder(PLANNING_MEDIUM, subset, catalog=catalog, benchmarks=bench)
+    assert got_sub is not None
+    assert all(
+        opt["platform_id"] in {"claude-code", "codex-cli"}
+        for col in got_sub["columns"].values()
+        for opt in _options(col)
+        if opt is not None
+    )
+
+    # 3. Respects platforms.excluded.
+    excl = (
+        base
+        + "\nplatforms.roadmap: claude-code, codex-cli, antigravity\nplatforms.excluded: codex-cli\n"
+    )
+    got_excl = scoring.settings_ladder(PLANNING_MEDIUM, excl, catalog=catalog, benchmarks=bench)
+    assert got_excl is not None
+    assert all(
+        opt["platform_id"] != "codex-cli"
+        for col in got_excl["columns"].values()
+        for opt in _options(col)
+        if opt is not None
+    )
+
+    # 4. Disjoint platforms.allowed & platforms.roadmap yields None (never allows all).
+    disjoint = base + "\nplatforms.allowed: google-api\nplatforms.roadmap: claude-code\n"
+    assert (
+        scoring.settings_ladder(PLANNING_MEDIUM, disjoint, catalog=catalog, benchmarks=bench)
+        is None
+    )
+
+    # 5. Unknown-only platforms.roadmap ids fall back safely to funded agent default.
+    unknown = base + "\nplatforms.roadmap: no-such-platform\n"
+    got_unk = scoring.settings_ladder(PLANNING_MEDIUM, unknown, catalog=catalog, benchmarks=bench)
+    assert got_unk is not None
+    assert all(
+        opt["platform_id"] in {"claude-code", "codex-cli", "antigravity"}
+        for col in got_unk["columns"].values()
+        for opt in _options(col)
+        if opt is not None
+    )
+
+
+def test_settings_ladder_falls_back_when_no_agent_subscription_is_funded() -> None:
+    catalog, bench = _multi_surface_google_catalog()
+    api_only = (
+        "# User Context\n\n## Active subscriptions\n\n"
+        "| Subscription | Monthly | Provider | What it pays for |\n"
+        "| --- | --- | --- | --- |\n\n"
+        "## Active API keys\n\n| Provider | Key present | Notes |\n| --- | --- | --- |\n"
+        "| Google | Yes | |\n"
+    )
+    got_api_only = scoring.settings_ladder(
+        PLANNING_MEDIUM, api_only, catalog=catalog, benchmarks=bench
+    )
+    assert got_api_only is not None
+    got_empty = scoring.settings_ladder(PLANNING_MEDIUM, "", catalog=catalog, benchmarks=bench)
+    assert got_empty is not None
