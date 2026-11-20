@@ -1490,7 +1490,7 @@ Billing types:
 #### Antigravity — `antigravity`
 
 - **Billing:** subscription-included (requires google-ai-pro-or-ultra-subscription)
-- **Supports models:** gemini-3.1-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,claude-sonnet-5-5,sonnet-4.6,gpt-oss-120b,gemini-4-argon,gemini-4-hydrogen,gemini-4-neon
+- **Supports models:** gemini-3.1-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,claude-sonnet-5-5,sonnet-4.6,gpt-oss-120b,gemini-4-argon,gemini-4-carbon,gemini-4-hydrogen,gemini-4-neon
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
 - **Best for:** Google's agent-first coding surface: the Antigravity desktop IDE, its VS Code panel and the `agy` CLI, which replaced the Gemini CLI for personal Google accounts on 2026-06-18. Google AI Pro and Ultra pay for it: quota refreshes every five hours up to a weekly limit (the free tier refreshes weekly), and both can buy AI credits for overage. It serves the Gemini models and, on Google's quota, Claude Sonnet 4.6 and Claude Opus 4.6 with thinking and gpt-oss-120b (antigravity.google/docs/models); Claude Opus 4.6 is not in this catalog. Gemini models take a Low / Medium / High reasoning level, set in the model id (`<model>-low` / `-medium` / `-high`) or with `agy --effort`; the Claude and GPT-OSS models carry their own thinking setting. It bills a Google AI plan or a Google Cloud project, not a Gemini API key.
 
@@ -1726,6 +1726,12 @@ Step A00 — Apply the user's PLATFORM ALLOWLIST / DENYLIST (hard filter).
       every access method whose id is not in the list.
     - `platforms.excluded` — access-method ids the operator has opted
       out of. DROP every listed method.
+    - `platforms.roadmap` — optional list of access-method ids for
+      interactive roadmap Settings ladders (`settings_ladder` /
+      `roadmodel ladder`), leaving API keys available for
+      programmatic tasks outside roadmaps. When omitted, roadmap
+      ladders default to subscription-funded coding-agent surfaces
+      (falling back to the full pool when none are funded).
   Both are HARD filters applied BEFORE any scoring, exactly like the
   jurisdiction filter and unlike the soft preference ORDER of Step D.
   When neither key is present, this step is a no-op — an absent

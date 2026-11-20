@@ -249,18 +249,28 @@ To rule a platform **out** entirely, use the hard filter below.
 
 ### Allowed / excluded platforms
 
-Two optional keys — `platforms.allowed` and `platforms.excluded` —
-naming **access-method ids** from the `<access-methods>` block of
-`model-selector.txt` (`claude-code`, `cursor`, `codex-cli`,
-`chatgpt-app`, `anthropic-api`, `openai-api`, `google-api`, …), not
-display names and not provider names:
+Three optional keys — `platforms.allowed`, `platforms.excluded`, and
+`platforms.roadmap` — naming **access-method ids** from the
+`<access-methods>` block of `model-selector.txt` (`claude-code`,
+`cursor`, `codex-cli`, `antigravity`, `chatgpt-app`, `anthropic-api`,
+`openai-api`, `google-api`, …), not display names and not provider
+names:
 
 ```text
 platforms.allowed:   claude-code, codex-cli, anthropic-api
+platforms.roadmap:   claude-code, codex-cli
 platforms.excluded:  cursor
 ```
 
-`<access-selection>` **Step A00** applies both as **hard filters
+`platforms.roadmap` scopes interactive roadmap Settings ladders
+(`settings_ladder` / `roadmodel ladder`) to the coding-agent surfaces
+you actually prompt from while leaving API keys available to
+`/recommend` and `score_candidates` for automated tasks. When omitted,
+roadmap ladders default to your subscription-funded interactive coding
+agents (`claude-code`, `codex-cli`, `cursor`, `antigravity`), falling
+back to the full pool when none are funded.
+
+`<access-selection>` **Step A00** applies `platforms.allowed` and `platforms.excluded` as **hard filters
 before any scoring**, the same way the jurisdiction list filters
 models. A non-empty `platforms.allowed` drops every access method not
 on it; `platforms.excluded` drops every method on it. This is the

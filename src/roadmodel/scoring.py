@@ -220,6 +220,14 @@ DEFAULT_K: Final[float] = 30.0
 AGENT_SURFACES: Final[frozenset[str]] = frozenset(
     {"claude-code", "codex-cli", "cursor", "gemini-cli", "antigravity"}
 )
+# Interactive coding-agent surfaces funded by consumer/team subscriptions.
+# Unlike AGENT_SURFACES, omits per-token CLIs (gemini-cli) so roadmap ladders
+# do not silently spill onto API-key billing when an operator holds agent
+# subscriptions. Used as the default pool for settings_ladder() when
+# user-context.md omits `platforms.roadmap`.
+ROADMAP_AGENT_SURFACES: Final[frozenset[str]] = frozenset(
+    {"claude-code", "codex-cli", "cursor", "antigravity"}
+)
 AGENT_CATEGORIES: Final[frozenset[str]] = frozenset({"coding", "agentic", "planning"})
 # Platform tie-break when scores are equal: a paid-for subscription surface,
 # then the operator's own hardware, then a pay-per-token key.
@@ -877,6 +885,10 @@ _PLATFORMS_RE: Final = re.compile(
     r"(?:\*\*)?platforms\.(allowed|excluded)(?:\*\*)?[ \t]*:(?:\*\*)?(.*)",
     re.IGNORECASE,
 )
+_ROADMAP_PLATFORMS_RE: Final = re.compile(
+    r"(?:\*\*)?platforms\.roadmap(?:\*\*)?[ \t]*:(?:\*\*)?(.*)",
+    re.IGNORECASE,
+)
 _PLATFORM_ID_RE: Final = re.compile(r"[a-z0-9][a-z0-9-]*")
 _JURIS_HEADING_RE: Final = re.compile(r"\*\*Allowed jurisdictions[^*\n]*\*\*", re.IGNORECASE)
 _JURIS_LIST_RE: Final = re.compile(r"`?([a-z]{2,7}(?:[ \t]*,[ \t]*[a-z]{2,7})*)`?", re.IGNORECASE)
@@ -903,6 +915,14 @@ def declared_budget(text: str) -> str:
     return _BUDGET_ALIASES.get(value, value)
 
 
+def _parse_platform_ids(rest: str) -> set[str]:
+    return {
+        token.strip("`").lower()
+        for token in re.split(r"[,\s]+", rest.strip(" \t"))
+        if _PLATFORM_ID_RE.fullmatch(token.strip("`").lower())
+    }
+
+
 def platform_filters(text: str) -> tuple[set[str], set[str]]:
     allowed: set[str] = set()
     excluded: set[str] = set()
@@ -911,13 +931,20 @@ def platform_filters(text: str) -> tuple[set[str], set[str]]:
         if match is None:
             continue
         kind, rest = match.groups()
-        ids = {
-            token.strip("`").lower()
-            for token in re.split(r"[,\s]+", rest.strip(" \t"))
-            if _PLATFORM_ID_RE.fullmatch(token.strip("`").lower())
-        }
-        (allowed if kind.lower() == "allowed" else excluded).update(ids)
+        (allowed if kind.lower() == "allowed" else excluded).update(_parse_platform_ids(rest))
     return allowed, excluded
+
+
+def roadmap_platforms(text: str) -> set[str]:
+    """Access-method ids declared under ``platforms.roadmap`` for interactive
+    roadmap ladders; empty when absent or placeholder (e.g. ``(none declared)``)."""
+    ids: set[str] = set()
+    for line in text.split("\n"):
+        match = _ROADMAP_PLATFORMS_RE.fullmatch(line.strip(" \t"))
+        if match is None:
+            continue
+        ids.update(_parse_platform_ids(match.group(1)))
+    return ids
 
 
 def allowed_jurisdictions(text: str) -> set[str]:
@@ -1343,16 +1370,21 @@ def _funding_for(
     return "subscription", "headroom", SCARCITY["subscription-headroom"], ""
 
 
-def _platform_key(c: Candidate, dial: bool = False) -> tuple[bool, float, int, int, int, str]:
+def _platform_key(
+    c: Candidate, dial: bool = False, first_party: bool = True
+) -> tuple[bool, float, int, int, int, int, str]:
     """A platform's standing for one model: funded first, then the score, the
-    subscription over a key, the agent surface, then the surface whose effort
-    dial the catalog documents for the model (``dial``), where a pick's effort
-    can be set exactly."""
+    subscription over a key, the agent surface, the maker's own surface over
+    a third-party host (so Claude models prefer Claude Code over Antigravity
+    even when both expose a dial), then the surface whose effort dial the
+    catalog documents for the model (``dial``), where a pick's effort can be
+    set exactly."""
     return (
         c.funding == "unfunded",
         -c.score,
         FUNDING_PREFERENCE.get(c.funding, 3),
         0 if c.platform_id in AGENT_SURFACES else 1,
+        0 if first_party else 1,
         0 if dial else 1,
         c.platform_id,
     )
@@ -1365,7 +1397,7 @@ def _configuration_candidates(
     text: str,
     headroom: str,
     pools: list[tuple[str, str, str]],
-    allowed: set[str],
+    allowed: set[str] | None,
     denied: set[str],
     jurisdictions: set[str],
     unavailable: set[str],
@@ -1389,7 +1421,7 @@ def _configuration_candidates(
         method = methods.get(pid)
         if (
             method is None
-            or (allowed and pid not in allowed)
+            or (allowed is not None and pid not in allowed)
             or pid in denied
             or cid in unavailable
             or str(method.get("provider_jurisdiction", "us")).lower() not in jurisdictions
@@ -1497,6 +1529,7 @@ def rank(
     effort_aware: bool = True,
     latest_only: bool = True,
     neutral_pools: bool = False,
+    allowed_platforms: set[str] | frozenset[str] | None = None,
 ) -> Ranking:
     """Rank every reachable (model, platform) pair for ``task``.
 
@@ -1554,6 +1587,16 @@ def rank(
             )
     allowed_p &= method_ids
     excluded_p &= method_ids
+    extra_allowed = set(allowed_platforms) & method_ids if allowed_platforms is not None else set()
+    effective_allowed: set[str] | None
+    if allowed_p and extra_allowed:
+        effective_allowed = allowed_p & extra_allowed
+    elif allowed_p:
+        effective_allowed = allowed_p
+    elif extra_allowed:
+        effective_allowed = extra_allowed
+    else:
+        effective_allowed = None
 
     for model in cat.get("models", []):
         if not isinstance(model, dict):
@@ -1582,6 +1625,7 @@ def rank(
 
         best_for_model: Candidate | None = None
         best_dial = False
+        best_first_party = False
         newer_here: list[str] = []
         for method in methods:
             supports = method.get("supports_models") or method.get("supports-models") or []
@@ -1597,7 +1641,7 @@ def rank(
                     newer_here.extend(newer)
                     continue
             pid = str(method.get("id", ""))
-            if allowed_p and pid not in allowed_p:
+            if effective_allowed is not None and pid not in effective_allowed:
                 continue
             if pid in excluded_p:
                 continue
@@ -1663,10 +1707,12 @@ def rank(
             # to the subscription surface over a key, then to the agent surface,
             # then to the surface whose effort dial the catalog documents.
             dial = native_levels(pid, model_id, catalog=cat) is not None
-            if best_for_model is None or _platform_key(c, dial) < _platform_key(
-                best_for_model, best_dial
+            first_party = str(method.get("provider", "")).lower() == provider.lower()
+            if best_for_model is None or _platform_key(c, dial, first_party) < _platform_key(
+                best_for_model, best_dial, best_first_party
             ):
                 best_dial = dial
+                best_first_party = first_party
                 best_for_model = c
         if best_for_model is None:
             reason = (
@@ -1687,7 +1733,7 @@ def rank(
             text,
             headroom,
             pools,
-            allowed_p,
+            effective_allowed,
             excluded_p,
             juris,
             unavailable,
@@ -2172,6 +2218,7 @@ def ladder(
     catalog: dict[str, Any] | None = None,
     benchmarks: dict[str, Any] | None = None,
     neutral_pools: bool = False,
+    allowed_platforms: set[str] | frozenset[str] | None = None,
 ) -> Ladder | None:
     """The Cost / Balanced / Quality picks for ``task``, read off the
     operator's own cost/quality frontier. ``neutral_pools`` reads every usage
@@ -2230,6 +2277,7 @@ def ladder(
         benchmarks=bench,
         effort_aware=False,
         neutral_pools=neutral_pools,
+        allowed_platforms=allowed_platforms,
     )
     funded = [c for c in ranking.candidates if c.funding != "unfunded"]
     pool = funded or ranking.candidates
@@ -3078,6 +3126,32 @@ def _deepest_level(c: Candidate, catalog: dict[str, Any]) -> str:
     return pinnable[-1] if pinnable else levels[-1]
 
 
+def _roadmap_allowed_platforms(text: str, catalog: dict[str, Any]) -> set[str] | None:
+    """Platforms eligible for a roadmap Settings ladder: ``platforms.roadmap``
+    when declared with at least one catalog access-method id, else the
+    subscription-funded interactive coding-agent surfaces
+    (:data:`ROADMAP_AGENT_SURFACES`) that pass ``platforms.allowed`` and
+    ``platforms.excluded``. Returns None when neither applies (e.g. an
+    API-only or anonymous user), leaving the full pool eligible."""
+    methods = [m for m in catalog.get("access_methods", []) if isinstance(m, dict)]
+    method_ids = {str(m.get("id", "")) for m in methods}
+    allowed_p, excluded_p = platform_filters(text)
+    allowed_p &= method_ids
+    excluded_p &= method_ids
+    declared = roadmap_platforms(text) & method_ids
+    if declared:
+        return declared
+    funded_agents = {
+        pid
+        for method in methods
+        if (pid := str(method.get("id", ""))) in ROADMAP_AGENT_SURFACES
+        and pid not in excluded_p
+        and (not allowed_p or pid in allowed_p)
+        and _cost._resolve_funding(method, catalog, text)[1] is not None
+    }
+    return funded_agents or None
+
+
 def settings_ladder(
     task: Task,
     user_context_text: str,
@@ -3117,6 +3191,7 @@ def settings_ladder(
     Index."""
     cat = catalog if catalog is not None else _cost._load_catalog()
     bench = benchmarks if benchmarks is not None else with_unmeasured(_load_benchmarks(), cat)
+    roadmap_allowed = _roadmap_allowed_platforms(user_context_text or "", cat)
     off = list(unavailable_models or [])
     seen: dict[frozenset[str], Ladder | None] = {}
 
@@ -3130,6 +3205,7 @@ def settings_ladder(
                 catalog=cat,
                 benchmarks=bench,
                 neutral_pools=True,
+                allowed_platforms=roadmap_allowed,
             )
         return seen[key]
 

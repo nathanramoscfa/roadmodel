@@ -128,8 +128,12 @@ scraping the site that shows them.
 Availability (`unavailable_models`), allowed jurisdictions (user-context, or
 the `us, eu, uk, ca, au, jp, kr` baseline; a `local` access method passes
 every list), the operator's `platforms.allowed` / `platforms.excluded` lists
-(both the template's fenced form and the bold form; tokens that are not
-access-method ids, such as `(none declared)`, are dropped, and an unknown id
+(plus `platforms.roadmap` for `settings_ladder`, which defaults to
+subscription-funded interactive coding-agent surfaces when omitted so
+roadmap ladders do not spill onto web chat boxes or API keys while
+`/recommend` and `score_candidates` keep full API access; both the
+template's fenced form and the bold form are accepted, tokens that are not
+access-method ids such as `(none declared)` are dropped, and an unknown id
 is reported and ignored rather than read as "allow nothing"), and the access
 method's own provider jurisdiction. Excluded models are reported with the
 reason. For the `speed` category a local access method (`billing: local`)
@@ -433,9 +437,11 @@ Max, ChatGPT Pro and Google AI Pro, medium and high speed work reads Gemini
 
 **Platforms.** Of the surfaces that reach a model, the best-scoring funded one
 runs it; on a tie, a subscription beats a key, an agent surface beats a chat
-app, and then a surface whose effort dial the catalog documents beats one
-whose dial it does not, since only there can a pick's effort be set exactly
-(Sonnet 5.5 runs on Claude Code, not Antigravity).
+app, the model maker's own surface beats a third-party host (`_platform_key`
+keeps Claude models on Claude Code over Antigravity), and then a surface
+whose effort dial the catalog documents beats one whose dial it does not,
+since only there can a pick's effort be set exactly (Sonnet 5.5 runs on
+Claude Code, not Antigravity).
 
 **Context windows.** `docs/context-windows.json` holds each catalogued
 model's context window in tokens, OpenRouter's `context_length` (the largest
