@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.118] — 2026-11-19
+
+- **`/roadmap-step --worktree` for parallel roadmap steps (`#1614`):** isolated per-conversation linked worktree execution (`--worktree` / `--worktree=PATH`), remote `origin/main` Execution Order prerequisite gating, parallel-safe Stage 3/4 rebase preserving sibling `Complete` marks and `--squash` merge omitting `--delete-branch` inside linked worktrees, Stage 5 single-worktree cleanup, aligned phase/project roadmap templates, and updated planning workflow docs.
+- **Agent configurations and Antigravity model coverage (`#1604`, `#1611`, `#1613`):** added paid-plan `Gemini 4 Hydrogen` and `Gemini 4 Neon` to Antigravity; added Antigravity Orchestrator (`Neon`, `Carbon`, `Argon`) and Claude Code `Ultracode` configuration records, evidence-gated ranking/ladder settings, and grouped Platform details below the `/models` table.
+- **Tiered model curation, upper-estimate supersession, and Z.AI direct sync (`#1592`, `#1600`):** shortened the superseded grace window to 14 days (`RETIRE_AFTER_DAYS = 14`); added same-series supersession with an optimistic upper-estimate bar (`index + band/2`) for unmeasured incumbents and immediate retirement for superseded SKUs absent from their maker's pricing snapshot or two or more versions behind (retiring `gpt-5.6-sol`, `gpt-6-sol`, `gpt-5.1-codex`, `gpt-5.1-codex-max`, `gemini-2.5-flash`, `glm-4.6`, `glm-4.5-air`); added Z.AI `### Latest Models` extraction (`GLM-5.3`, `GLM-5.3-Flash`) and daily `zai-api` sync (`glm-5.2` superseded by `glm-5.3`).
+- **`/models` interactive cards, effort-adjusted pricing, and small-screen polish (`#1592`, `#1595`, `#1596`, `#1600`):** added a dedicated sortable `EFFORT` column and portaled rating/effort/benchmark hover cards; switched `/models` Score, frontier, and charts to effort-adjusted blended pricing (`headlinePrice`); added interactive hover-persistent `HoverCard` popups with `100dvh` viewport clamping, a sticky touch-only `×` close button, and portaled `GlossaryTerm` tooltips.
+
 ## [0.2.117] — 2026-11-18
 
 - **Every unmeasured catalog model now gets a day-1 AA Index estimate, Score, quality band, and grounded rating letters — eliminating the "Not measured" group and `BBBBBBB` placeholders.**
