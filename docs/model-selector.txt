@@ -2043,12 +2043,6 @@
           every access method whose id is not in the list.
         - `platforms.excluded` — access-method ids the operator has opted
           out of. DROP every listed method.
-        - `platforms.roadmap` — optional list of access-method ids for
-          interactive roadmap Settings ladders (`settings_ladder` /
-          `roadmodel ladder`), leaving API keys available for
-          programmatic tasks outside roadmaps. When omitted, roadmap
-          ladders default to subscription-funded coding-agent surfaces
-          (falling back to the full pool when none are funded).
       Both are HARD filters applied BEFORE any scoring, exactly like the
       jurisdiction filter and unlike the soft preference ORDER of Step D.
       When neither key is present, this step is a no-op — an absent
