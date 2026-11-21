@@ -179,14 +179,16 @@ function FrontierPlot({
     if (width === 0) return new Map<string, Label>();
     return placeLabels(
       [
-        // Ringed models first, then the tier lines' names, then the
-        // highest-scoring of the rest while there is room.
+        // Only frontier (ringed) models and the tier lines get labels;
+        // off-frontier dots remain as obstacles so labels clear them, while
+        // off-frontier models are named by their hover/tap cards.
         ...pts.map((p) => ({
           id: p.row.id,
           cx: sx(p.x),
           cy: sy(p.index),
           text: p.row.name,
-          priority: (p.row.value_frontier ? 1000 : 0) + p.index,
+          priority: 1000 + p.index,
+          label: p.row.value_frontier,
         })),
         // A tier line's name tries the line's right end, then its left end,
         // then its middle, and keeps no clearance of its own.
@@ -466,7 +468,13 @@ function FrontierPlot({
               const dim = activePoint && activePoint.row.id !== id;
               const isTier = id.startsWith("tier-");
               return (
-                <g key={`label-${id}`} opacity={dim ? 0.35 : 1} pointerEvents="none">
+                <g
+                  key={`label-${id}`}
+                  opacity={dim ? 0.35 : 1}
+                  pointerEvents="none"
+                  data-testid={isTier ? "frontier-tier-label" : "frontier-model-label"}
+                  data-model-id={isTier ? undefined : id}
+                >
                   <rect
                     x={l.box.x}
                     y={l.box.y}
