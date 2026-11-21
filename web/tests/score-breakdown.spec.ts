@@ -32,6 +32,7 @@ import {
   type BenchKey,
   type BenchRow,
 } from "../lib/benchmark-grid";
+import { placeLabels } from "../components/chart-kit";
 import { headlinePrice } from "../lib/pick-effort";
 import { liveCatalog } from "./fixtures/live-catalog";
 
@@ -252,4 +253,31 @@ test("a model is new for fourteen days after its release date", () => {
   expect(newUntil("2026-09-28", new Date("2026-10-12T00:00:00Z"))).toBeNull();
   expect(newUntil(null, new Date())).toBeNull();
   expect(newUntil("September", new Date())).toBeNull();
+});
+
+test("placeLabels skips label: false items while still avoiding their dots", () => {
+  const dotR = 5;
+  const reach = dotR + 3;
+  const obstacle = { id: "b", cx: 220, cy: 200, text: "Off-frontier", priority: 999, label: false };
+  const labels = placeLabels(
+    [
+      { id: "a", cx: 200, cy: 200, text: "Frontier", priority: 100 },
+      obstacle,
+    ],
+    { x: 0, y: 0, w: 600, h: 400 },
+    10,
+    dotR,
+  );
+  expect(labels.has("b")).toBe(false);
+  expect(labels.size).toBe(1);
+  const aLabel = labels.get("a");
+  expect(aLabel).toBeDefined();
+  const box = aLabel!.box;
+  const obsBox = { x: obstacle.cx - reach, y: obstacle.cy - reach, w: 2 * reach, h: 2 * reach };
+  const overlapsObstacle =
+    box.x < obsBox.x + obsBox.w &&
+    obsBox.x < box.x + box.w &&
+    box.y < obsBox.y + obsBox.h &&
+    obsBox.y < box.y + box.h;
+  expect(overlapsObstacle).toBe(false);
 });

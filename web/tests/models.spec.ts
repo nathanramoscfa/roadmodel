@@ -506,6 +506,20 @@ test("a Cost tier narrows the charts to its models; the frontier still spans eve
   for (const id of offBand) {
     await expect(panel.getByTestId("frontier-off-band")).toContainText(catalog.models.find((m) => m.id === id)!.name);
   }
+  const tierLabeledIds = await panel
+    .getByTestId("frontier-model-label")
+    .evaluateAll((els) => els.map((e) => e.getAttribute("data-model-id")!));
+  for (const id of tierLabeledIds) expect(catalogFrontier.has(id)).toBe(true);
+  const offOnlyTier = ["very-high", "high", "medium", "low"].find(
+    (t) => MEASURED.some((r) => r.m.tier_cost === t) && !MEASURED.some((r) => r.m.tier_cost === t && catalogFrontier.has(r.m.id)),
+  );
+  if (offOnlyTier) {
+    await page.getByLabel("Filter by cost tier").selectOption(offOnlyTier);
+    await expect(panel.getByTestId("frontier-chart-point")).toHaveCount(
+      MEASURED.filter((r) => r.m.tier_cost === offOnlyTier).length,
+    );
+    await expect(panel.getByTestId("frontier-model-label")).toHaveCount(0);
+  }
   test.info().annotations.push({ type: "off-band frontier steps", description: `${tier}: ${offBand.join(",")}` });
 });
 
@@ -581,6 +595,12 @@ test("a Provider narrows the charts to its models and redraws the frontier over 
     onFrontier.map((r) => r.m.id).join(","),
   );
   await expect(page.getByTestId("frontier-scope")).toHaveText("Anthropic");
+  const providerFrontierIds = new Set(onFrontier.map((r) => r.m.id));
+  const providerLabeledIds = await panel
+    .getByTestId("frontier-model-label")
+    .evaluateAll((els) => els.map((e) => e.getAttribute("data-model-id")!));
+  expect(providerLabeledIds.length).toBeGreaterThan(0);
+  for (const id of providerLabeledIds) expect(providerFrontierIds.has(id)).toBe(true);
 });
 
 test("the benchmark-scores view is a uniform grid: one AA column per evaluation", async ({ page }) => {
@@ -1139,6 +1159,50 @@ test("the frontier chart plots every measured model and joins the frontier with 
   for (let i = 1; i < onFrontier.length; i += 1) {
     expect(onFrontier[i].index).toBeGreaterThan(onFrontier[i - 1].index);
   }
+  // Only models on the cost/quality frontier are labeled, and no placed label overlaps a dot.
+  const frontierIdSet = new Set(onFrontier.map((r) => r.m.id));
+  const labeledIds = await panel
+    .getByTestId("frontier-model-label")
+    .evaluateAll((els) => els.map((e) => e.getAttribute("data-model-id")!));
+  expect(labeledIds.length).toBeGreaterThan(0);
+  expect(labeledIds.length).toBeLessThanOrEqual(onFrontier.length);
+  for (const id of labeledIds) expect(frontierIdSet.has(id)).toBe(true);
+  const labelOverlaps = await panel.getByTestId("frontier-chart").evaluate((fig) => {
+    const num = (el: Element, a: string) => Number(el.getAttribute(a));
+    const dots = [...fig.querySelectorAll('[data-testid="frontier-chart-point"]')].map((d) => ({
+      id: d.getAttribute("data-model-id")!,
+      cx: num(d, "cx"),
+      cy: num(d, "cy"),
+    }));
+    const rects = [
+      ...fig.querySelectorAll('[data-testid="frontier-model-label"], [data-testid="frontier-tier-label"]'),
+    ].map((g) => {
+      const r = g.querySelector("rect")!;
+      return {
+        modelId: g.getAttribute("data-model-id"),
+        text: g.textContent ?? "",
+        x: num(r, "x"),
+        y: num(r, "y"),
+        w: num(r, "width"),
+        h: num(r, "height"),
+      };
+    });
+    const hits: string[] = [];
+    for (const lb of rects) {
+      for (const dt of dots) {
+        const reach = dt.id === lb.modelId ? 5 : 8;
+        const dx0 = dt.cx - reach;
+        const dy0 = dt.cy - reach;
+        const dw = 2 * reach;
+        if (lb.x < dx0 + dw && dx0 < lb.x + lb.w && lb.y < dy0 + dw && dy0 < lb.y + lb.h) {
+          hits.push(`${lb.text} overlaps ${dt.id}`);
+        }
+      }
+    }
+    return hits;
+  });
+  expect(labelOverlaps).toEqual([]);
+
   // One grey Score line per cost tier the fit covers.
   await expect(panel.getByTestId("frontier-tier-line")).toHaveCount(
     new Set(MEASURED.map((r) => r.m.tier_cost)).size,

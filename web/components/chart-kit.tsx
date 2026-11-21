@@ -93,7 +93,8 @@ const DOT_CLEARANCE = 3;
 // placed and every other dot. A label with no clear spot is left to the hover
 // card: a crowd of labels is harder to read than none. An item can offer
 // other anchors to try in turn (a line's two ends and middle), and an item
-// that is not a dot (dot: false) keeps no clearance of its own.
+// that is not a dot (dot: false) keeps no clearance of its own. An item
+// with label: false keeps its dot clearance as an obstacle without being labeled.
 export interface LabelItem {
   id: string;
   cx: number;
@@ -102,6 +103,7 @@ export interface LabelItem {
   priority: number;
   anchors?: { cx: number; cy: number }[];
   dot?: boolean;
+  label?: boolean;
 }
 
 export function placeLabels(
@@ -120,6 +122,7 @@ export function placeLabels(
     }));
   const out = new Map<string, Label>();
   for (const p of [...pts].sort((a, b) => b.priority - a.priority)) {
+    if (p.label === false) continue;
     if (out.size >= maxLabels) break;
     const w = textWidth(p.text);
     const off = dotR + 5;
