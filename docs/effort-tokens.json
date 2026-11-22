@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at_utc": "2026-11-08T15:06:48Z",
+  "generated_at_utc": "2026-11-22T02:42:30Z",
   "source": "Measured by update/measure_effort_tokens.py: output tokens (reasoning included) per probe on a fixed set of short tasks, at every ladder effort the model's lane can set.",
   "probe_set_sha256": "db1a808e774b2c1afd25f380c9641b83ccacae87f1ead88fc7307f2c539aa4a0",
   "probes": 8,
@@ -54,6 +54,46 @@
           "truncated": 0,
           "ci90": 0.343,
           "multiplier": 4.72
+        }
+      }
+    },
+    "claude-fable-5.2": {
+      "lane": "claude-code",
+      "levels": {
+        "low": {
+          "mean_output_tokens": 458.2,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.028,
+          "multiplier": 0.681
+        },
+        "medium": {
+          "mean_output_tokens": 487.2,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.048,
+          "multiplier": 0.724
+        },
+        "high": {
+          "mean_output_tokens": 552.0,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.035,
+          "multiplier": 0.82
+        },
+        "xhigh": {
+          "mean_output_tokens": 794.6,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.059,
+          "multiplier": 1.181
+        },
+        "max": {
+          "mean_output_tokens": 2028.8,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.083,
+          "multiplier": 3.015
         }
       }
     },
@@ -458,6 +498,98 @@
         }
       }
     },
+    "gemini-4-carbon": {
+      "lane": "openrouter",
+      "levels": {
+        "low": {
+          "mean_output_tokens": 288.2,
+          "runs": 40,
+          "truncated": 0,
+          "ci90": 0.186,
+          "multiplier": 0.335
+        },
+        "medium": {
+          "mean_output_tokens": 1132.5,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.081,
+          "multiplier": 1.317
+        },
+        "high": {
+          "mean_output_tokens": 3315.8,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.069,
+          "multiplier": 3.857
+        }
+      }
+    },
+    "gemini-4-hydrogen": {
+      "lane": "openrouter",
+      "levels": {
+        "low": {
+          "mean_output_tokens": 936.6,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.08,
+          "multiplier": 1.089
+        },
+        "medium": {
+          "mean_output_tokens": 1328.8,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.045,
+          "multiplier": 1.546
+        },
+        "high": {
+          "mean_output_tokens": 1415.3,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.07,
+          "multiplier": 1.646
+        },
+        "xhigh": {
+          "mean_output_tokens": 4317.8,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.078,
+          "multiplier": 5.023
+        }
+      }
+    },
+    "gemini-4-neon": {
+      "lane": "openrouter",
+      "levels": {
+        "low": {
+          "mean_output_tokens": 1097.6,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.048,
+          "multiplier": 1.277
+        },
+        "medium": {
+          "mean_output_tokens": 1565.8,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.025,
+          "multiplier": 1.821
+        },
+        "high": {
+          "mean_output_tokens": 1843.8,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.049,
+          "multiplier": 2.145
+        },
+        "xhigh": {
+          "mean_output_tokens": 4145.2,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.028,
+          "multiplier": 4.822
+        }
+      }
+    },
     "glm-5.2": {
       "lane": "openrouter",
       "levels": {
@@ -571,6 +703,32 @@
           "truncated": 0,
           "ci90": 0.135,
           "multiplier": 4.557
+        }
+      }
+    },
+    "gpt-5.1-codex": {
+      "lane": "openrouter",
+      "levels": {
+        "low": {
+          "mean_output_tokens": 673.2,
+          "runs": 32,
+          "truncated": 0,
+          "ci90": 0.177,
+          "multiplier": 0.783
+        },
+        "medium": {
+          "mean_output_tokens": 1257.1,
+          "runs": 192,
+          "truncated": 0,
+          "ci90": 0.116,
+          "multiplier": 1.462
+        },
+        "high": {
+          "mean_output_tokens": 2182.5,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.085,
+          "multiplier": 2.539
         }
       }
     },
@@ -963,6 +1121,126 @@
         }
       }
     },
+    "gpt-6.1-terra": {
+      "lane": "codex",
+      "levels": {
+        "low": {
+          "mean_output_tokens": 209.4,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.052,
+          "multiplier": 0.311
+        },
+        "medium": {
+          "mean_output_tokens": 217.1,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.033,
+          "multiplier": 0.323
+        },
+        "high": {
+          "mean_output_tokens": 232.5,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.025,
+          "multiplier": 0.345
+        },
+        "xhigh": {
+          "mean_output_tokens": 260.8,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.028,
+          "multiplier": 0.387
+        },
+        "max": {
+          "mean_output_tokens": 858.8,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.136,
+          "multiplier": 1.276
+        }
+      }
+    },
+    "gpt-6.2-astra": {
+      "lane": "codex",
+      "levels": {
+        "low": {
+          "mean_output_tokens": 183.9,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.015,
+          "multiplier": 0.273
+        },
+        "medium": {
+          "mean_output_tokens": 194.7,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.039,
+          "multiplier": 0.289
+        },
+        "high": {
+          "mean_output_tokens": 228.4,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.045,
+          "multiplier": 0.339
+        },
+        "xhigh": {
+          "mean_output_tokens": 366.8,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.075,
+          "multiplier": 0.545
+        },
+        "max": {
+          "mean_output_tokens": 1301.8,
+          "runs": 32,
+          "truncated": 0,
+          "ci90": 0.083,
+          "multiplier": 1.934
+        }
+      }
+    },
+    "gpt-6.2-sol": {
+      "lane": "codex",
+      "levels": {
+        "low": {
+          "mean_output_tokens": 189.3,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.057,
+          "multiplier": 0.281
+        },
+        "medium": {
+          "mean_output_tokens": 232.3,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.038,
+          "multiplier": 0.345
+        },
+        "high": {
+          "mean_output_tokens": 319.6,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.044,
+          "multiplier": 0.475
+        },
+        "xhigh": {
+          "mean_output_tokens": 464.4,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.085,
+          "multiplier": 0.69
+        },
+        "max": {
+          "mean_output_tokens": 1283.4,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.062,
+          "multiplier": 1.907
+        }
+      }
+    },
     "gpt-oss-120b": {
       "lane": "openrouter",
       "levels": {
@@ -1215,7 +1493,7 @@
     }
   },
   "settable": {
-    "claude-fable-5.1": [
+    "claude-fable-5.2": [
       "low",
       "medium",
       "high",
@@ -1248,16 +1526,6 @@
       "high",
       "max"
     ],
-    "gemini-3-flash": [
-      "low",
-      "medium",
-      "high"
-    ],
-    "gemini-3.1-flash-lite": [
-      "low",
-      "medium",
-      "high"
-    ],
     "gemini-3.5-flash-lite": [
       "low",
       "medium",
@@ -1273,7 +1541,20 @@
       "medium",
       "high"
     ],
-    "glm-5.2": [
+    "gemini-4-carbon": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "gemini-4-hydrogen": [
+      "low",
+      "medium",
+      "high",
+      "xhigh"
+    ],
+    "gemini-4-neon": [
+      "low",
+      "medium",
       "high",
       "xhigh"
     ],
@@ -1287,34 +1568,6 @@
       "high",
       "max"
     ],
-    "gpt-5.6-luna": [
-      "low",
-      "medium",
-      "high",
-      "xhigh",
-      "max"
-    ],
-    "gpt-5.6-sol": [
-      "low",
-      "medium",
-      "high",
-      "xhigh",
-      "max"
-    ],
-    "gpt-5.6-terra": [
-      "low",
-      "medium",
-      "high",
-      "xhigh",
-      "max"
-    ],
-    "gpt-6-astra": [
-      "low",
-      "medium",
-      "high",
-      "xhigh",
-      "max"
-    ],
     "gpt-6-luna": [
       "low",
       "medium",
@@ -1322,14 +1575,21 @@
       "xhigh",
       "max"
     ],
-    "gpt-6-sol": [
+    "gpt-6.1-terra": [
       "low",
       "medium",
       "high",
       "xhigh",
       "max"
     ],
-    "gpt-6.1-sol": [
+    "gpt-6.2-astra": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "gpt-6.2-sol": [
       "low",
       "medium",
       "high",
@@ -1342,11 +1602,6 @@
       "high"
     ],
     "gpt-oss-20b": [
-      "low",
-      "medium",
-      "high"
-    ],
-    "grok-4.3": [
       "low",
       "medium",
       "high"
@@ -1379,97 +1634,77 @@
   },
   "typical": {
     "high": 1.0,
-    "low": 0.54,
-    "medium": 0.763,
-    "xhigh": 1.323,
-    "max": 1.817
+    "low": 0.58,
+    "medium": 0.816,
+    "xhigh": 1.405,
+    "max": 1.929
   },
   "derived": {
-    "claude-4.5-haiku": {
-      "low": 0.54,
-      "medium": 0.763,
+    "codestral": {
+      "low": 0.58,
+      "medium": 0.816,
       "high": 1.0,
-      "xhigh": 1.323,
-      "max": 1.817
+      "xhigh": 1.405,
+      "max": 1.929
     },
-    "gemini-2.5-flash": {
-      "low": 0.54,
-      "medium": 0.763,
+    "composer-2.5": {
+      "low": 0.58,
+      "medium": 0.816,
       "high": 1.0,
-      "xhigh": 1.323,
-      "max": 1.817
+      "xhigh": 1.405,
+      "max": 1.929
     },
-    "glm-4.5-air": {
-      "low": 0.54,
-      "medium": 0.763,
-      "high": 1.0,
-      "xhigh": 1.323,
-      "max": 1.817
+    "glm-5.2": {
+      "low": 1.54,
+      "medium": 2.165,
+      "max": 7.688
     },
-    "glm-4.6": {
-      "low": 0.54,
-      "medium": 0.763,
-      "high": 1.0,
-      "xhigh": 1.323,
-      "max": 1.817
+    "grok-4.3": {
+      "xhigh": 4.753,
+      "max": 6.526
     },
     "kimi-k2.7-code": {
-      "low": 0.54,
-      "medium": 0.763,
+      "low": 0.58,
+      "medium": 0.816,
       "high": 1.0,
-      "xhigh": 1.323,
-      "max": 1.817
+      "xhigh": 1.405,
+      "max": 1.929
     },
     "mistral-medium-3.5": {
-      "low": 0.54,
-      "medium": 0.763,
+      "low": 0.58,
+      "medium": 0.816,
       "high": 1.0,
-      "xhigh": 1.323,
-      "max": 1.817
+      "xhigh": 1.405,
+      "max": 1.929
     },
     "mistral-small-4": {
-      "low": 0.54,
-      "medium": 0.763,
+      "low": 0.58,
+      "medium": 0.816,
       "high": 1.0,
-      "xhigh": 1.323,
-      "max": 1.817
+      "xhigh": 1.405,
+      "max": 1.929
     }
   },
   "unmeasured": {
-    "claude-4.5-haiku": "its lane sets no efforts",
+    "codestral": "its lane sets no efforts",
+    "codestral@high": "OpenRouter cannot set this effort",
+    "codestral@low": "OpenRouter cannot set this effort",
+    "codestral@max": "OpenRouter cannot set this effort",
+    "codestral@medium": "OpenRouter cannot set this effort",
+    "codestral@xhigh": "OpenRouter cannot set this effort",
+    "composer-2.5": "no lane serves it (not on OpenRouter, no subscription lane)",
     "deepseek-flash@medium": "OpenRouter cannot set this effort",
     "deepseek-flash@xhigh": "OpenRouter cannot set this effort",
-    "gemini-2.5-flash": "its lane sets no efforts",
-    "gemini-2.5-flash@high": "OpenRouter cannot set this effort",
-    "gemini-2.5-flash@low": "OpenRouter cannot set this effort",
-    "gemini-2.5-flash@max": "OpenRouter cannot set this effort",
-    "gemini-2.5-flash@medium": "OpenRouter cannot set this effort",
-    "gemini-2.5-flash@xhigh": "OpenRouter cannot set this effort",
-    "gemini-3-flash@max": "OpenRouter cannot set this effort",
-    "gemini-3-flash@xhigh": "OpenRouter cannot set this effort",
-    "gemini-3.1-flash-lite@max": "OpenRouter cannot set this effort",
-    "gemini-3.1-flash-lite@xhigh": "OpenRouter cannot set this effort",
     "gemini-3.5-flash-lite@max": "OpenRouter cannot set this effort",
     "gemini-3.5-flash-lite@xhigh": "OpenRouter cannot set this effort",
     "gemini-3.8-flash@max": "OpenRouter cannot set this effort",
     "gemini-3.8-flash@xhigh": "OpenRouter cannot set this effort",
     "gemini-4-argon@max": "OpenRouter cannot set this effort",
     "gemini-4-argon@xhigh": "OpenRouter cannot set this effort",
-    "glm-4.5-air": "its lane sets no efforts",
-    "glm-4.5-air@high": "OpenRouter cannot set this effort",
-    "glm-4.5-air@low": "OpenRouter cannot set this effort",
-    "glm-4.5-air@max": "OpenRouter cannot set this effort",
-    "glm-4.5-air@medium": "OpenRouter cannot set this effort",
-    "glm-4.5-air@xhigh": "OpenRouter cannot set this effort",
-    "glm-4.6": "its lane sets no efforts",
-    "glm-4.6@high": "OpenRouter cannot set this effort",
-    "glm-4.6@low": "OpenRouter cannot set this effort",
-    "glm-4.6@max": "OpenRouter cannot set this effort",
-    "glm-4.6@medium": "OpenRouter cannot set this effort",
-    "glm-4.6@xhigh": "OpenRouter cannot set this effort",
-    "glm-5.2@low": "OpenRouter cannot set this effort",
-    "glm-5.2@max": "OpenRouter cannot set this effort",
-    "glm-5.2@medium": "OpenRouter cannot set this effort",
+    "gemini-4-carbon@max": "OpenRouter cannot set this effort",
+    "gemini-4-carbon@xhigh": "OpenRouter cannot set this effort",
+    "gemini-4-hydrogen@max": "OpenRouter cannot set this effort",
+    "gemini-4-neon@max": "OpenRouter cannot set this effort",
     "glm-5.3-flash@medium": "OpenRouter cannot set this effort",
     "glm-5.3-flash@xhigh": "OpenRouter cannot set this effort",
     "glm-5.3@medium": "OpenRouter cannot set this effort",
@@ -1478,8 +1713,6 @@
     "gpt-oss-120b@xhigh": "OpenRouter cannot set this effort",
     "gpt-oss-20b@max": "OpenRouter cannot set this effort",
     "gpt-oss-20b@xhigh": "OpenRouter cannot set this effort",
-    "grok-4.3@max": "OpenRouter cannot set this effort",
-    "grok-4.3@xhigh": "OpenRouter cannot set this effort",
     "grok-4.7@max": "OpenRouter cannot set this effort",
     "kimi-k2.7-code": "its lane sets no efforts",
     "kimi-k2.7-code@high": "OpenRouter cannot set this effort",

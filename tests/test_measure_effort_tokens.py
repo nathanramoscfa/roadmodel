@@ -10,7 +10,9 @@ its blended price (scoring.effort_price).
 
 from __future__ import annotations
 
+import datetime as dt
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -232,6 +234,7 @@ def test_frontier_price_scales_the_output_share_by_the_measured_multiplier(
 def test_the_committed_measurements_are_well_formed() -> None:
     doc = json.loads((REPO_ROOT / "docs" / "effort-tokens.json").read_text())
     bench = json.loads((REPO_ROOT / "docs" / "benchmarks.json").read_text())["models"]
+    estimates = json.loads((REPO_ROOT / "docs" / "index-estimates.json").read_text())["models"]
     # A retired model's row leaves the benchmark layer, but its measurement
     # stays: it is part of the reference every multiplier is taken over.
     selector = (REPO_ROOT / "docs" / "model-selector.txt").read_text()
@@ -240,7 +243,7 @@ def test_the_committed_measurements_are_well_formed() -> None:
     assert doc["probe_set_sha256"] == met.probe_set_sha256(), "probes changed: re-measure"
     assert doc["models"], "no model measured"
     for mid, row in doc["models"].items():
-        assert mid in bench or mid in retired, mid
+        assert mid in bench or mid in estimates or mid in retired, mid
         assert len(row["levels"]) > 1, mid
         for level, v in row["levels"].items():
             assert level in scoring.EFFORT_LADDER, (mid, level)
@@ -366,6 +369,19 @@ def test_unmeasured_lists_new_ladder_efforts_but_not_explained_gaps() -> None:
     }
 
 
+def test_unmeasured_still_surfaces_transient_run_failures() -> None:
+    bench = _bench(**{"gpt-6-luna": _aa_row("OpenAI"), "grok-4.7": _aa_row("xAI")})
+    doc = {
+        "models": {},
+        "unmeasured": {
+            "gpt-6-luna": "runs failed: model_not_found",
+            "grok-4.7": "too few probes measured",
+        },
+    }
+    got = met.unmeasured(bench, _ladder_catalog(), doc)
+    assert set(got) == {"gpt-6-luna", "grok-4.7"}
+
+
 def test_the_benchmark_cron_keeps_one_issue_for_unmeasured_efforts() -> None:
     wf = (REPO_ROOT / ".github" / "workflows" / "update-benchmarks.yml").read_text()
     assert "python update/measure_effort_tokens.py --unmeasured" in wf
@@ -374,7 +390,11 @@ def test_the_benchmark_cron_keeps_one_issue_for_unmeasured_efforts() -> None:
 
 def test_a_narrowed_run_keeps_every_models_skip_reason() -> None:
     src = (UPDATE_DIR / "measure_effort_tokens.py").read_text()
-    assert "plan(bench, catalog, samples=1, models=None, levels=None, routes=routes)" in src
+    assert re.search(
+        r"every,\s*reasons\s*=\s*plan\(\s*bench,\s*catalog,\s*samples=1,"
+        r"\s*models=None,\s*levels=None,\s*routes=routes,\s*estimates=estimates,?\s*\)",
+        src,
+    )
     assert "skipped=reasons," in src
 
 
@@ -580,3 +600,122 @@ def test_the_reference_is_kept_while_the_probe_set_is_unchanged() -> None:
     assert _summary(runs)["reference"]["mean_output_tokens"] == 1800.0
     src = (UPDATE_DIR / "measure_effort_tokens.py").read_text()
     assert 'previous.get("probe_set_sha256") == sha' in src
+
+
+def test_estimates_models_and_dynamic_codex_lane_are_included() -> None:
+    catalog: dict[str, Any] = {
+        "models": [
+            {"id": "claude-fable-5.2", "input_price_per_1m": 8.0, "output_price_per_1m": 40.0},
+            {"id": "gpt-6.2-sol", "input_price_per_1m": 2.0, "output_price_per_1m": 10.0},
+            {"id": "gemini-4-neon", "input_price_per_1m": 3.0, "output_price_per_1m": 15.0},
+        ],
+        "access_methods": [
+            {
+                "id": "claude-code",
+                "effort_levels": list(met.LEVELS),
+                "effort_levels_by_model": {"claude-fable-5.2": list(met.LEVELS)},
+            },
+            {
+                "id": "codex-cli",
+                "effort_levels": [*met.LEVELS, "ultra"],
+                "supports_models": ["gpt-6.2-sol"],
+            },
+        ],
+    }
+    estimates = {
+        "models": {
+            "claude-fable-5.2": {"index": 57.4, "effort": "max"},
+            "gpt-6.2-sol": {"index": 53.8, "effort": "max"},
+            "gemini-4-neon": {"index": 56.9, "effort": "xhigh"},
+        }
+    }
+    routes = {"gemini-4-neon": ("google/gemini-4-neon", ["low", "medium", "high", "xhigh"])}
+    assert met.ladder_models(catalog, {"models": {}}, estimates) == [
+        "claude-fable-5.2",
+        "gemini-4-neon",
+        "gpt-6.2-sol",
+    ]
+    assert met.unmeasured({"models": {}}, catalog, {}, estimates=estimates) == {
+        "claude-fable-5.2": list(met.LEVELS),
+        "gemini-4-neon": list(met.LEVELS),
+        "gpt-6.2-sol": list(met.LEVELS),
+    }
+    jobs, skipped = met.plan(
+        {"models": {}},
+        catalog,
+        samples=1,
+        models=None,
+        levels=None,
+        routes=routes,
+        estimates=estimates,
+    )
+    lanes = {(j.model_id, j.lane, j.target) for j in jobs}
+    assert lanes == {
+        ("claude-fable-5.2", "claude-code", "claude-fable-5-2"),
+        ("gpt-6.2-sol", "codex", "gpt-6.2-sol"),
+        ("gemini-4-neon", "openrouter", "google/gemini-4-neon"),
+    }
+    assert skipped == {"gemini-4-neon@max": "OpenRouter cannot set this effort"}
+
+
+def test_derive_fills_unmeasurable_levels_and_inherits_same_series_predecessor() -> None:
+    measured = {
+        "glm-5.2": {"high": 2.654, "xhigh": 4.705},
+        "other-a": {"high": 1.0, "xhigh": 1.5, "max": 2.25},
+        "other-b": {"xhigh": 1.0, "max": 1.5},
+        "claude-fable-5.1": {"high": 0.725, "xhigh": 1.11, "max": 4.72},
+    }
+    derived, _ = met.derive(
+        measured,
+        {
+            "glm-5.2": ["high", "xhigh", "max"],
+            "claude-fable-5.2": ["high", "xhigh", "max"],
+        },
+    )
+    # glm-5.2@max extrapolates upward from its xhigh (median max/xhigh across
+    # other-a [1.5], other-b [1.5], fable-5.1 [4.252] = 1.5 -> 4.705 * 1.5 = 7.058).
+    assert derived["glm-5.2"]["max"] == pytest.approx(7.058, abs=1e-3)
+    # claude-fable-5.2 inherits claude-fable-5.1's measured levels rather than typical.
+    assert derived["claude-fable-5.2"] == {"high": 0.725, "xhigh": 1.11, "max": 4.72}
+
+
+def test_token_use_falls_back_through_same_series_predecessor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        scoring,
+        "effort_token_multipliers",
+        lambda: {
+            "claude-fable-5.1": {"low": 0.637, "max": 4.72},
+            "glm-5.2": {"high": 2.654, "xhigh": 4.705},
+        },
+    )
+    monkeypatch.setattr(
+        scoring,
+        "derived_token_multipliers",
+        lambda: {"glm-5.2": {"max": 7.058}},
+    )
+    assert scoring.token_use("claude-fable-5.2", "max") == (4.72, False)
+    assert scoring.token_use("glm-5.3", "max") == (7.058, False)
+    assert scoring.token_use("brand-new-series", "max") == (
+        scoring.EFFORT_TOKEN_MULTIPLIER["max"],
+        False,
+    )
+
+
+def test_recent_openrouter_spend_counts_last_7_days_openrouter_only() -> None:
+    now = dt.datetime(2026, 11, 21, 12, 0, tzinfo=dt.UTC)
+    runs = [
+        {"lane": "openrouter", "cost_usd": 1.25, "at": "2026-11-21T10:00:00Z"},
+        {"lane": "openrouter", "cost_usd": 2.50, "at": "2026-11-15T00:00:00Z"},
+        {"lane": "openrouter", "cost_usd": 9.99, "at": "2026-11-10T00:00:00Z"},
+        {"lane": "claude-code", "cost_usd": 5.00, "at": "2026-11-21T11:00:00Z"},
+    ]
+    assert met.recent_openrouter_spend(runs, days=7, now=now) == pytest.approx(3.75)
+
+
+def test_measure_weekly_script_fetches_tags_and_enforces_weekly_cap() -> None:
+    script = (REPO_ROOT / "scripts" / "measure-weekly.sh").read_text(encoding="utf-8")
+    assert "git fetch -q --tags --force origin" in script
+    assert "--max-weekly-usd" in script
+    assert "--auto" in script
