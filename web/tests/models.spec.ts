@@ -34,7 +34,7 @@ import {
 } from "../lib/benchmark-grid";
 import { modelProvider } from "../lib/catalog-fields";
 import { estimateFor, estimatedCategories, getModelRows, inheritedSource, pastLeaveDate } from "../lib/catalog-models";
-import { effortWord, headlinePrice } from "../lib/pick-effort";
+import { effortWord, headlinePrice, resolveTokenMultipliers, type EffortTokensDoc } from "../lib/pick-effort";
 import { isNewer } from "../lib/series";
 import { liveCatalog } from "./fixtures/live-catalog";
 
@@ -127,10 +127,7 @@ const benchmarks = JSON.parse(
 ) as { models: Record<string, BenchModel> };
 const effortTokens = JSON.parse(
   readFileSync(path.join(process.cwd(), "data", "effort-tokens.json"), "utf8"),
-) as {
-  models?: Record<string, { levels?: Record<string, { multiplier?: number }> }>;
-  derived?: Record<string, Record<string, number>>;
-};
+) as EffortTokensDoc;
 const MEASURED_COUNT = catalog.models.filter((m) => benchmarks.models[m.id]).length;
 
 // --- The one composite number (AA Index) --------------------------------------
@@ -191,15 +188,11 @@ function headlineEffortFor(m: ScoredModel): string | null {
 }
 
 function effectivePrice(m: ScoredModel): number {
-  const mults: Record<string, number> = { ...(effortTokens.derived?.[m.id] ?? {}) };
-  for (const [lvl, row] of Object.entries(effortTokens.models?.[m.id]?.levels ?? {})) {
-    if (typeof row.multiplier === "number" && row.multiplier > 0) mults[lvl] = row.multiplier;
-  }
   return headlinePrice({
     input_price_per_1m: m.input_price_per_1m,
     output_price_per_1m: m.output_price_per_1m,
     aa_index_effort: headlineEffortFor(m),
-    token_multiplier_by_effort: Object.keys(mults).length > 0 ? mults : undefined,
+    token_multiplier_by_effort: resolveTokenMultipliers(m.id, effortTokens),
   });
 }
 

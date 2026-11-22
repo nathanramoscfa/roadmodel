@@ -33,7 +33,7 @@ import {
   type BenchRow,
 } from "../lib/benchmark-grid";
 import { placeLabels } from "../components/chart-kit";
-import { headlinePrice } from "../lib/pick-effort";
+import { headlinePrice, resolveTokenMultipliers, type EffortTokensDoc } from "../lib/pick-effort";
 import { liveCatalog } from "./fixtures/live-catalog";
 
 interface CatalogModel {
@@ -50,10 +50,7 @@ const benchmarks = JSON.parse(
 ) as { models: Record<string, { aa_effort?: string | null; evaluations: Record<string, number | null> }> };
 const effortTokens = JSON.parse(
   readFileSync(path.join(process.cwd(), "data", "effort-tokens.json"), "utf8"),
-) as {
-  models?: Record<string, { levels?: Record<string, { multiplier?: number }> }>;
-  derived?: Record<string, Record<string, number>>;
-};
+) as EffortTokensDoc;
 const indexEstimates = JSON.parse(
   readFileSync(path.join(process.cwd(), "data", "index-estimates.json"), "utf8"),
 ) as { models?: Record<string, { effort?: string | null }> };
@@ -69,15 +66,11 @@ function priceOf(m: CatalogModel): number {
   const b = benchmarks.models[m.id];
   const measured = b?.evaluations.artificial_analysis_intelligence_index;
   const eff = typeof measured === "number" ? (b?.aa_effort ?? null) : (indexEstimates.models?.[m.id]?.effort ?? null);
-  const mults: Record<string, number> = { ...(effortTokens.derived?.[m.id] ?? {}) };
-  for (const [lvl, row] of Object.entries(effortTokens.models?.[m.id]?.levels ?? {})) {
-    if (typeof row.multiplier === "number" && row.multiplier > 0) mults[lvl] = row.multiplier;
-  }
   return headlinePrice({
     input_price_per_1m: m.input_price_per_1m,
     output_price_per_1m: m.output_price_per_1m,
     aa_index_effort: eff,
-    token_multiplier_by_effort: Object.keys(mults).length > 0 ? mults : undefined,
+    token_multiplier_by_effort: resolveTokenMultipliers(m.id, effortTokens),
   });
 }
 const fit = fitScoreModel(
@@ -115,15 +108,34 @@ test("every model's breakdown adds up exactly to the Score the table prints", ()
 });
 
 test("headlinePrice charges reasoning models for extra output tokens at their headline effort", () => {
-  const hydrogen = catalog.models.find((m) => m.id === "gemini-4-hydrogen");
-  if (hydrogen) {
-    // Gemini 4 Hydrogen ($1.50/$7.50) at Extra high (1.6x output): (3*1.5 + 1.6*7.5)/4 = 4.125 vs 3.00 list.
-    expect(priceOf(hydrogen)).toBeCloseTo(4.125, 3);
-    expect(priceOf(hydrogen)).toBeGreaterThan(blendedPrice(hydrogen.input_price_per_1m, hydrogen.output_price_per_1m));
+  // Synthetic unmeasured fallback: $1.50/$7.50 at Extra high (1.6x output) = (3*1.5 + 1.6*7.5)/4 = 4.125.
+  expect(
+    headlinePrice({ input_price_per_1m: 1.5, output_price_per_1m: 7.5, aa_index_effort: "xhigh" }),
+  ).toBeCloseTo(4.125, 3);
+
+  // Day-one predecessor inheritance before a new model is measured in effort-tokens.json:
+  const inherited = resolveTokenMultipliers("claude-fable-5.9", {
+    models: {
+      "claude-fable-5.1": { levels: { max: { multiplier: 4.72 } } },
+      "claude-fable-5.2": { levels: { max: { multiplier: 5.5 } } },
+    },
+  });
+  expect(inherited?.max).toBe(5.5);
+
+  for (const id of ["gemini-4-hydrogen", "claude-opus-5-5", "claude-fable-5.2"]) {
+    const model = catalog.models.find((m) => m.id === id);
+    if (!model) continue;
+    expect(priceOf(model)).toBeGreaterThan(
+      blendedPrice(model.input_price_per_1m, model.output_price_per_1m),
+    );
   }
-  const opus = catalog.models.find((m) => m.id === "claude-opus-5-5");
-  if (opus) {
-    expect(priceOf(opus)).toBeGreaterThan(blendedPrice(opus.input_price_per_1m, opus.output_price_per_1m));
+  const fable52 = catalog.models.find((m) => m.id === "claude-fable-5.2");
+  const mult52 = effortTokens.models?.["claude-fable-5.2"]?.levels?.max?.multiplier;
+  if (fable52 && typeof mult52 === "number") {
+    expect(priceOf(fable52)).toBeCloseTo(
+      (3 * fable52.input_price_per_1m + mult52 * fable52.output_price_per_1m) / 4,
+      6,
+    );
   }
 });
 

@@ -620,18 +620,36 @@ def settable_levels() -> dict[str, list[str]]:
     }
 
 
+def _predecessor_token_multiplier(model_id: str, level: str) -> float | None:
+    """The newest same-series predecessor's measured (else derived) output-token
+    multiplier at ``level``, or ``None`` when no predecessor has one."""
+    for table in (effort_token_multipliers(), derived_token_multipliers()):
+        candidates = [
+            old
+            for old, mults in table.items()
+            if level in mults and _series.is_newer(old, model_id)
+        ]
+        if candidates:
+            best = max(candidates, key=lambda k: (_series.version(k), k))
+            return table[best][level]
+    return None
+
+
 def token_use(model_id: str, level: str) -> tuple[float, bool]:
     """The output tokens ``model_id`` draws at ``level``, relative to a typical
     model at high, and whether that was measured: measured, else derived from
-    the model's measured efforts (every ladder model has one or the other),
-    else the uniform EFFORT_TOKEN_MULTIPLIER (a model newer than the last
-    measurement)."""
+    the model's measured efforts, else inherited day-one from its newest
+    measured/derived same-series predecessor, else the uniform
+    EFFORT_TOKEN_MULTIPLIER."""
     measured = effort_token_multipliers().get(model_id, {})
     if level in measured:
         return measured[level], True
     derived = derived_token_multipliers().get(model_id, {})
     if level in derived:
         return derived[level], False
+    predecessor = _predecessor_token_multiplier(model_id, level)
+    if predecessor is not None:
+        return predecessor, False
     return EFFORT_TOKEN_MULTIPLIER[level], False
 
 

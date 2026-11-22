@@ -33,7 +33,7 @@ import {
   type ScoreFit,
 } from "@/lib/benchmark-grid";
 import { withFrontier } from "@/lib/catalog-filter";
-import { headlinePrice } from "@/lib/pick-effort";
+import { headlinePrice, resolveTokenMultipliers, type EffortTokensDoc } from "@/lib/pick-effort";
 import { BENCHMARKS } from "@/lib/glossary";
 import { compareVersions, isNewer, version } from "@/lib/series";
 
@@ -173,30 +173,13 @@ export function estimatedCategories(id: string): Category[] {
 }
 
 // Each effort's output-token multiplier (docs/effort-tokens.json,
-// update/measure_effort_tokens.py): measured, else derived from the model's
-// measured efforts; undefined when it has neither.
-const TOKEN_DOC = effortTokens as {
-  models?: Record<string, { levels?: Record<string, { multiplier?: number }> }>;
-  derived?: Record<string, Record<string, number>>;
-};
-const TOKENS = TOKEN_DOC.models ?? {};
-const DERIVED_TOKENS = TOKEN_DOC.derived ?? {};
+// update/measure_effort_tokens.py): measured, else derived, else inherited
+// day-one from the newest same-series predecessor.
+const TOKEN_DOC = effortTokens as EffortTokensDoc;
 
 const EFFORT_RATINGS =
   (effortRatings as { models?: Record<string, Record<string, Partial<Record<Category, Rating>>>> })
     .models ?? {};
-
-function multiplierByEffort(id: string): Record<string, number> | undefined {
-  const out: Record<string, number> = {};
-  for (const [level, v] of Object.entries(DERIVED_TOKENS[id] ?? {})) {
-    if (typeof v === "number" && Number.isFinite(v) && v > 0) out[level] = v;
-  }
-  for (const [level, row] of Object.entries(TOKENS[id]?.levels ?? {})) {
-    const v = row.multiplier;
-    if (typeof v === "number" && Number.isFinite(v) && v > 0) out[level] = v;
-  }
-  return Object.keys(out).length > 0 ? out : undefined;
-}
 
 // The AA Index at each effort AA measured the model at, or undefined when it
 // names none.
@@ -388,7 +371,7 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
         : null,
       aa_index_by_effort: indexByEffort(m.id),
       aa_index_effort: measured !== null ? (BENCH[m.id]?.aa_effort ?? null) : (estimate?.effort ?? null),
-      token_multiplier_by_effort: multiplierByEffort(m.id),
+      token_multiplier_by_effort: resolveTokenMultipliers(m.id, TOKEN_DOC),
       default_efforts: defaultEffortsFor(m.id),
       tiers_by_effort: EFFORT_RATINGS[m.id],
       bench,

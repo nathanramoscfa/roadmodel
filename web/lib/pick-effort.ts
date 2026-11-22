@@ -11,6 +11,7 @@
 import { blendedPrice, scoreFor } from "@/lib/benchmark-grid";
 import type { AgentConfiguration } from "@/lib/catalog-fields";
 import type { PicksData, SlimRow } from "@/lib/recommend-picks";
+import { compareVersions, isNewer, version } from "@/lib/series";
 
 // Expected output tokens at each effort, relative to a typical model at high,
 // for a model or effort not measured (docs/effort-tokens.json). Mirrors
@@ -42,6 +43,54 @@ export function effortPrice(row: SlimRow, level: EffortLevel): number {
   const input = 3 * row.input_price_per_1m;
   const output = row.output_price_per_1m * tokenMultiplier(row, level);
   return (input + output) / 4;
+}
+
+export interface EffortTokensDoc {
+  models?: Record<string, { levels?: Record<string, { multiplier?: number }> }>;
+  derived?: Record<string, Record<string, number>>;
+}
+
+function mergeEffortMap(
+  out: Record<string, number>,
+  raw: Record<string, number> | undefined,
+): void {
+  for (const [level, v] of Object.entries(raw ?? {})) {
+    if (typeof v === "number" && Number.isFinite(v) && v > 0) out[level] = v;
+  }
+}
+
+function mergeMeasuredMap(
+  out: Record<string, number>,
+  levels: Record<string, { multiplier?: number }> | undefined,
+): void {
+  for (const [level, row] of Object.entries(levels ?? {})) {
+    const v = row.multiplier;
+    if (typeof v === "number" && Number.isFinite(v) && v > 0) out[level] = v;
+  }
+}
+
+// Each effort's output-token multiplier for `id`: direct measured over direct
+// derived, falling back day-one to the newest measured/derived same-series
+// predecessor per level when `id` is not yet in `doc`.
+export function resolveTokenMultipliers(
+  id: string,
+  doc: EffortTokensDoc,
+): Record<string, number> | undefined {
+  const out: Record<string, number> = {};
+  const models = doc.models ?? {};
+  const derived = doc.derived ?? {};
+  const preds = [...new Set([...Object.keys(models), ...Object.keys(derived)])]
+    .filter((old) => isNewer(old, id))
+    .sort((a, b) => compareVersions(version(a), version(b)) || a.localeCompare(b));
+  for (const old of preds) {
+    mergeEffortMap(out, derived[old]);
+  }
+  for (const old of preds) {
+    mergeMeasuredMap(out, models[old]?.levels);
+  }
+  mergeEffortMap(out, derived[id]);
+  mergeMeasuredMap(out, models[id]?.levels);
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 export interface PriceableRow {

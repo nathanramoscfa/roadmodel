@@ -81,8 +81,14 @@ import requests
 
 UPDATE_DIR = Path(__file__).resolve().parent
 REPO_ROOT = UPDATE_DIR.parent
+if str(REPO_ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT / "src"))
+
+from roadmodel import series  # noqa: E402
+
 BENCH_PATH = REPO_ROOT / "docs" / "benchmarks.json"
 CATALOG_PATH = REPO_ROOT / "docs" / "catalog.json"
+ESTIMATES_PATH = REPO_ROOT / "docs" / "index-estimates.json"
 OUT_PATH = REPO_ROOT / "docs" / "effort-tokens.json"
 RUNS_PATH = Path.home() / ".cache" / "roadmodel" / "effort-token-runs.jsonl"
 OR_MODELS_URL = "https://openrouter.ai/api/v1/models"
@@ -288,19 +294,68 @@ def measured_levels(row: dict[str, Any]) -> list[str]:
     return out if len(out) > 1 else []
 
 
-def ladder_models(catalog: dict[str, Any], bench: dict[str, Any]) -> list[str]:
+def codex_models(catalog: dict[str, Any] | None) -> frozenset[str]:
+    """The GPT models Codex CLI runs, read dynamically from ``codex-cli`` in
+    ``catalog['access_methods']`` when present, else :data:`CODEX_MODELS`."""
+    if catalog:
+        for method in catalog.get("access_methods", []):
+            if method.get("id") == "codex-cli":
+                supported = method.get("supports_models")
+                if isinstance(supported, list) and supported:
+                    return frozenset(str(m) for m in supported)
+    return CODEX_MODELS
+
+
+def ladder_models(
+    catalog: dict[str, Any],
+    bench: dict[str, Any],
+    estimates: dict[str, Any] | None = None,
+) -> list[str]:
     """The catalog models a ladder can show: every one not superseded or
-    retiring that carries an AA Intelligence Index."""
+    retiring that carries an AA Intelligence Index or a launch-table estimate."""
     rows = bench.get("models") or {}
+    est_rows = (estimates or {}).get("models") or {}
     out = []
     for m in catalog.get("models", []):
         mid = str(m.get("id", ""))
-        if m.get("superseded_by") or m.get("retires_on") or mid not in rows:
+        if m.get("superseded_by") or m.get("retires_on"):
             continue
-        evals = rows[mid].get("evaluations") or {}
-        if isinstance(evals.get("artificial_analysis_intelligence_index"), int | float):
+        evals = (rows.get(mid) or {}).get("evaluations") or {}
+        has_aa = isinstance(evals.get("artificial_analysis_intelligence_index"), int | float)
+        est = est_rows.get(mid) or {}
+        has_est = isinstance(est.get("index"), int | float)
+        if has_aa or has_est:
             out.append(mid)
     return sorted(out)
+
+
+def headline_efforts(
+    catalog: dict[str, Any],
+    bench: dict[str, Any],
+    estimates: dict[str, Any] | None = None,
+) -> dict[str, set[str]]:
+    """The headline and AA-measured effort levels across every live model in
+    ``catalog`` (including superseded models until their leave date)."""
+    rows = bench.get("models") or {}
+    est_rows = (estimates or {}).get("models") or {}
+    out: dict[str, set[str]] = {}
+    for m in catalog.get("models", []):
+        mid = str(m.get("id", ""))
+        if not mid:
+            continue
+        levels: set[str] = set()
+        b = rows.get(mid) or {}
+        if b.get("aa_effort") in LEVELS:
+            levels.add(str(b["aa_effort"]))
+        for lv in b.get("effort_variants") or {}:
+            if lv in LEVELS:
+                levels.add(str(lv))
+        e = est_rows.get(mid) or {}
+        if e.get("effort") in LEVELS:
+            levels.add(str(e["effort"]))
+        if levels:
+            out[mid] = levels
+    return out
 
 
 def dial_levels(catalog: dict[str, Any], method_id: str, model_id: str) -> list[str]:
@@ -318,10 +373,10 @@ def dial_levels(catalog: dict[str, Any], method_id: str, model_id: str) -> list[
     return []
 
 
-def lane_for(model_id: str, creator: str) -> str:
+def lane_for(model_id: str, creator: str = "", catalog: dict[str, Any] | None = None) -> str:
     if creator.lower() == "anthropic" or model_id.startswith("claude-"):
         return "claude-code"
-    if model_id in CODEX_MODELS:
+    if model_id in codex_models(catalog):
         return "codex"
     return "openrouter"
 
@@ -357,16 +412,17 @@ def plan(
     models: set[str] | None,
     levels: set[str] | None,
     routes: dict[str, tuple[str, list[str]]],
+    estimates: dict[str, Any] | None = None,
 ) -> tuple[list[Job], dict[str, str]]:
     """Every run to make, and why each ladder model left out is: each model
     :func:`ladder_models` names, at every ladder level its lane can set."""
     jobs: list[Job] = []
     skipped: dict[str, str] = {}
     rows = bench.get("models", {})
-    for mid in ladder_models(catalog, bench):
+    for mid in ladder_models(catalog, bench, estimates):
         if models is not None and mid not in models:
             continue
-        lane = lane_for(mid, str(rows[mid].get("aa_creator") or ""))
+        lane = lane_for(mid, str((rows.get(mid) or {}).get("aa_creator") or ""), catalog)
         target = mid
         if lane == "openrouter":
             if mid not in routes:
@@ -445,7 +501,18 @@ def run_claude_code(job: Job, claude_bin: str) -> RunResult:
     if data.get("is_error"):
         return RunResult(None, error=str(data.get("result"))[:200])
     # Claude Code also makes small Haiku side calls; count the model's own.
-    usage = (data.get("modelUsage") or {}).get(job.target)
+    model_usage = data.get("modelUsage") or {}
+    usage = model_usage.get(job.target)
+    if not isinstance(usage, dict):
+        usage = next(
+            (
+                v
+                for k, v in model_usage.items()
+                if isinstance(v, dict)
+                and (k.startswith(f"{job.target}-") or k.startswith(f"{job.target}["))
+            ),
+            None,
+        )
     if not isinstance(usage, dict):
         return RunResult(None, error=f"no usage for {job.target}")
     return RunResult(int(usage["outputTokens"]), truncated=data.get("stop_reason") == "max_tokens")
@@ -732,26 +799,36 @@ def derive(
     out: dict[str, dict[str, float]] = {}
     for mid, wanted in sorted(models.items()):
         have = measured.get(mid, {})
+        base = have
+        base_id = mid
+        if not have:
+            preds = [old for old in measured if series.is_newer(old, mid)]
+            if preds:
+                base_id = max(preds, key=lambda k: (series.version(k), k))
+                base = measured[base_id]
         row: dict[str, float] = {}
         for lv in LEVELS:
             if lv in have or lv not in wanted:
                 continue
+            if not have and lv in base:
+                row[lv] = base[lv]
+                continue
             i = LEVELS.index(lv)
-            lo = [x for x in have if LEVELS.index(x) < i]
-            hi = [x for x in have if LEVELS.index(x) > i]
+            lo = [x for x in base if LEVELS.index(x) < i]
+            hi = [x for x in base if LEVELS.index(x) > i]
             if lo and hi:
                 a, b = max(lo, key=LEVELS.index), min(hi, key=LEVELS.index)
                 t = (i - LEVELS.index(a)) / (LEVELS.index(b) - LEVELS.index(a))
-                row[lv] = have[a] * (have[b] / have[a]) ** t
-            elif have:
+                row[lv] = base[a] * (base[b] / base[a]) ** t
+            elif base:
                 a = max(lo, key=LEVELS.index) if lo else min(hi, key=LEVELS.index)
                 ratios = [
-                    m[lv] / m[a] for n, m in measured.items() if n != mid and lv in m and a in m
+                    m[lv] / m[a] for n, m in measured.items() if n != base_id and lv in m and a in m
                 ]
                 if ratios:
-                    row[lv] = have[a] * statistics.median(ratios)
+                    row[lv] = base[a] * statistics.median(ratios)
                 elif lv in typical and a in typical:
-                    row[lv] = have[a] * typical[lv] / typical[a]
+                    row[lv] = base[a] * typical[lv] / typical[a]
             elif lv in typical:
                 row[lv] = typical[lv]
         if row:
@@ -894,7 +971,11 @@ def _failed(runs: Iterable[dict[str, Any]], measured: set[str]) -> dict[str, str
 
 
 def unmeasured(
-    bench: dict[str, Any], catalog: dict[str, Any], doc: dict[str, Any]
+    bench: dict[str, Any],
+    catalog: dict[str, Any],
+    doc: dict[str, Any],
+    *,
+    estimates: dict[str, Any] | None = None,
 ) -> dict[str, list[str]]:
     """The ladder efforts of each ladder model (:func:`ladder_models`) that
     docs/effort-tokens.json has no figure for and no recorded reason to lack:
@@ -906,16 +987,43 @@ def unmeasured(
     measured = doc.get("models") or {}  # ``derived`` levels are not measured
     rows = bench.get("models") or {}
     out: dict[str, list[str]] = {}
-    for mid in ladder_models(catalog, bench):
-        if mid in known:
+    for mid in ladder_models(catalog, bench, estimates):
+        reason = known.get(mid)
+        if isinstance(reason, str) and not reason.startswith(("runs failed:", "too few probes")):
             continue
-        lane = lane_for(mid, str(rows[mid].get("aa_creator") or ""))
+        lane = lane_for(mid, str((rows.get(mid) or {}).get("aa_creator") or ""), catalog)
         dial = list(LEVELS) if lane == "openrouter" else dial_levels(catalog, LANE_DIALS[lane], mid)
         have = (measured.get(mid) or {}).get("levels") or {}
         missing = [lv for lv in dial if lv not in have and f"{mid}@{lv}" not in known]
         if len(dial) > 1 and missing:
             out[mid] = missing
     return out
+
+
+def recent_openrouter_spend(
+    runs: Iterable[dict[str, Any]],
+    *,
+    days: int = 7,
+    now: dt.datetime | None = None,
+) -> float:
+    """Total OpenRouter USD spend recorded in ``runs`` within the trailing ``days`` days."""
+    cutoff = (now or dt.datetime.now(dt.UTC)) - dt.timedelta(days=days)
+    total = 0.0
+    for r in runs:
+        if r.get("lane") != "openrouter":
+            continue
+        at = r.get("at")
+        if not isinstance(at, str) or not at:
+            continue
+        try:
+            ts = dt.datetime.fromisoformat(at.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=dt.UTC)
+        if ts >= cutoff:
+            total += float(r.get("cost_usd") or 0.0)
+    return total
 
 
 def write_if_changed(path: Path, doc: dict[str, Any]) -> bool:
@@ -977,6 +1085,12 @@ def main(argv: list[str] | None = None) -> int:
         "--max-usd", type=float, default=5.0, help="OpenRouter spend cap for this invocation"
     )
     parser.add_argument(
+        "--max-weekly-usd",
+        type=float,
+        default=None,
+        help="rolling 7-day OpenRouter spend cap across saved runs",
+    )
+    parser.add_argument(
         "--target",
         type=float,
         default=0.10,
@@ -992,9 +1106,10 @@ def main(argv: list[str] | None = None) -> int:
 
     bench = json.loads(BENCH_PATH.read_text())
     catalog = json.loads(CATALOG_PATH.read_text())
+    estimates = json.loads(ESTIMATES_PATH.read_text()) if ESTIMATES_PATH.exists() else {}
     if args.unmeasured:
         doc = json.loads(args.out.read_text()) if args.out.exists() else {}
-        for mid, lvls in unmeasured(bench, catalog, doc).items():
+        for mid, lvls in unmeasured(bench, catalog, doc, estimates=estimates).items():
             print(f"{mid}: {', '.join(lvls)}")
         return 0
     sha = probe_set_sha256()
@@ -1007,8 +1122,20 @@ def main(argv: list[str] | None = None) -> int:
         models=only,
         levels=set(args.levels.split(",")) if args.levels else None,
         routes=routes,
+        estimates=estimates,
     )
     saved = load_runs(args.runs)
+
+    openrouter_cap = args.max_usd
+    if args.max_weekly_usd is not None:
+        weekly_spent = recent_openrouter_spend(saved)
+        remaining_weekly = max(0.0, args.max_weekly_usd - weekly_spent)
+        openrouter_cap = min(args.max_usd, remaining_weekly)
+        print(
+            f"measure_effort_tokens: 7-day OpenRouter spend ${weekly_spent:.2f} / "
+            f"${args.max_weekly_usd:.2f} (${remaining_weekly:.2f} remaining)",
+            file=sys.stderr,
+        )
 
     def pending(candidates: list[Job]) -> list[Job]:
         runs = load_runs(args.runs)
@@ -1027,7 +1154,7 @@ def main(argv: list[str] | None = None) -> int:
     estimate = sum(_estimate_usd(j, saved, catalog) for j in todo if j.lane == "openrouter")
     print(
         f"measure_effort_tokens: {len(jobs)} runs planned, {len(todo)} to make {by_lane} "
-        f"(OpenRouter ~${estimate:.2f}, cap ${args.max_usd:.2f}); skipped {skipped}",
+        f"(OpenRouter ~${estimate:.2f}, cap ${openrouter_cap:.2f}); skipped {skipped}",
         file=sys.stderr,
     )
     if args.plan:
@@ -1037,13 +1164,28 @@ def main(argv: list[str] | None = None) -> int:
 
     # Every model's levels and skip reason, not only the ones this run was
     # narrowed to.
-    every, reasons = plan(bench, catalog, samples=1, models=None, levels=None, routes=routes)
+    every, reasons = plan(
+        bench,
+        catalog,
+        samples=1,
+        models=None,
+        levels=None,
+        routes=routes,
+        estimates=estimates,
+    )
     # The reference stays the file's own while the probe set is unchanged.
     previous = json.loads(args.out.read_text()) if args.out.exists() else {}
     reference = previous.get("reference") if previous.get("probe_set_sha256") == sha else None
     settable = {
         mid: [lv for lv in LEVELS if any(j.model_id == mid and j.level == lv for j in every)]
         for mid in sorted({j.model_id for j in every if not j.calibration})
+    }
+    needed = headline_efforts(catalog, bench, estimates)
+    all_ladder = ladder_models(catalog, bench, estimates)
+    derive_targets = sorted(set(all_ladder) | set(needed))
+    derive_for = {
+        m: sorted(set(settable.get(m, list(LEVELS))) | needed.get(m, set()), key=LEVELS.index)
+        for m in derive_targets
     }
 
     def write_doc() -> dict[str, Any]:
@@ -1054,7 +1196,7 @@ def main(argv: list[str] | None = None) -> int:
             generated_at=dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
             samples=args.samples,
             settable=settable,
-            derive_for={m: settable.get(m, list(LEVELS)) for m in ladder_models(catalog, bench)},
+            derive_for=derive_for,
             reference=reference,
         )
 
@@ -1077,7 +1219,7 @@ def main(argv: list[str] | None = None) -> int:
                         target=args.target,
                         max_samples=args.max_samples,
                         # A superseded model is in the saved runs but on no ladder.
-                        models=only or set(ladder_models(catalog, bench)),
+                        models=only or set(all_ladder),
                     )
                 )
             if not key:
@@ -1088,7 +1230,7 @@ def main(argv: list[str] | None = None) -> int:
                 continue  # nothing new to measure: straight to the top-ups
             print(f"measure_effort_tokens: round {rnd}: {len(todo)} runs", file=sys.stderr)
             spent = execute(
-                todo, runners, args.runs, sha=sha, max_usd=args.max_usd, spent_usd=spent
+                todo, runners, args.runs, sha=sha, max_usd=openrouter_cap, spent_usd=spent
             )
         if not key:
             print(
