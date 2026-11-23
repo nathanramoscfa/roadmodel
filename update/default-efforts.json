@@ -58,6 +58,6 @@
   "zai-api": {
     "GLM-5.2": "max",
     "GLM-5.3": "max",
-    "GLM-5.3-FLASH": "max"
+    "GLM-5.3-Flash": "max"
   }
 }
