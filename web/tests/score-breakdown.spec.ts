@@ -1,11 +1,12 @@
 // web/tests/score-breakdown.spec.ts
 //
 // The Score hover card takes a Score apart into parts that must ADD UP to the
-// figure printed in the table: AA Index − tier average = vs-average, and
+// figure printed in the table: AA Index − market average = vs-average, and
 // vs-average + price adjustment = Score. Rounded parts do not naturally sum to
 // a rounded total, so lib/benchmark-grid derives the displayed parts in whole
 // tenths from the displayed total. These pure tests hold that for EVERY
-// measured catalog model, and pin the price-axis ticks the charts draw.
+// measured catalog model, prove continuity across tier boundaries (zero tier
+// cliffs) and Pareto monotonicity, and pin the price-axis ticks the charts draw.
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -74,7 +75,7 @@ function priceOf(m: CatalogModel): number {
   });
 }
 const fit = fitScoreModel(
-  catalog.models.map((m) => ({ price: priceOf(m), index: aaIndexFor(m), tier: m.tier_cost })),
+  catalog.models.map((m) => ({ price: priceOf(m), index: aaIndexFor(m) })),
 );
 const tenths = (v: number) => Math.round(v * 10);
 
@@ -82,8 +83,8 @@ test("every model's breakdown adds up exactly to the Score the table prints", ()
   expect(fit).not.toBeNull();
   let checked = 0;
   for (const m of catalog.models) {
-    const b = scoreBreakdown(fit, m.tier_cost, priceOf(m), aaIndexFor(m));
-    const score = scoreFor(fit, m.tier_cost, priceOf(m), aaIndexFor(m));
+    const b = scoreBreakdown(fit, priceOf(m), aaIndexFor(m));
+    const score = scoreFor(fit, priceOf(m), aaIndexFor(m));
     if (score === null) {
       expect(b).toBeNull();
       continue;
@@ -91,7 +92,7 @@ test("every model's breakdown adds up exactly to the Score the table prints", ()
     expect(b).not.toBeNull();
     const s = b!.shown;
     // The ledger, in whole tenths so floating point cannot blur it.
-    expect(tenths(s.index) - tenths(s.tierMean)).toBe(tenths(s.vsAverage));
+    expect(tenths(s.index) - tenths(s.marketMean)).toBe(tenths(s.vsAverage));
     expect(tenths(s.vsAverage) + tenths(s.priceAdjustment)).toBe(tenths(s.score));
     expect(tenths(s.index) - tenths(s.score)).toBe(tenths(s.expected));
     // The total is the figure the table shows.
@@ -100,8 +101,8 @@ test("every model's breakdown adds up exactly to the Score the table prints", ()
     // the rounding it absorbs.
     const trueAdjustment = -b!.slope * Math.log10(b!.priceRatio);
     expect(Math.abs(s.priceAdjustment - trueAdjustment)).toBeLessThanOrEqual(0.15);
-    // Expected index is the tier's line at this price.
-    expect(b!.expected).toBeCloseTo(expectedIndex(fit!, m.tier_cost, priceOf(m))!, 9);
+    // Expected index is the continuous market line at this price.
+    expect(b!.expected).toBeCloseTo(expectedIndex(fit!, priceOf(m))!, 9);
     checked += 1;
   }
   expect(checked).toBe(fit!.n);
@@ -139,10 +140,45 @@ test("headlinePrice charges reasoning models for extra output tokens at their he
   }
 });
 
-test("the typical price is where the tier's line meets the tier average", () => {
-  for (const [tier, t] of Object.entries(fit!.tiers)) {
-    const typical = 10 ** t.meanLogPrice;
-    expect(expectedIndex(fit!, tier, typical)).toBeCloseTo(t.meanIndex, 9);
+test("the typical market price is where the line meets the market average, with zero global mean residual", () => {
+  const typical = 10 ** fit!.meanLogPrice;
+  expect(expectedIndex(fit!, typical)).toBeCloseTo(fit!.meanIndex, 9);
+  const residuals = catalog.models
+    .map((m) => scoreFor(fit, priceOf(m), aaIndexFor(m)))
+    .filter((v): v is number => v !== null);
+  expect(residuals).toHaveLength(fit!.n);
+  const mean = residuals.reduce((a, b) => a + b, 0) / residuals.length;
+  expect(Math.abs(mean)).toBeLessThan(1e-9);
+});
+
+test("Score has zero tier-boundary cliffs and preserves Pareto monotonicity across the catalog", () => {
+  expect(fit).not.toBeNull();
+  // Crossing any list-output tier boundary ($10, $15, $25) changes expected AA Index smoothly.
+  for (const boundary of [10, 15, 25]) {
+    const below = expectedIndex(fit!, boundary - 0.01)!;
+    const above = expectedIndex(fit!, boundary + 0.01)!;
+    expect(Math.abs(above - below)).toBeLessThan(0.05);
+  }
+  // Equal blended price + AA Index gives identical Score regardless of cost tier.
+  const samePriceA = scoreFor(fit, 10.54, 54)!;
+  const samePriceB = scoreFor(fit, 10.54, 54)!;
+  expect(samePriceA).toBe(samePriceB);
+  // Models with nearly identical price and AA Index stay nearly tied (no artificial 15-pt gap).
+  const hydrogenScore = scoreFor(fit, 10.54, 54)!;
+  const carbonScore = scoreFor(fit, 11.14, 54)!;
+  expect(Math.abs(hydrogenScore - carbonScore)).toBeLessThan(1);
+  // Strict Pareto monotonicity: cheaper-or-equal and higher-or-equal AA Index => higher-or-equal Score.
+  const scoredPts = catalog.models
+    .map((m) => ({ price: priceOf(m), index: aaIndexFor(m) }))
+    .filter((p): p is { price: number; index: number } => p.index !== null);
+  for (const a of scoredPts) {
+    for (const b of scoredPts) {
+      if (a.price <= b.price && a.index >= b.index) {
+        expect(scoreFor(fit, a.price, a.index)!).toBeGreaterThanOrEqual(
+          scoreFor(fit, b.price, b.index)! - 1e-12,
+        );
+      }
+    }
   }
 });
 

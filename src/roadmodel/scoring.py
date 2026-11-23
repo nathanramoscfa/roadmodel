@@ -3005,18 +3005,14 @@ def ladder_price_by_name(
 def _configuration_value_score(
     c: Candidate, bench: dict[str, Any], catalog: dict[str, Any]
 ) -> float | None:
-    """Compare the configuration to the same per-tier fit as the /models Score."""
-    if c.configuration_index is None or c.configuration_output_price is None:
+    """Compare the configuration to the same continuous market fit as the /models Score."""
+    if (
+        c.configuration_index is None
+        or c.configuration_output_price is None
+        or c.blended_price_usd <= 0
+    ):
         return None
-    tier = next(
-        (
-            name
-            for bound, name in ((10, "low"), (15, "medium"), (25, "high"))
-            if c.configuration_output_price < bound
-        ),
-        "very-high",
-    )
-    groups: dict[str, list[tuple[float, float]]] = {}
+    points: list[tuple[float, float]] = []
     for m in catalog.get("models", []):
         mid = str(m["id"])
         row = bench.get(mid)
@@ -3027,20 +3023,16 @@ def _configuration_value_score(
         mult = token_multiplier(mid, level) if isinstance(level, str) else 1.0
         price = effort_price(blended_price(m), output_share(m), mult)
         if aa is not None and price > 0:
-            groups.setdefault(str(m["tier_cost"]), []).append((math.log10(price), aa))
-    if tier not in groups or sum(map(len, groups.values())) < 3:
+            points.append((math.log10(price), aa))
+    if len(points) < 3:
         return None
-    means = {
-        t: (sum(x for x, _ in points) / len(points), sum(y for _, y in points) / len(points))
-        for t, points in groups.items()
-    }
-    centered = [(x - means[t][0], y - means[t][1]) for t, pts in groups.items() for x, y in pts]
-    variance = sum(x * x for x, _ in centered)
+    mx = sum(x for x, _ in points) / len(points)
+    my = sum(y for _, y in points) / len(points)
+    variance = sum((x - mx) ** 2 for x, _ in points)
     if not variance:
         return None
-    slope = sum(x * y for x, y in centered) / variance
-    x, y = means[tier]
-    return c.configuration_index - (y + slope * (math.log10(c.blended_price_usd) - x))
+    slope = sum((x - mx) * (y - my) for x, y in points) / variance
+    return c.configuration_index - (my + slope * (math.log10(c.blended_price_usd) - mx))
 
 
 def _option(

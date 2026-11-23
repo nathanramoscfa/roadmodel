@@ -118,3 +118,39 @@ def test_ultracode_preserves_the_picker_model_effort_and_switch(
     assert pick["level_cell"] == "High"
     assert pick["ultracode"] == "On"
     assert "Ultracode" in ladder["markdown"]
+
+
+def test_configuration_value_score_has_no_tier_cliff(
+    catalog: dict[str, Any], benchmarks: dict[str, Any]
+) -> None:
+    def candidate_at(output_price: float) -> scoring.Candidate:
+        return scoring.Candidate(
+            model_id="test-config",
+            model_name="Test Config",
+            provider="google",
+            platform_id="antigravity",
+            platform_name="Antigravity",
+            funding="subscription",
+            pool_state="uncapped",
+            quality=100.0,
+            quality_source="aa:test",
+            letter="S",
+            requirement=90.0,
+            requirement_penalty=0.0,
+            blended_price_usd=10.5,
+            output_share=0.5,
+            scarcity=0.0,
+            effort="fixed",
+            effort_multiplier=1.0,
+            effective_cost_usd=10.5,
+            cost_decades=2.0,
+            cost_penalty=0.0,
+            score=100.0,
+            configuration_index=54.0,
+            configuration_output_price=output_price,
+        )
+
+    below = scoring._configuration_value_score(candidate_at(9.99), benchmarks, catalog)
+    above = scoring._configuration_value_score(candidate_at(10.01), benchmarks, catalog)
+    assert below is not None
+    assert below == pytest.approx(above)

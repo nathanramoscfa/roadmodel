@@ -14,10 +14,10 @@
 //   FrontierPointCard  — a dot on the frontier chart: AA Index, blended price,
 //                        and where it stands across the whole catalog
 //   FrontierStepCard   — the frontier line: the top score a price buys
-// Every card that shows a Score also shows FrontierStatus: the Score compares
-// a model with its own cost tier, and FrontierStatus with the whole catalog,
-// or with the models the page's Provider and Jurisdiction filters keep
-// (FrontierScope).
+// Every card that shows a Score also shows FrontierStatus: the Score measures
+// vertical distance from the continuous whole-catalog price line, and
+// FrontierStatus shows the top model at that price or less in the whole catalog
+// or the active Provider/Jurisdiction pool (FrontierScope).
 // Figures come from the same ScoreFit the table and charts use, so a card can
 // never disagree with the cell or the dot it explains.
 import { createContext, useContext, type ReactNode } from "react";
@@ -147,8 +147,7 @@ function Row({
 // when the filters narrow it). A green ring marks a model on the cost/quality
 // frontier: the top AA Index at its price or less.
 // Any other model is shown with the model that holds the top score at its
-// price or less. The Score compares a model with its own tier, so a card that
-// shows a Score shows this too.
+// price or less, so a card that shows a Score shows this too.
 export function FrontierStatus({
   model: m,
   leader,
@@ -469,9 +468,8 @@ export function ScoreBreakdownCard({
   const price = activeEffort
     ? (3 * m.input_price_per_1m + m.output_price_per_1m * activeEffort.tokenShare) / 4
     : listPrice;
-  const b = scoreBreakdown(fit, m.tier_cost, price, m.aa_index);
+  const b = scoreBreakdown(fit, price, m.aa_index);
   if (!b) return null;
-  const tier = COST_TIER_DEFS[m.tier_cost].label;
   const s = b.shown;
   const sigma = fit.sigma;
   const adj = Math.abs(s.priceAdjustment);
@@ -479,11 +477,11 @@ export function ScoreBreakdownCard({
 
   let priceSentence: string;
   if (adj === 0) {
-    priceSentence = `${m.name} costs about the tier's typical price, so there is nothing to adjust for.`;
+    priceSentence = `${m.name} costs about the market's typical price, so the adjustment is zero.`;
   } else if (s.priceAdjustment < 0) {
-    priceSentence = `${m.name} costs ${ratio.toFixed(2)}× the typical price. Pricier models usually score higher, so ${num(adj)} of its points are credited to price and taken off.`;
+    priceSentence = `${m.name} costs ${ratio.toFixed(2)}× the typical market price. Pricier models usually score higher, so ${num(adj)} of its points are credited to price and taken off.`;
   } else {
-    priceSentence = `${m.name} costs ${ratio.toFixed(2)}× the typical price. Cheaper models usually score lower, so the ${num(adj)} points its price predicts it would lose are added back.`;
+    priceSentence = `${m.name} costs ${ratio.toFixed(2)}× the typical market price. Cheaper models usually score lower, so the ${num(adj)} points its price predicts it would lose are added back.`;
   }
 
   const outside = Math.abs(b.score) >= sigma;
@@ -495,8 +493,8 @@ export function ScoreBreakdownCard({
     <div className="w-[22rem] max-w-full" data-testid="score-breakdown">
       <CardHeader name={m.name} tier={m.tier_cost} />
       <p className={"mt-1 text-xs leading-[1.125rem] " + MUTED}>
-        Score: AA Index points above (+) or below (−) what this model&rsquo;s price predicts
-        among {tier}-cost models.
+        Score: AA Index points above (+) or below (−) what this model&rsquo;s effort-adjusted
+        price predicts on the market line.
       </p>
 
       <div className="mt-3 rounded-md bg-brand-slate-50 px-3 py-2.5 dark:bg-brand-slate-900/70">
@@ -513,13 +511,13 @@ export function ScoreBreakdownCard({
           valueClass={STRONG}
         />
         <Row
-          label={`${tier}-cost average (${b.tierN} models)`}
-          value={`− ${num(s.tierMean)}`}
+          label={`Market average (${b.marketN} models)`}
+          value={`− ${num(s.marketMean)}`}
           valueClass={STRONG}
         />
         <div className={"my-1.5 border-t " + RULE} />
         <Row
-          label={s.vsAverage >= 0 ? "Above the tier average" : "Below the tier average"}
+          label={s.vsAverage >= 0 ? "Above the market average" : "Below the market average"}
           value={formatScore(s.vsAverage)}
           valueClass={STRONG}
         />
@@ -556,7 +554,7 @@ export function ScoreBreakdownCard({
           </p>
         )}
         <Row
-          label={`Typical ${tier}-cost price`}
+          label="Typical market price"
           value={`${usd(b.typicalPrice)} per 1M tokens`}
           valueClass={STRONG}
         />
@@ -605,7 +603,7 @@ export function ModelPointCard({
   const listPrice = blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
   const share = headlineTokenShare(m);
   const price = headlinePrice(m);
-  const b = scoreBreakdown(fit, m.tier_cost, price, m.aa_index);
+  const b = scoreBreakdown(fit, price, m.aa_index);
   if (!b) return null;
   return (
     <div className="w-[18rem] max-w-full" data-testid="point-card">
@@ -650,26 +648,21 @@ const LOG10 = (
 );
 
 export function PriceLineCard({
-  tier,
   fit,
   atPrice,
 }: {
-  tier: CostTier;
   fit: ScoreFit;
   // The blended price under the pointer, for the live readout.
   atPrice: number;
 }) {
-  const t = fit.tiers[tier];
-  const label = COST_TIER_DEFS[tier].label;
-  const typical = 10 ** t.meanLogPrice;
-  const expected = t.intercept + fit.slope * Math.log10(atPrice);
-  const tierCount = Object.keys(fit.tiers).length;
+  const typical = 10 ** fit.meanLogPrice;
+  const expected = fit.intercept + fit.slope * Math.log10(atPrice);
   const sign = (v: number) => (v < 0 ? "−" : "+");
   return (
     <div className="w-[23rem] max-w-full" data-testid="line-card">
-      <p className={"text-sm font-semibold " + STRONG}>Price line: {label} cost</p>
+      <p className={"text-sm font-semibold " + STRONG}>Market price line</p>
       <p className={"mt-0.5 text-xs " + MUTED}>
-        What a model in this tier is expected to score at each price.
+        What the market is expected to score at each effort-adjusted price, across every cost tier.
       </p>
 
       <div
@@ -679,7 +672,7 @@ export function PriceLineCard({
         }
         data-testid="line-equation"
       >
-        Expected AA Index = {num(t.intercept)} + {num(fit.slope)} × {LOG10}(p)
+        Expected AA Index = {num(fit.intercept)} + {num(fit.slope)} × {LOG10}(p)
       </div>
 
       <dl className="mt-2.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-xs leading-[1.125rem]">
@@ -688,22 +681,22 @@ export function PriceLineCard({
           Effort-adjusted blended price, $ per 1M tokens
           <span className={"block " + MUTED}>= (3 × input + m × output) ÷ 4</span>
         </dd>
-        <dt className={"font-semibold tabular-nums " + STRONG}>{num(t.intercept)}</dt>
-        <dd>Intercept for this tier: the line&rsquo;s height at p&nbsp;=&nbsp;$1</dd>
+        <dt className={"font-semibold tabular-nums " + STRONG}>{num(fit.intercept)}</dt>
+        <dd>Intercept: the line&rsquo;s height at p&nbsp;=&nbsp;$1</dd>
         <dt className={"font-semibold tabular-nums " + STRONG}>{num(fit.slope)}</dt>
         <dd>
-          Slope: AA Index points per 10× price, one value shared by all {tierCount} cost tiers
+          Slope: AA Index points per 10× price, one continuous line across the whole catalog
         </dd>
       </dl>
 
       <div className={"mt-2.5 border-t pt-2 text-xs leading-[1.125rem] " + RULE}>
-        <p className={"font-semibold " + STRONG}>The same line, centred on this tier</p>
+        <p className={"font-semibold " + STRONG}>The same line, centred on the market</p>
         <p className={"mt-0.5 font-semibold tabular-nums " + STRONG}>
-          Expected = {num(t.meanIndex)} {sign(fit.slope)} {num(Math.abs(fit.slope))} × {LOG10}(p ÷{" "}
+          Expected = {num(fit.meanIndex)} {sign(fit.slope)} {num(Math.abs(fit.slope))} × {LOG10}(p ÷{" "}
           {usd(typical)})
         </p>
         <p className="mt-0.5">
-          {num(t.meanIndex)} is the average AA Index of this tier&rsquo;s {t.n} models, and{" "}
+          {num(fit.meanIndex)} is the average AA Index across all {fit.n} measured models, and{" "}
           {usd(typical)} their typical (geometric-mean) blended price.
         </p>
       </div>
@@ -717,9 +710,10 @@ export function PriceLineCard({
       </div>
 
       <p className={"mt-2.5 border-t pt-2 text-xs leading-[1.125rem] " + RULE + " " + MUTED}>
-        Least squares over {fit.n} AA-measured models. R² {fit.r2.toFixed(2)}: price and tier
-        explain {Math.round(fit.r2 * 100)}% of the spread in AA Index. Residual σ {num(fit.sigma)}{" "}
-        is the shaded band. A model&rsquo;s Score is its height above (+) or below (−) this line.
+        Least squares over {fit.n} AA-measured models. R² {fit.r2.toFixed(2)}: effort-adjusted
+        price explains {Math.round(fit.r2 * 100)}% of the spread in AA Index. Residual σ{" "}
+        {num(fit.sigma)} is the shaded band. A model&rsquo;s Score is its height above (+) or
+        below (−) this line.
       </p>
     </div>
   );
