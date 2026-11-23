@@ -407,10 +407,10 @@ test("unchecking CN takes it out of every chart and redraws the frontier over th
   const onFrontier = pool.filter((r) => leaderOf(r, pool) === r).sort((a, b) => a.price - b.price);
   const catalogFrontier = new Set(MEASURED.filter((r) => leaderOf(r) === r).map((r) => r.m.id));
 
-  // The Score charts: every non-CN measured model in a charted tier, no CN
-  // dot, and each dot keeps its whole-catalog Score.
-  const fit = fitScoreModel(FITTED.map((r) => ({ price: r.price, index: r.index, tier: r.m.tier_cost })))!;
-  const charted = pool.filter((r) => aaIndexFor(r.m) !== null && (fit.tiers[r.m.tier_cost]?.n ?? 0) >= 2);
+  // The Score charts: every non-CN measured model, no CN dot, and each dot
+  // keeps its whole-catalog Score.
+  const fit = fitScoreModel(FITTED.map((r) => ({ price: r.price, index: r.index })))!;
+  const charted = pool.filter((r) => aaIndexFor(r.m) !== null);
   const scorePanel = page.getByTestId("score-charts");
   await expect(scorePanel.getByTestId("score-charts-filter")).toContainText("Jurisdiction: US + EU");
   await expect(scorePanel.getByTestId("score-chart-point")).toHaveCount(charted.length);
@@ -419,7 +419,7 @@ test("unchecking CN takes it out of every chart and redraws the frontier over th
     scorePanel.locator(`[data-testid="score-chart-point"][data-model-id="${some.m.id}"]`),
   ).toHaveAttribute(
     "aria-label",
-    new RegExp(`Score ${formatScore(scoreFor(fit, some.m.tier_cost, some.price, some.index)).replace("+", "\\+")}`),
+    new RegExp(`Score ${formatScore(scoreFor(fit, some.price, some.index)).replace("+", "\\+")}`),
   );
 
   // The frontier chart: every non-CN measured model, the frontier recomputed
@@ -463,11 +463,10 @@ test("unchecking CN takes it out of every chart and redraws the frontier over th
 test("a Cost tier narrows the charts to its models; the frontier still spans every price", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/models");
-  const fit = fitScoreModel(FITTED.map((r) => ({ price: r.price, index: r.index, tier: r.m.tier_cost })))!;
-  // The charted tier with the fewest models: the narrowest band on the page.
-  const tier = Object.entries(fit.tiers)
-    .filter(([, t]) => t.n >= 2)
-    .sort((a, b) => a[1].n - b[1].n)[0][0];
+  // The charted tier with the fewest measured models: the narrowest band on the page.
+  const counts = new Map<string, number>();
+  for (const r of FITTED) counts.set(r.m.tier_cost, (counts.get(r.m.tier_cost) ?? 0) + 1);
+  const tier = [...counts.entries()].sort((a, b) => a[1] - b[1])[0][0];
   await page.getByLabel("Filter by cost tier").selectOption(tier);
   const inTier = MEASURED.filter((r) => r.m.tier_cost === tier);
   const catalogFrontier = new Set(MEASURED.filter((r) => leaderOf(r) === r).map((r) => r.m.id));
@@ -479,8 +478,8 @@ test("a Cost tier narrows the charts to its models; the frontier still spans eve
 
   // The frontier chart: the tier's models, ringed only if they hold the top
   // score across the whole catalog (a band's cheapest model is not ringed for
-  // starting the band), one grey tier line, and a line whose every step is a
-  // whole-catalog frontier model.
+  // starting the band), one continuous grey market line, and a line whose every
+  // step is a whole-catalog frontier model.
   const panel = page.getByTestId("frontier-panel");
   await expect(panel.getByTestId("frontier-chart-point")).toHaveCount(inTier.length);
   for (const r of inTier) {
@@ -489,7 +488,8 @@ test("a Cost tier narrows the charts to its models; the frontier still spans eve
       catalogFrontier.has(r.m.id) ? "1" : "0",
     );
   }
-  await expect(panel.getByTestId("frontier-tier-line")).toHaveCount(1);
+  await expect(panel.getByTestId("frontier-market-line")).toHaveCount(1);
+  await expect(panel.getByTestId("frontier-tier-label")).toHaveCount(0);
   const ids = ((await panel.getByTestId("frontier-line").getAttribute("data-frontier-ids")) ?? "").split(",").filter(Boolean);
   expect(ids.length).toBeGreaterThan(0);
   for (const id of ids) expect(catalogFrontier.has(id)).toBe(true);
@@ -685,13 +685,12 @@ test("rating cells are letters only; the Score column is the cost-adjusted score
   const cheapestMeasured = [...inputs].filter((r) => r.index !== null).sort((a, b) => a.price - b.price || b.index! - a.index!)[0];
   expect(frontier.has(cheapestMeasured.m.id)).toBe(true);
 
-  // The score = AA Index minus the market fit (index ~ α_tier + b·log10 blended
-  // price, one pooled slope, one intercept per cost tier) over every measured
-  // model. Recompute from the same inputs and compare every rendered figure.
+  // The score = AA Index minus the continuous market fit (index ~ α + b·log10
+  // effort-adjusted blended price) over every measured model. Recompute from
+  // the same inputs and compare every rendered figure.
   const fitInputs = scored.map((m) => ({
     price: effectivePrice(m),
     index: aaIndexFor(m),
-    tier: m.tier_cost,
   }));
   const fit = fitScoreModel(fitInputs);
   expect(fit).not.toBeNull();
@@ -699,31 +698,27 @@ test("rating cells are letters only; the Score column is the cost-adjusted score
   expect(fit!.slope).toBeGreaterThan(0); // pricier models do score higher, on average
   expect(fit!.sigma).toBeGreaterThan(0);
   const scoreOf = (m: ScoredModel) =>
-    scoreFor(fit, m.tier_cost, effectivePrice(m), scoreIndexFor(m));
+    scoreFor(fit, effectivePrice(m), scoreIndexFor(m));
   for (const m of scored) {
     // Match on the id: a name filter for "Fable 5" would also hit "Fable 5.1".
     const row = page.locator(`[data-testid="model-row"][data-model-id="${m.id}"]`);
     const sc = scoreOf(m);
     await expect(row.getByTestId("value-cell")).toContainText(sc === null ? "—" : formatScore(sc));
   }
-  // Least-squares residuals sum to ~0 WITHIN EVERY TIER: each tier is centred
-  // on its own peers, not a ratio that crowns the cheapest model overall. The
-  // fit's own points only: an estimated model is scored against the line, not
-  // part of it.
-  for (const tier of Object.keys(fit!.tiers)) {
-    const residuals = scored
-      .filter((m) => m.tier_cost === tier && aaIndexFor(m) !== null)
-      .map(scoreOf)
-      .filter((v): v is number => v !== null);
-    expect(residuals.length).toBe(fit!.tiers[tier].n);
-    const mean = residuals.reduce((a, b) => a + b, 0) / residuals.length;
-    expect(Math.abs(mean)).toBeLessThan(1e-6);
-  }
+  // Least-squares residuals sum to ~0 across all fitted AA-measured models.
+  // An estimated model is scored against the line, not part of fitting it.
+  const residuals = scored
+    .filter((m) => aaIndexFor(m) !== null)
+    .map(scoreOf)
+    .filter((v): v is number => v !== null);
+  expect(residuals.length).toBe(fit!.n);
+  const mean = residuals.reduce((a, b) => a + b, 0) / residuals.length;
+  expect(Math.abs(mean)).toBeLessThan(1e-6);
 
   // The header tooltips carry live statistics, never a typed-in figure: the
   // Score fit it just computed, and the AA snapshot the page just read.
   const scoreInfo = page.getByRole("link", {
-    name: "Score (cost-adjusted intelligence within the cost tier) definition",
+    name: "Score (cost-adjusted intelligence) definition",
   });
   await scoreInfo.hover();
   await expect(
@@ -1033,9 +1028,9 @@ test("every model off the frontier names the model that beats it, from any cost 
   // The case that reads as a contradiction without this: the best Score in the
   // table that has no dot. Its AA Index card and its Score card both name the
   // model that beats it; a frontier model's cards say it is on the frontier.
-  const fit = fitScoreModel(FITTED.map((o) => ({ price: o.price, index: o.index, tier: o.m.tier_cost })));
+  const fit = fitScoreModel(FITTED.map((o) => ({ price: o.price, index: o.index })));
   const scoreOf = (o: (typeof measured)[number]) =>
-    (scoreIndexFor(o.m) === null ? null : scoreFor(fit, o.m.tier_cost, o.price, o.index)) ?? -Infinity;
+    (scoreIndexFor(o.m) === null ? null : scoreFor(fit, o.price, o.index)) ?? -Infinity;
   const beaten = measured.filter((r) => leaderOf(r) !== r).sort((a, b) => scoreOf(b) - scoreOf(a))[0];
   const lead = leaderOf(beaten);
   const row = page.locator(`[data-testid="model-row"][data-model-id="${beaten.m.id}"]`);
@@ -1079,14 +1074,13 @@ test("Group by Quality is the default: AA Index bands, highest Score first in ea
     scored.map((m) => ({
       price: effectivePrice(m),
       index: aaIndexFor(m),
-      tier: m.tier_cost,
     })),
   );
   const bandOf = (v: number | null) => (v === null ? null : Math.floor(v / 10) * 10);
   const rowsIn = scored.map((m) => ({
     m,
     band: bandOf(shownIndexFor(m)),
-    score: scoreFor(fit, m.tier_cost, effectivePrice(m), scoreIndexFor(m)),
+    score: scoreFor(fit, effectivePrice(m), scoreIndexFor(m)),
   }));
   const bands = [...new Set(rowsIn.map((r) => r.band).filter((b): b is number => b !== null))].sort((a, b) => b - a);
   const groups = await page.getByTestId("quality-group").evaluateAll((els) => els.map((e) => e.getAttribute("data-band")));
@@ -1168,7 +1162,7 @@ test("the frontier chart plots every measured model and joins the frontier with 
       cy: num(d, "cy"),
     }));
     const rects = [
-      ...fig.querySelectorAll('[data-testid="frontier-model-label"], [data-testid="frontier-tier-label"]'),
+      ...fig.querySelectorAll('[data-testid="frontier-model-label"]'),
     ].map((g) => {
       const r = g.querySelector("rect")!;
       return {
@@ -1196,10 +1190,9 @@ test("the frontier chart plots every measured model and joins the frontier with 
   });
   expect(labelOverlaps).toEqual([]);
 
-  // One grey Score line per cost tier the fit covers.
-  await expect(panel.getByTestId("frontier-tier-line")).toHaveCount(
-    new Set(MEASURED.map((r) => r.m.tier_cost)).size,
-  );
+  // One continuous grey Score line across the plotted price range, no tier labels.
+  await expect(panel.getByTestId("frontier-market-line")).toHaveCount(1);
+  await expect(panel.getByTestId("frontier-tier-label")).toHaveCount(0);
   await expect(panel).toContainText(`That keeps ${onFrontier.length} of the ${MEASURED.length} models plotted.`);
 
   // Dot centres on screen, to hover only where nothing else sits.
@@ -1565,17 +1558,15 @@ test("one Score chart per cost tier in either grouping, every measured model plo
     scored.map((m) => ({
       price: effectivePrice(m),
       index: aaIndexFor(m),
-      tier: m.tier_cost,
     })),
   );
   expect(fit).not.toBeNull();
-  const tiers = Object.entries(fit!.tiers).filter(([, t]) => t.n >= 2).map(([tier]) => tier);
+  const tiers = [...new Set(scored.filter((m) => aaIndexFor(m) !== null).map((m) => m.tier_cost))];
   await expect(panel.getByTestId("score-chart")).toHaveCount(tiers.length);
   const charted = () =>
     panel.getByTestId("score-chart").evaluateAll((els) => els.map((e) => e.getAttribute("data-tier")));
 
-  // Grouped by quality (the default), the charts stay by tier and say why:
-  // a Score is read against its own tier's line.
+  // Grouped by quality (the default), the charts stay one per cost tier and say why.
   await expect(page.getByTestId("group-by-quality")).toHaveAttribute("aria-pressed", "true");
   await expect(panel.getByTestId("score-charts-grouping-note")).toContainText(
     "these charts stay one per cost tier",
@@ -1589,7 +1580,7 @@ test("one Score chart per cost tier in either grouping, every measured model plo
     await expect(chart.getByTestId("score-chart-point")).toHaveCount(inTier.length);
     for (const m of inTier) {
       const expected = formatScore(
-        scoreFor(fit, m.tier_cost, effectivePrice(m), aaIndexFor(m)),
+        scoreFor(fit, effectivePrice(m), aaIndexFor(m)),
       );
       await expect(
         chart.locator(`[data-testid="score-chart-point"][data-model-id="${m.id}"]`),
@@ -1604,7 +1595,7 @@ test("one Score chart per cost tier in either grouping, every measured model plo
   expect(await charted()).toEqual(byQuality);
 
   // The footnote carries the live fit, not typed figures.
-  await expect(panel).toContainText(`One least-squares fit over all ${fit!.n} AA-measured models`);
+  await expect(panel).toContainText(`One continuous least-squares fit over all ${fit!.n} AA-measured models`);
   await expect(panel).toContainText(`β = ${fit!.slope.toFixed(1)}`);
 });
 
@@ -1615,12 +1606,10 @@ test("hovering a chart dot shows its model, Score, AA Index and prices; the line
     scored.map((m) => ({
       price: effectivePrice(m),
       index: aaIndexFor(m),
-      tier: m.tier_cost,
     })),
   )!;
   // The charts draw once they have measured their width (after hydration).
-  // A tier with a single measured model has no chart (no line to fit).
-  const charted = Object.values(fit.tiers).reduce((sum, t) => sum + (t.n >= 2 ? t.n : 0), 0);
+  const charted = scored.filter((m) => aaIndexFor(m) !== null).length;
   await expect(page.getByTestId("score-chart-point")).toHaveCount(charted);
   // A dot no other dot overlaps, so the pointer lands on it and nothing else.
   const centres = await page.getByTestId("score-chart-point").evaluateAll((els) =>
@@ -1634,7 +1623,7 @@ test("hovering a chart dot shows its model, Score, AA Index and prices; the line
   )!.id;
   const m = scored.find((x) => x.id === clearId)!;
   const price = effectivePrice(m);
-  const sc = scoreFor(fit, m.tier_cost, price, aaIndexFor(m));
+  const sc = scoreFor(fit, price, aaIndexFor(m));
 
   const dot = page.locator(`[data-testid="score-chart-point"][data-model-id="${m.id}"]`);
   await dot.scrollIntoViewIfNeeded();
@@ -1655,7 +1644,7 @@ test("hovering a chart dot shows its model, Score, AA Index and prices; the line
   await page.mouse.move(2, 2);
   await expect(card).toHaveCount(0);
 
-  // The line: its equation, with the tier's own intercept and the pooled slope.
+  // The line: its equation, with the market's continuous intercept and slope.
   const tier = m.tier_cost;
   const line = page.locator(`[data-testid="score-chart"][data-tier="${tier}"] [data-testid="score-chart-line"]`);
   // A point ON the line, away from every dot (dots sit above the line's
@@ -1680,10 +1669,9 @@ test("hovering a chart dot shows its model, Score, AA Index and prices; the line
   expect(onLine).not.toBeNull();
   await page.mouse.move(onLine!.x, onLine!.y);
   await expect(card).toBeVisible();
-  const t = fit.tiers[tier];
   const num = (v: number) => (Math.round(v * 10) / 10 < 0 ? "−" : "") + Math.abs(Math.round(v * 10) / 10).toFixed(1);
   await expect(card.getByTestId("line-equation")).toContainText(
-    `Expected AA Index = ${num(t.intercept)} + ${num(fit.slope)} × log`,
+    `Expected AA Index = ${num(fit.intercept)} + ${num(fit.slope)} × log`,
   );
   await expect(card.getByTestId("line-readout")).toContainText("expected");
 });
@@ -1695,7 +1683,6 @@ test("the Score cell opens a breakdown whose parts add up to the printed Score",
     scored.map((m) => ({
       price: effectivePrice(m),
       index: aaIndexFor(m),
-      tier: m.tier_cost,
     })),
   )!;
   const parse = (t: string) => Number(t.replace("−", "-").replace("+", "").replace(/[^\d.-]/g, ""));
@@ -1715,11 +1702,11 @@ test("the Score cell opens a breakdown whose parts add up to the printed Score",
       .locator('[data-testid="score-breakdown"] .tabular-nums')
       .allInnerTexts();
     const [index, subtracted, vsAvg, adj, score] = values.slice(0, 5).map(parse);
-    const tierMean = Math.abs(subtracted); // printed "− 43.5": a subtraction, not a sign
-    expect(Math.round((index - tierMean) * 10)).toBe(Math.round(vsAvg * 10));
+    const marketMean = Math.abs(subtracted); // printed "− 36.3": a subtraction, not a sign
+    expect(Math.round((index - marketMean) * 10)).toBe(Math.round(vsAvg * 10));
     expect(Math.round((vsAvg + adj) * 10)).toBe(Math.round(score * 10));
     expect(formatScore(score)).toBe(
-      formatScore(scoreFor(fit, m.tier_cost, effectivePrice(m), aaIndexFor(m))),
+      formatScore(scoreFor(fit, effectivePrice(m), aaIndexFor(m))),
     );
     const effort = headlineEffortFor(m);
     if (effort) {

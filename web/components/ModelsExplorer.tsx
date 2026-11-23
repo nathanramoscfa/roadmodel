@@ -10,8 +10,8 @@
 // only the models you could run yourself, with the chart that changes right
 // under the control. The table's Group by switch keeps its state here too,
 // since the charts read it: grouped by quality, the frontier chart marks the
-// table's ten-point AA Index bands, and the Score charts, one per cost tier
-// either way, say why they stay by tier.
+// table's ten-point AA Index bands, and the Score charts, zooming into each
+// cost tier along the continuous market line either way.
 //
 // The page remembers them (lib/models-prefs): the server reads the saved
 // choices from a cookie and passes them in, so the first render is already

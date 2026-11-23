@@ -6,8 +6,8 @@
 // line that steps up at each one, so the line's height at any price is the top
 // AA Index that price buys. The frontier comes straight from the data (sort by
 // price, keep each model that outscores everything at its price or less); the
-// grey lines behind it are the Score's fitted model, one price line per cost
-// tier over the tier's own prices, all sharing one slope.
+// grey line behind it is the Score's continuous market price line across the
+// catalog.
 //
 // Interactive like the tier charts: hover (mouse), tap (touch) or tab to
 // (keyboard) any dot for its card; hover the green line for the top score at
@@ -37,7 +37,7 @@ import {
   qualityBand,
   type ScoreFit,
 } from "@/lib/benchmark-grid";
-import { COST_TIER_DEFS, type CostTier, type ModelRow } from "@/lib/catalog-fields";
+import { COST_TIER_DEFS, type ModelRow } from "@/lib/catalog-fields";
 import { headlinePrice } from "@/lib/pick-effort";
 import type { Grouping } from "@/lib/models-prefs";
 import {
@@ -63,7 +63,6 @@ const M = { top: 16, right: 24, bottom: 46, left: 46 };
 const BAND_MARGIN = 70;
 const BAND_NAMES_MIN_WIDTH = 480;
 const R = 5; // dot radius: this chart carries every model at once
-const TIERS: CostTier[] = ["low", "medium", "high", "very-high"];
 
 interface Pt {
   row: ModelRow;
@@ -72,8 +71,7 @@ interface Pt {
   index: number;
 }
 
-interface TierLine {
-  tier: CostTier;
+interface MarketLine {
   a: number; // log10 price at the line's left end
   b: number; // … and right end
   ya: number;
@@ -99,7 +97,7 @@ function FrontierPlot({
   drawn,
   x0,
   x1,
-  lines,
+  marketLine,
   byId,
   bands,
 }: {
@@ -111,7 +109,7 @@ function FrontierPlot({
   // The plotted price range, log10.
   x0: number;
   x1: number;
-  lines: TierLine[];
+  marketLine: MarketLine | null;
   byId: Map<string, ModelRow>;
   // Grouped by quality: the lower bound of each band that holds a plotted
   // model (the table's quality groups). Null when grouped by cost tier.
@@ -129,12 +127,12 @@ function FrontierPlot({
   const plotH = height - M.top - M.bottom;
 
   const yLo = 0;
-  // Tall enough for every dot, every step of the line and both ends of every
-  // tier line (a filtered chart's line can run above its highest dot).
+  // Tall enough for every dot, every step of the frontier line, and the
+  // continuous market price line across the plotted range.
   const top = Math.max(
     ...pts.map((p) => p.index),
     ...drawn.map((f) => f.index),
-    ...lines.flatMap((l) => [l.ya, l.yb]),
+    ...(marketLine ? [marketLine.ya, marketLine.yb] : []),
   );
   const yHi = Math.min(100, Math.ceil((top + 4) / 10) * 10);
   const sx = useCallback((x: number) => M.left + ((x - x0) / (x1 - x0)) * plotW, [x0, x1, plotW]);
@@ -178,39 +176,21 @@ function FrontierPlot({
   const labels = useMemo(() => {
     if (width === 0) return new Map<string, Label>();
     return placeLabels(
-      [
-        // Only frontier (ringed) models and the tier lines get labels;
-        // off-frontier dots remain as obstacles so labels clear them, while
-        // off-frontier models are named by their hover/tap cards.
-        ...pts.map((p) => ({
-          id: p.row.id,
-          cx: sx(p.x),
-          cy: sy(p.index),
-          text: p.row.name,
-          priority: 1000 + p.index,
-          label: p.row.value_frontier,
-        })),
-        // A tier line's name tries the line's right end, then its left end,
-        // then its middle, and keeps no clearance of its own.
-        ...lines.map((l) => ({
-          id: `tier-${l.tier}`,
-          cx: sx(l.b),
-          cy: sy(l.yb),
-          text: `${COST_TIER_DEFS[l.tier].label} tier`,
-          priority: 500,
-          dot: false,
-          anchors: [
-            { cx: sx(l.b), cy: sy(l.yb) },
-            { cx: sx(l.a), cy: sy(l.ya) },
-            { cx: sx((l.a + l.b) / 2), cy: sy((l.ya + l.yb) / 2) },
-          ],
-        })),
-      ],
+      // Only frontier (ringed) models get labels; off-frontier dots remain as
+      // obstacles so labels clear them, while hover/tap cards name every dot.
+      pts.map((p) => ({
+        id: p.row.id,
+        cx: sx(p.x),
+        cy: sy(p.index),
+        text: p.row.name,
+        priority: 1000 + p.index,
+        label: p.row.value_frontier,
+      })),
       { x: M.left + 2, y: M.top + 2, w: plotW - 4, h: plotH - 4 },
       Math.max(4, Math.min(16, Math.floor(plotW / 70))),
       R,
     );
-  }, [pts, lines, width, sx, sy, plotW, plotH]);
+  }, [pts, width, sx, sy, plotW, plotH]);
 
   const clear = useCallback(() => {
     pinned.current = false;
@@ -296,6 +276,11 @@ function FrontierPlot({
               if (e.target === e.currentTarget) clear();
             }}
           >
+            <defs>
+              <clipPath id="frontier-plot-clip">
+                <rect x={M.left} y={M.top} width={plotW} height={plotH} />
+              </clipPath>
+            </defs>
             {/* Grouped by quality: the table's bands as rows behind everything
                 else, every other one shaded, and each band that holds a model
                 named in the margin. */}
@@ -372,22 +357,22 @@ function FrontierPlot({
               </g>
             ))}
 
-            {/* The Score's price lines, one per cost tier, over the tier's own prices. */}
-            {lines.map((l) => (
-              <line
-                key={l.tier}
-                x1={sx(l.a)}
-                y1={sy(l.ya)}
-                x2={sx(l.b)}
-                y2={sy(l.yb)}
-                strokeWidth={2}
-                strokeLinecap="round"
-                data-testid="frontier-tier-line"
-                data-tier={l.tier}
-                className="stroke-brand-slate-400 dark:stroke-brand-slate-500"
-                pointerEvents="none"
-              />
-            ))}
+            {/* The Score's single continuous market price line across the plotted range. */}
+            {marketLine && (
+              <g clipPath="url(#frontier-plot-clip)">
+                <line
+                  x1={sx(marketLine.a)}
+                  y1={sy(marketLine.ya)}
+                  x2={sx(marketLine.b)}
+                  y2={sy(marketLine.yb)}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  data-testid="frontier-market-line"
+                  className="stroke-brand-slate-400 dark:stroke-brand-slate-500"
+                  pointerEvents="none"
+                />
+              </g>
+            )}
 
             {/* The frontier line. */}
             <path
@@ -466,14 +451,13 @@ function FrontierPlot({
             {/* Labels, on plates so a line under the text never hurts it. */}
             {[...labels.entries()].map(([id, l]) => {
               const dim = activePoint && activePoint.row.id !== id;
-              const isTier = id.startsWith("tier-");
               return (
                 <g
                   key={`label-${id}`}
                   opacity={dim ? 0.35 : 1}
                   pointerEvents="none"
-                  data-testid={isTier ? "frontier-tier-label" : "frontier-model-label"}
-                  data-model-id={isTier ? undefined : id}
+                  data-testid="frontier-model-label"
+                  data-model-id={id}
                 >
                   <rect
                     x={l.box.x}
@@ -488,12 +472,8 @@ function FrontierPlot({
                     y={l.y}
                     textAnchor={l.anchor}
                     fontSize={LABEL_PX}
-                    fontWeight={isTier ? 400 : 500}
-                    className={
-                      isTier
-                        ? "fill-brand-slate-500 italic dark:fill-brand-slate-400"
-                        : "fill-brand-slate-700 dark:fill-brand-slate-200"
-                    }
+                    fontWeight={500}
+                    className="fill-brand-slate-700 dark:fill-brand-slate-200"
                   >
                     {l.text}
                   </text>
@@ -627,22 +607,20 @@ export function FrontierChart({
   const offBand = drawn.filter((f) => !shownIds.has(f.row.id));
   const ringed = pts.filter((p) => p.row.value_frontier).length;
 
-  // The Score's price lines, one per cost tier on the chart, each over the
-  // prices of that tier's plotted models (a tier priced at one point gets a
-  // short stub so it still shows).
-  const lines: TierLine[] = fit
-    ? TIERS.filter((t) => fit.tiers[t] && pts.some((p) => p.row.tier_cost === t)).map((t) => {
-        const tf = fit.tiers[t];
-        const tx = pts.filter((p) => p.row.tier_cost === t).map((p) => p.x);
-        let a = Math.min(...tx);
-        let b = Math.max(...tx);
-        if (b - a < 0.04) {
-          a -= 0.03;
-          b += 0.03;
-        }
-        return { tier: t, a, b, ya: tf.intercept + fit.slope * a, yb: tf.intercept + fit.slope * b };
-      })
-    : [];
+  // The Score's continuous market price line across the plotted price range
+  // (a single plotted price gets a short stub so the line still shows).
+  const marketLine: MarketLine | null =
+    fit && xs.length > 0
+      ? (() => {
+          let a = Math.min(...xs);
+          let b = Math.max(...xs);
+          if (b - a < 0.04) {
+            a -= 0.03;
+            b += 0.03;
+          }
+          return { a, b, ya: fit.intercept + fit.slope * a, yb: fit.intercept + fit.slope * b };
+        })()
+      : null;
 
   return (
     <details
@@ -689,7 +667,7 @@ export function FrontierChart({
             drawn={drawn}
             x0={x0}
             x1={x1}
-            lines={lines}
+            marketLine={marketLine}
             byId={byId}
             bands={bands}
           />
@@ -726,7 +704,7 @@ export function FrontierChart({
             <LegendSwatch>
               <line x1={1} y1={10} x2={21} y2={5} strokeWidth={2} className="stroke-brand-slate-400 dark:stroke-brand-slate-500" />
             </LegendSwatch>
-            A cost tier&rsquo;s Score line
+            Expected AA Index for the price
           </li>
           {bands && (
             <li className="inline-flex items-center gap-1.5">
@@ -749,9 +727,9 @@ export function FrontierChart({
             {scope ? ` ${scope} model` : " model"} at its price or less.
           </strong>{" "}
           The dotted green line joins them from cheapest to priciest and steps up at each one, so
-          its height at any price is the top AA Index that price buys. The grey lines are the
-          Score&rsquo;s price lines, one per cost tier, drawn for comparison; the charts below
-          take them apart tier by tier.
+          its height at any price is the top AA Index that price buys. The grey line is the
+          Score&rsquo;s continuous market price line across every cost tier, drawn for comparison;
+          the charts below zoom into each cost tier along that line.
           {bands && (
             <span data-testid="frontier-bands-note">
               {" "}
@@ -770,9 +748,10 @@ export function FrontierChart({
           {fit && (
             <>
               {" "}
-              The grey lines are the Score&rsquo;s fit: AA Index = α<sub>tier</sub> + β&thinsp;×&thinsp;log
-              <sub>10</sub>(effort-adjusted price), with β&nbsp;=&nbsp;{fit.slope.toFixed(1)} index points per
-              10&times; price shared by every tier, each line drawn over its own tier&rsquo;s prices.
+              The grey line is the Score&rsquo;s fit across all {fit.n} AA-measured models: AA Index ={" "}
+              {fit.intercept.toFixed(1)} + {fit.slope.toFixed(1)}&thinsp;×&thinsp;log<sub>10</sub>
+              (effort-adjusted price), a single continuous baseline of {fit.slope.toFixed(1)} index points
+              per 10&times; price across every cost tier.
             </>
           )}
         </p>

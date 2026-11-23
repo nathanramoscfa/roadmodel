@@ -56,7 +56,7 @@ export default async function HomePage() {
 
         {/* Overview first: the filters, the frontier drawn across every model
             right under them, the catalog table (its rows scroll in their own
-            box), then the charts that explain its Score column tier by tier
+            box), then the charts that zoom into its Score column tier by tier
             (all three under the same filters), then the full key (the table's
             caption links to it). */}
         <div className="mt-10 space-y-8">

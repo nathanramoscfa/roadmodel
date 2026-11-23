@@ -1,16 +1,15 @@
 // web/components/ScoreCharts.tsx
 //
-// The Score column, drawn: one chart per cost tier, all four on screen. Each
-// plots the tier's measured models at their blended price (x, log scale) and
-// AA Intelligence Index (y), with the tier's fitted price line, the ±σ tie
-// band, and a stem from the line to each model — the stem's length IS the
-// model's Score.
+// The Score column, drawn: one zoom chart per cost tier, all four on screen.
+// Each plots the tier's measured models at their effort-adjusted blended price
+// (x, log scale) and AA Intelligence Index (y) against the single continuous
+// market price line, the ±σ tie band, and a stem from the line to each model —
+// the stem's length IS the model's Score.
 //
-// The charts stay one per cost tier whichever way the table is grouped. A
-// Score is a model's distance from its own tier's line, and a tier's chart
-// shows the whole tier around that line, some above and some below. Grouped
-// by quality, the panel says so and points to the frontier chart, which
-// shades the quality bands (FrontierChart).
+// The charts stay one per cost tier whichever way the table is grouped, zooming
+// into each cost tier along the same continuous market price line. Grouped by
+// quality, the panel says so and points to the frontier chart, which shades
+// the quality bands (FrontierChart).
 //
 // Interactive: hover (mouse), tap (touch), or tab to (keyboard) any dot for a
 // card with the model's name, Score, AA Index and prices; hover the line for
@@ -100,14 +99,13 @@ function TierChart({
   const [active, setActive] = useState<Active>(null);
   const pinned = useRef(false);
   const pointer = useRef("mouse");
-  const t = fit.tiers[tier];
   const label = COST_TIER_DEFS[tier].label;
 
   const pts: Pt[] = useMemo(
     () =>
       rows
         // The charts show the fit through AA's measurements: an estimated
-        // model's Score is in the table, not on these lines.
+        // model's Score is in the table, not on the market line.
         .filter(
           (r) =>
             r.tier_cost === tier &&
@@ -125,11 +123,11 @@ function TierChart({
             price,
             index: r.aa_index as number,
             score: r.value_score as number,
-            predicted: t.intercept + fit.slope * x,
+            predicted: fit.intercept + fit.slope * x,
           };
         })
         .sort((a, b) => a.x - b.x || b.index - a.index),
-    [rows, tier, fit, t],
+    [rows, tier, fit],
   );
   const inTier = rows.filter((r) => r.tier_cost === tier).length;
   // The caption's price ranges, over the plotted models: output (which sets
@@ -147,7 +145,7 @@ function TierChart({
   const pad = Math.max(0.09, (Math.max(...xs) - Math.min(...xs)) * 0.14);
   const x0 = Math.min(...xs) - pad;
   const x1 = Math.max(...xs) + pad;
-  const line = useCallback((x: number) => t.intercept + fit.slope * x, [t, fit]);
+  const line = useCallback((x: number) => fit.intercept + fit.slope * x, [fit]);
   const yVals = [
     ...pts.map((p) => p.index),
     line(x0) - fit.sigma,
@@ -248,8 +246,8 @@ function TierChart({
         <span className="text-xs tabular-nums text-brand-slate-500 dark:text-brand-slate-400">
           <span className="whitespace-nowrap">
             {pts.length === inTier
-              ? `${pts.length} models`
-              : `${pts.length} of ${inTier} models measured`}
+              ? `${pts.length} ${pts.length === 1 ? "model" : "models"}`
+              : `${pts.length} of ${inTier} ${inTier === 1 ? "model" : "models"} measured`}
           </span>
           {" · "}
           <span className="whitespace-nowrap">
@@ -269,7 +267,7 @@ function TierChart({
             width={width}
             height={height}
             role="group"
-            aria-label={`${label} cost: ${pts.length} models plotted by blended price against AA Intelligence Index, with the tier's price line. Each model's Score is its vertical distance from the line.`}
+            aria-label={`${label} cost: ${pts.length} ${pts.length === 1 ? "model" : "models"} plotted by blended price against AA Intelligence Index, with the market price line. Each model's Score is its vertical distance from the line.`}
             className="block touch-manipulation select-none text-brand-slate-400 dark:text-brand-slate-500"
             onPointerDown={(e) => {
               if (e.target === e.currentTarget) clear();
@@ -326,7 +324,7 @@ function TierChart({
                 points={`${bandTop} ${bandBottom}`}
                 className="fill-brand-slate-900/[0.05] dark:fill-white/[0.06]"
               />
-              {/* The tier's price line */}
+              {/* The continuous market price line */}
               <line
                 x1={sx(x0)}
                 y1={sy(line(x0))}
@@ -347,7 +345,7 @@ function TierChart({
               strokeWidth={18}
               tabIndex={0}
               role="button"
-              aria-label={`${label}-cost price line: expected AA Index = ${t.intercept.toFixed(1)} + ${fit.slope.toFixed(1)} × log10(blended price)`}
+              aria-label={`Market price line: expected AA Index = ${fit.intercept.toFixed(1)} + ${fit.slope.toFixed(1)} × log10(blended price)`}
               data-testid="score-chart-line"
               className="cursor-crosshair outline-none"
               onPointerMove={(e) => {
@@ -362,7 +360,7 @@ function TierChart({
                 setActive({ kind: "line", x: xAt(e.clientX) });
               }}
               onFocus={(e) => {
-                if (e.currentTarget.matches(":focus-visible")) setActive({ kind: "line", x: t.meanLogPrice });
+                if (e.currentTarget.matches(":focus-visible")) setActive({ kind: "line", x: (x0 + x1) / 2 });
               }}
               onBlur={() => {
                 if (!pinned.current) setActive(null);
@@ -527,7 +525,7 @@ function TierChart({
               }
             />
           ) : active.kind === "line" ? (
-            <PriceLineCard tier={tier} fit={fit} atPrice={10 ** active.x} />
+            <PriceLineCard fit={fit} atPrice={10 ** active.x} />
           ) : null}
         </FloatingCard>
       )}
@@ -556,19 +554,17 @@ export function ScoreCharts({
 }) {
   const scope = useContext(FrontierScope);
   if (!fit) return null;
-  // A tier needs two measured models for a line; the filters then decide
-  // which of those tiers still have a dot to draw.
-  const fitted = TIER_ORDER.filter((t) => (fit.tiers[t]?.n ?? 0) >= 2);
-  if (fitted.length === 0) return null;
+  // Every tier shares the single continuous market line, so any cost tier
+  // with at least one measured model gets its zoom chart.
   const plotted = rows.filter(
     (r) =>
       r.aa_index !== null &&
       r.value_score !== null &&
       r.aa_index_source !== "estimated" &&
-      r.aa_index_source !== "inherited" &&
-      fitted.includes(r.tier_cost),
+      r.aa_index_source !== "inherited",
   );
-  const tiers = fitted.filter((t) => plotted.some((r) => r.tier_cost === t));
+  const tiers = TIER_ORDER.filter((t) => plotted.some((r) => r.tier_cost === t));
+  if (!filter && tiers.length === 0) return null;
   const byId = new Map(pool.map((r) => [r.id, r]));
   const sigma = fit.sigma.toFixed(1);
 
@@ -591,13 +587,14 @@ export function ScoreCharts({
       <div className="space-y-4 border-t border-brand-slate-200 px-5 py-5 dark:border-brand-slate-700">
         <p className="max-w-4xl text-sm leading-6 text-brand-slate-600 dark:text-brand-slate-300">
           Pricier models score higher on average, so &ldquo;is this model good?&rdquo; and
-          &ldquo;is it good <em>for its price</em>?&rdquo; are different questions. Each chart
-          answers the second for one cost tier: every model sits at its effort-adjusted blended
-          price (across) and AA Intelligence Index (up), and the line is what a model of that tier
-          typically scores at each price. Output is scaled by the tokens drawn at the model&rsquo;s
-          headline Effort, (3&nbsp;&times;&nbsp;input + m&nbsp;&times;&nbsp;output)&nbsp;&divide;&nbsp;4. <strong>A model&rsquo;s Score is its vertical distance from the line</strong>
-          , in index points: above it (+) buys more intelligence than the price predicts, below it
-          (&minus;) buys less.
+          &ldquo;is it good <em>for its price</em>?&rdquo; are different questions. Each chart zooms
+          into one cost tier along the market&rsquo;s continuous price line: every model sits at its
+          effort-adjusted blended price (across) and AA Intelligence Index (up), and the line is
+          what the market typically scores at each price. Output is scaled by the tokens drawn at
+          the model&rsquo;s headline Effort, (3&nbsp;&times;&nbsp;input + m&nbsp;&times;&nbsp;output)&nbsp;&divide;&nbsp;4.{" "}
+          <strong>A model&rsquo;s Score is its vertical distance from the line</strong>, in index
+          points: above it (+) buys more intelligence than the price predicts, below it (&minus;)
+          buys less.
         </p>
 
         {grouping === "quality" && (
@@ -608,8 +605,8 @@ export function ScoreCharts({
             <strong className="font-semibold text-brand-slate-900 dark:text-brand-slate-50">
               The table is grouped by quality; these charts stay one per cost tier.
             </strong>{" "}
-            A Score is a model&rsquo;s distance from its own tier&rsquo;s line, and a tier&rsquo;s
-            chart shows the whole tier around that line. The frontier chart above shades the
+            Each chart zooms into one tier&rsquo;s price range along the same continuous market
+            price line so every dot and label reads clearly. The frontier chart above shades the
             table&rsquo;s quality bands.
           </p>
         )}
@@ -619,8 +616,8 @@ export function ScoreCharts({
             {plotted.length === 0
               ? "No measured model matches, so there is nothing to plot."
               : `${plotted.length} measured ${plotted.length === 1 ? "model" : "models"} in ${tiers.length} ${tiers.length === 1 ? "chart" : "charts"}.`}{" "}
-            The price lines and Scores are still fitted over the whole catalog, so a filter changes
-            which dots are drawn, never where a line sits.
+            The market price line and Scores stay fitted over the whole catalog, so a filter narrows
+            the dots shown while keeping the line fixed.
           </FilterNote>
         )}
 
@@ -669,12 +666,12 @@ export function ScoreCharts({
         )}
 
         <p className="text-xs leading-5 text-brand-slate-500 dark:text-brand-slate-400">
-          One least-squares fit over all {fit.n} AA-measured models: AA Index = α<sub>tier</sub>
-          {" "}+ β&thinsp;×&thinsp;log<sub>10</sub>(effort-adjusted price), with a separate intercept
-          α for each cost tier and one shared slope β&nbsp;=&nbsp;{fit.slope.toFixed(1)} index
-          points per 10&times; price (R&sup2;&nbsp;{fit.r2.toFixed(2)}, residual
-          σ&nbsp;{sigma}). A dot inside the shaded band is level with its line: treat scores that
-          close together as a tie, not a ranking.{" "}
+          One continuous least-squares fit over all {fit.n} AA-measured models: AA Index = α +
+          β&thinsp;×&thinsp;log<sub>10</sub>(effort-adjusted price), with α&nbsp;=&nbsp;
+          {fit.intercept.toFixed(1)} at $1/1M and slope β&nbsp;=&nbsp;{fit.slope.toFixed(1)} index
+          points per 10&times; price across every cost tier (R&sup2;&nbsp;{fit.r2.toFixed(2)},
+          residual σ&nbsp;{sigma}). A dot inside the shaded band sits level with the line: treat
+          scores that close together as a tie, not a ranking.{" "}
           <strong className="text-brand-slate-700 dark:text-brand-slate-200">
             The green ring marks the cost/quality frontier: a model that scores higher than every
             other {scope ? `${scope} model` : "model in the catalog"} at its price or less.

@@ -343,10 +343,9 @@ export function paretoFrontier<T extends { price: number; index: number | null }
 // on sale at that row's price or less, across the WHOLE catalog (a tie on
 // index goes to the cheaper model). A row that is its own leader is on the
 // frontier, the same set paretoFrontier returns; any other row is beaten
-// outright by its leader, which costs no more and scores higher. This is the
-// cross-tier check the Score cannot make: the Score compares a model with its
-// own tier, so every tier averages zero even when one cheaper model beats the
-// whole tier.
+// outright by its leader, which costs no more and scores higher. Whereas the
+// Score measures vertical distance from the market's continuous price line,
+// the frontier marks every non-dominated model outright.
 export function frontierLeaders<T extends { price: number; index: number | null }>(
   rows: readonly T[],
 ): Map<T, T> {
@@ -385,37 +384,31 @@ export function formatQualityBand(lo: number): string {
   return `${lo}–${(lo + QUALITY_BAND_WIDTH - 0.1).toFixed(1)}`;
 }
 
-// Cost-adjusted score, grouped by cost tier. A quality ÷ price ratio is
-// useless across a price range spanning two orders of magnitude (it crowns the
-// cheapest weak model), and a hand-picked weight is a number to argue about. So
-// the weight is ESTIMATED from the market: index = α_tier + b·log10(price),
-// fitted by least squares over every AA-measured model with ONE pooled slope b
-// (a separate slope per tier would rest on a handful of points) and a separate
-// intercept α per cost tier (Low / Medium / High / Very High). A model's score
-// is its residual — index points above (+) or below (−) what its price predicts
-// AMONG ITS OWN TIER, so residuals sum to zero within every tier and the score
-// answers "which model is the best buy in this price band", not "which cheap
-// model beats an expensive one". Price is AA's blended figure (3 input : 1
-// output tokens). n, R² and residual σ ship with the column so the reader can
-// judge how much a gap means: two models within ~σ of each other are a tie.
-export interface TierFit {
+// Cost-adjusted score over one continuous whole-catalog market line. A quality
+// ÷ price ratio breaks down across two orders of magnitude of price (it crowns
+// the cheapest weak model), and a hand-picked weight is arbitrary, while
+// per-tier intercepts introduce sharp cliffs whenever list output price crosses
+// a tier boundary. So the baseline is ONE continuous least-squares line over
+// every AA-measured model: index = α + slope·log10(price), where price is the
+// effort-adjusted blended price (3 × input + m × output) ÷ 4 at the headline
+// effort. A model's score is its residual — index points above (+) or below (−)
+// what its price predicts on that market line, guaranteeing zero tier-boundary
+// cliffs and strict price/index monotonicity across the catalog. n, R² and
+// residual σ ship with the column so readers know how much a gap means: two
+// models within ~σ of each other are effectively tied.
+export interface ScoreFit {
   n: number;
-  intercept: number;
-  meanIndex: number;
-  // Mean of log10(blended price) over the tier — the line passes through
-  // (meanLogPrice, meanIndex), so 10^meanLogPrice is the tier's typical
-  // (geometric-mean) price and the natural centre for reading the line.
+  intercept: number; // expected AA Index at $1/1M effort-adjusted blended price
+  slope: number; // index points per decade (10×) of price
+  meanIndex: number; // mean AA Index over the n fitted models
+  // Mean of log10(effort-adjusted blended price) — the market line passes through
+  // (meanLogPrice, meanIndex), so 10^meanLogPrice is the typical (geometric-mean)
+  // market price and the natural centre for reading the line.
   meanLogPrice: number;
   minPrice: number;
   maxPrice: number;
-}
-
-export interface ScoreFit {
-  n: number;
-  slope: number; // index points per decade (10×) of price, pooled across tiers
   r2: number;
-  sigma: number; // pooled residual standard deviation, in index points
-  tiers: Record<string, TierFit>;
+  sigma: number; // residual standard deviation (dof = n − 2), in index points
 }
 
 export function blendedPrice(inputPer1m: number, outputPer1m: number): number {
@@ -423,79 +416,58 @@ export function blendedPrice(inputPer1m: number, outputPer1m: number): number {
 }
 
 export function fitScoreModel(
-  rows: readonly { price: number; index: number | null; tier: string }[],
+  rows: readonly { price: number; index: number | null }[],
 ): ScoreFit | null {
   const pts = rows.filter(
-    (r): r is { price: number; index: number; tier: string } =>
+    (r): r is { price: number; index: number } =>
       r.index !== null && Number.isFinite(r.index) && r.price > 0,
   );
   const n = pts.length;
   if (n < 3) return null;
   const xs = pts.map((p) => Math.log10(p.price));
   const ys = pts.map((p) => p.index);
-  // Per-tier means (the fixed effects), then the pooled within-tier slope.
-  const groups = new Map<string, number[]>();
-  pts.forEach((p, i) => {
-    const g = groups.get(p.tier);
-    if (g) g.push(i);
-    else groups.set(p.tier, [i]);
-  });
-  const mean = (idx: number[], v: number[]) => idx.reduce((a, i) => a + v[i], 0) / idx.length;
+  const meanLogPrice = xs.reduce((a, b) => a + b, 0) / n;
+  const meanIndex = ys.reduce((a, b) => a + b, 0) / n;
   let sxx = 0;
   let sxy = 0;
-  for (const idx of groups.values()) {
-    const mx = mean(idx, xs);
-    const my = mean(idx, ys);
-    for (const i of idx) {
-      sxx += (xs[i] - mx) ** 2;
-      sxy += (xs[i] - mx) * (ys[i] - my);
-    }
-  }
-  if (sxx === 0) return null;
-  const slope = sxy / sxx;
-  const tiers: Record<string, TierFit> = {};
-  for (const [tier, idx] of groups) {
-    const mx = mean(idx, xs);
-    const my = mean(idx, ys);
-    tiers[tier] = {
-      n: idx.length,
-      intercept: my - slope * mx,
-      meanIndex: my,
-      meanLogPrice: mx,
-      minPrice: Math.min(...idx.map((i) => pts[i].price)),
-      maxPrice: Math.max(...idx.map((i) => pts[i].price)),
-    };
-  }
-  const grand = ys.reduce((a, b) => a + b, 0) / n;
-  let ssRes = 0;
   let ssTot = 0;
-  pts.forEach((p, i) => {
-    ssRes += (ys[i] - (tiers[p.tier].intercept + slope * xs[i])) ** 2;
-    ssTot += (ys[i] - grand) ** 2;
-  });
-  if (ssTot === 0) return null;
-  const dof = n - groups.size - 1; // one slope + one intercept per tier
+  for (let i = 0; i < n; i += 1) {
+    const dx = xs[i] - meanLogPrice;
+    const dy = ys[i] - meanIndex;
+    sxx += dx * dx;
+    sxy += dx * dy;
+    ssTot += dy * dy;
+  }
+  if (sxx === 0 || ssTot === 0) return null;
+  const slope = sxy / sxx;
+  const intercept = meanIndex - slope * meanLogPrice;
+  let ssRes = 0;
+  for (let i = 0; i < n; i += 1) {
+    const pred = intercept + slope * xs[i];
+    ssRes += (ys[i] - pred) ** 2;
+  }
+  const dof = n - 2;
   return {
     n,
+    intercept,
     slope,
+    meanIndex,
+    meanLogPrice,
+    minPrice: Math.min(...pts.map((p) => p.price)),
+    maxPrice: Math.max(...pts.map((p) => p.price)),
     r2: 1 - ssRes / ssTot,
     sigma: Math.sqrt(ssRes / Math.max(1, dof)),
-    tiers,
   };
 }
 
-// The residual for one model, or null when it is unmeasured / its tier has no
-// fit / the fit failed.
+// The residual for one model, or null when it is unmeasured or the fit failed.
 export function scoreFor(
   fit: ScoreFit | null,
-  tier: string,
   price: number,
   index: number | null,
 ): number | null {
   if (!fit || index === null || !(price > 0)) return null;
-  const t = fit.tiers[tier];
-  if (!t) return null;
-  return index - (t.intercept + fit.slope * Math.log10(price));
+  return index - (fit.intercept + fit.slope * Math.log10(price));
 }
 
 // "+9.8" / "−3.4" / "0.0" — one decimal, explicit sign, typographic minus.
@@ -506,22 +478,21 @@ export function formatScore(score: number | null): string {
   return (rounded > 0 ? "+" : "−") + Math.abs(rounded).toFixed(1);
 }
 
-// The expected index the tier's line gives at a blended price.
-export function expectedIndex(fit: ScoreFit, tier: string, price: number): number | null {
-  const t = fit.tiers[tier];
-  if (!t || !(price > 0)) return null;
-  return t.intercept + fit.slope * Math.log10(price);
+// The expected index the continuous market line gives at a blended price.
+export function expectedIndex(fit: ScoreFit, price: number): number | null {
+  if (!(price > 0)) return null;
+  return fit.intercept + fit.slope * Math.log10(price);
 }
 
 // A Score, taken apart into two signed parts that add up to it:
 //
-//   Score = (AA Index − tier average)            how far above its peers
+//   Score = (AA Index − market average)          how far above the whole market
 //         + (−slope × log10(price ÷ typical))    the handicap (or credit) for
 //                                                 costing more (or less) than
-//                                                 the tier's typical model
+//                                                 the typical measured model
 //
-// which is the fitted line read around the tier's centre, the point
-// (typical price, tier average) that every least-squares line passes through.
+// which is the fitted line read around the market centre, the point
+// (typical price, market average) that the least-squares line passes through.
 //
 // Every figure a reader sees is rounded to one decimal, and rounded parts do
 // not always sum to a rounded total. So the displayed parts are derived in
@@ -531,20 +502,20 @@ export function expectedIndex(fit: ScoreFit, tier: string, price: number): numbe
 export interface ScoreBreakdown {
   score: number;
   index: number;
-  tierMean: number;
+  marketMean: number;
   expected: number;
   price: number;
   typicalPrice: number;
   priceRatio: number;
   slope: number;
-  tierN: number;
+  marketN: number;
   // One-decimal figures that add up exactly:
-  //   vsAverage = index − tierMean
+  //   vsAverage = index − marketMean
   //   score     = vsAverage + priceAdjustment
-  //   expected  = index − score = tierMean − priceAdjustment
+  //   expected  = index − score = marketMean − priceAdjustment
   shown: {
     index: number;
-    tierMean: number;
+    marketMean: number;
     vsAverage: number;
     priceAdjustment: number;
     expected: number;
@@ -556,31 +527,29 @@ const tenths = (v: number) => Math.round(v * 10);
 
 export function scoreBreakdown(
   fit: ScoreFit | null,
-  tier: string,
   price: number,
   index: number | null,
 ): ScoreBreakdown | null {
-  const score = scoreFor(fit, tier, price, index);
+  const score = scoreFor(fit, price, index);
   if (score === null || !fit || index === null) return null;
-  const t = fit.tiers[tier];
-  const typicalPrice = 10 ** t.meanLogPrice;
+  const typicalPrice = 10 ** fit.meanLogPrice;
   const iT = tenths(index);
-  const mT = tenths(t.meanIndex);
+  const mT = tenths(fit.meanIndex);
   const sT = tenths(score);
   const vT = iT - mT;
   return {
     score,
     index,
-    tierMean: t.meanIndex,
+    marketMean: fit.meanIndex,
     expected: index - score,
     price,
     typicalPrice,
     priceRatio: price / typicalPrice,
     slope: fit.slope,
-    tierN: t.n,
+    marketN: fit.n,
     shown: {
       index: iT / 10,
-      tierMean: mT / 10,
+      marketMean: mT / 10,
       vsAverage: vT / 10,
       priceAdjustment: (sT - vT) / 10,
       expected: (iT - sT) / 10,

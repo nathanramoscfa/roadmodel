@@ -338,8 +338,8 @@ function IndexCell({ view, data }: { view: PickAtEffort; data: PicksData }) {
   );
 }
 
-// The /models Score: AA Index points above or below what the model's price
-// predicts among its cost tier.
+// The /models Score: AA Index points above or below what the model's
+// effort-adjusted price predicts on the continuous market line.
 function ScoreCell({ view, data }: { view: PickAtEffort; data: PicksData }) {
   const { row, leader } = view;
   if (row.value_score === null) return <span className={MUTED_UNIT}>—</span>;

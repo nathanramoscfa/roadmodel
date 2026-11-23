@@ -394,7 +394,6 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
   for (const r of marked) {
     r.value_score = scoreFor(
       fit,
-      r.tier_cost,
       headlinePrice(r),
       r.aa_index,
     );
@@ -408,12 +407,12 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
 // point and an estimate is not a measurement, so it leaves both out. An
 // estimated model still gets a Score against that line.
 export function getScoreFit(
-  rows: readonly (Pick<ModelRow, "input_price_per_1m" | "output_price_per_1m" | "aa_index" | "tier_cost"> &
+  rows: readonly (Pick<ModelRow, "input_price_per_1m" | "output_price_per_1m" | "aa_index"> &
     Partial<Pick<ModelRow, "aa_index_source" | "aa_index_effort" | "token_multiplier_by_effort" | "configuration">>)[],
 ): ScoreFit | null {
   return fitScoreModel(
     rows.flatMap((r) => r.configuration || r.aa_index_source === "inherited" || r.aa_index_source === "estimated"
-      ? [] : [{ price: headlinePrice(r), index: r.aa_index, tier: r.tier_cost }]),
+      ? [] : [{ price: headlinePrice(r), index: r.aa_index }]),
   );
 }
 

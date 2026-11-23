@@ -107,9 +107,9 @@ export interface ModelRow {
   // The uniform Artificial Analysis figures (lib/benchmark-grid.ts), or null
   // when AA has not measured the model at all.
   bench: BenchRow | null;
-  // Cost-adjusted score: AA Index minus the index the market fit predicts for
-  // this model's price WITHIN ITS COST TIER (pooled slope, per-tier intercept),
-  // in index points; null when AA has not measured it. See fitScoreModel().
+  // Cost-adjusted score: AA Index minus the index predicted by the market's
+  // continuous price line over every AA-measured model, in index points; null
+  // when AA has not measured it. See fitScoreModel().
   value_score: number | null;
   // On the cost/quality Pareto frontier: no catalog model, in any cost tier,
   // is both cheaper (blended price) and higher on the AA Index. See
@@ -288,9 +288,9 @@ export const FIELD_DEFS: Record<FieldKey, FieldDef> = {
   },
   value: {
     label: "Score",
-    fullName: "Score (cost-adjusted intelligence within the cost tier)",
+    fullName: "Score (cost-adjusted intelligence)",
     definition:
-      "AA Intelligence Index minus the index a model's price predicts among models in its own cost tier, in index points. The prediction is a least-squares fit of index against log10(effort-adjusted blended price — 3 input : m output tokens scaled at headline Effort) over every AA-measured model, with one pooled price slope and a separate baseline per cost tier, so the cost weight is estimated from the market rather than chosen and each tier is centred on its own peers. +10 means ten more index points than a same-tier model at that price typically delivers; negative means less. Sorting by Score groups the table the way Group by chooses: by quality band or by cost tier. Treat two models within about σ (shown below) of each other as a tie. The Score compares a model with its own tier, so each tier's Scores average zero. The green ring beside the AA Index compares the whole catalog: it marks the top score at each price (the cost/quality frontier).",
+      "AA Intelligence Index minus the index predicted by one continuous market price line across the catalog, in index points. The prediction is a single least-squares fit of index against log10(effort-adjusted blended price — 3 input : m output tokens scaled at headline Effort) over every AA-measured model, so the cost weight is estimated from the market and price predicts expected quality smoothly across every price tier. +10 means ten more index points than the market typically delivers at that effort-adjusted price; negative means less. Sorting by Score groups the table the way Group by chooses: by quality band or by cost tier. Treat two models within about σ (shown below) of each other as a tie. The green ring beside the AA Index marks the cost/quality frontier: a model scoring higher than every other model at its effort-adjusted price or less.",
     url: "https://artificialanalysis.ai/",
   },
   benchmarks: {

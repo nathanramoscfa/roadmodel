@@ -99,9 +99,9 @@ export function CatalogLegend({ id }: { id?: string }) {
               A green ring marks a model that <strong>scores higher on the AA Index than every
               other model at its price or less</strong> (blended price). Lined up from cheapest to
               priciest, the ringed models trace the frontier: the top score each budget buys,
-              drawn as a line in the frontier chart. The ring compares every model in the catalog;
-              the Score compares a model with its own cost tier. Hover any AA Index for the top
-              score at its price.
+              drawn as a line in the frontier chart. The ring compares every model outright; the Score
+              measures vertical distance above or below the continuous market price line. Hover any
+              AA Index for the top score at its price.
             </p>
           </div>
           <div
@@ -158,16 +158,16 @@ export function CatalogLegend({ id }: { id?: string }) {
             <strong>Effort</strong> shows the headline reasoning setting (hover for scores and
             token multipliers by level).{" "}
             <strong>Score</strong> is the cost-adjusted figure: the AA Index minus what a
-            model&rsquo;s price predicts <em>among its own cost tier</em>, from one market fit
-            over every measured model (index against log&nbsp;price, with a baseline per tier),
-            in index points &mdash; positive means more intelligence than a same-tier model at
-            that price usually delivers. It is the <strong>default sort</strong> inside every group,
-            highest first. The table opens grouped by <strong>Quality</strong>:{" "}
-            {QUALITY_BAND_WIDTH}-point AA Index bands, best first: the best buy at each level.{" "}
-            <strong>Group by &rarr; Cost tier</strong> regroups it by price band, priciest first, so
-            each model is read against its own tier: the best buy at your budget. The header shows
-            the fit&rsquo;s n, R&sup2; and residual σ; gaps smaller than σ are ties. The Score compares a model with its own tier; the frontier ring (above) compares the
-            whole catalog.
+            model&rsquo;s effort-adjusted price predicts on one continuous market price line fitted
+            over every measured model (index against log&nbsp;price), in index points &mdash;
+            positive means more intelligence than the market usually delivers at that price. It is
+            the <strong>default sort</strong> inside every group, highest first. The table opens
+            grouped by <strong>Quality</strong>: {QUALITY_BAND_WIDTH}-point AA Index bands, best
+            first: the best buy at each level. <strong>Group by &rarr; Cost tier</strong> regroups
+            it by list-output price band, priciest first, so you can compare models in each
+            budget tier. The header shows the fit&rsquo;s n, R&sup2; and residual σ; gaps smaller
+            than σ are ties. The frontier ring (above) marks every model scoring higher than all
+            models at its effort-adjusted price or less.
           </p>
         </div>
 
@@ -209,7 +209,8 @@ export function CatalogLegend({ id }: { id?: string }) {
           </dl>
           <p className="mt-3 text-xs text-brand-slate-500 dark:text-brand-slate-400">
             The dot beside each output price is its tier. A tier&rsquo;s header row also gives
-            its blended range, which the Score is fitted on. Cache-read and blended prices and the
+            its blended range; the Score, charts, and frontier scale output at each model&rsquo;s
+            headline Effort. Cache-read and blended prices and the
             provider&rsquo;s pricing notes are in the expanded row.
           </p>
           <p className="mt-3 text-xs text-brand-slate-500 dark:text-brand-slate-400" data-testid="legend-superseded">

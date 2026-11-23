@@ -241,7 +241,7 @@ export function pickAtEffort(data: PicksData, row: SlimRow, level: EffortLevel |
   const tokenShare = tokenMultiplier(row, level);
   const at: SlimRow = {
     ...named(row, level, index),
-    value_score: scoreFor(data.fit, row.tier_cost, price, index),
+    value_score: scoreFor(data.fit, price, index),
     value_frontier: rowInPool(row) && leader === null,
     value_beaten_by: leader ? leader.row.id : null,
   };

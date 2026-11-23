@@ -5,10 +5,10 @@ score of "+6.7" actually measures.
     python scripts/plot_score_model.py --tier very-high --out score.png
 
 Reads the same two files the site reads (docs/catalog.json, docs/benchmarks.json),
-fits the same line the page fits — AA Intelligence Index against log10(blended
-price), one pooled slope across every measured model, one intercept per cost
-tier — and plots the chosen tier: each model as a point, the tier's fitted line,
-and each model's SCORE as the vertical distance from the point to that line.
+fits the same continuous line the page fits — AA Intelligence Index against
+log10(blended price) across every measured model — and plots the chosen tier:
+each model as a point, the market's fitted line, and each model's SCORE as the
+vertical distance from the point to that line.
 
 Maintainer tool (matplotlib is not a package dependency); the site renders the
 same figures, one per cost tier and interactive, in web/components/ScoreCharts.tsx.
@@ -72,31 +72,18 @@ def load() -> list[dict[str, Any]]:
     return rows
 
 
-def fit(rows: list[dict[str, Any]]) -> tuple[float, dict[str, float], float]:
-    """(pooled slope, per-tier intercept, residual sigma) — the ANCOVA fit the
-    site uses: one price gradient, each tier centred on its own peers."""
-    groups: dict[str, list[dict[str, Any]]] = {}
-    for r in rows:
-        groups.setdefault(r["tier"], []).append(r)
-    sxx = sxy = 0.0
-    for members in groups.values():
-        mx = sum(math.log10(r["price"]) for r in members) / len(members)
-        my = sum(r["index"] for r in members) / len(members)
-        for r in members:
-            x = math.log10(r["price"])
-            sxx += (x - mx) ** 2
-            sxy += (x - mx) * (r["index"] - my)
+def fit(rows: list[dict[str, Any]]) -> tuple[float, float, float]:
+    """(intercept, slope, residual sigma) — the single continuous OLS fit the
+    site uses across every measured model."""
+    mx = sum(math.log10(r["price"]) for r in rows) / len(rows)
+    my = sum(r["index"] for r in rows) / len(rows)
+    sxx = sum((math.log10(r["price"]) - mx) ** 2 for r in rows)
+    sxy = sum((math.log10(r["price"]) - mx) * (r["index"] - my) for r in rows)
     slope = sxy / sxx
-    intercepts = {
-        tier: (sum(r["index"] for r in members) / len(members))
-        - slope * (sum(math.log10(r["price"]) for r in members) / len(members))
-        for tier, members in groups.items()
-    }
-    ss_res = sum(
-        (r["index"] - (intercepts[r["tier"]] + slope * math.log10(r["price"]))) ** 2 for r in rows
-    )
-    dof = max(1, len(rows) - len(groups) - 1)
-    return slope, intercepts, math.sqrt(ss_res / dof)
+    intercept = my - slope * mx
+    ss_res = sum((r["index"] - (intercept + slope * math.log10(r["price"]))) ** 2 for r in rows)
+    dof = max(1, len(rows) - 2)
+    return intercept, slope, math.sqrt(ss_res / dof)
 
 
 def main() -> int:
@@ -111,11 +98,10 @@ def main() -> int:
     import matplotlib.pyplot as plt
 
     rows = load()
-    slope, intercepts, sigma = fit(rows)
+    intercept, slope, sigma = fit(rows)
     tier_rows = sorted((r for r in rows if r["tier"] == args.tier), key=lambda r: r["price"])
     if not tier_rows:
         raise SystemExit(f"no measured models in tier {args.tier!r}")
-    intercept = intercepts[args.tier]
 
     fig, ax = plt.subplots(figsize=(11, 6.8), dpi=170)
     fig.patch.set_facecolor("white")
@@ -185,8 +171,7 @@ def main() -> int:
     ax.set_xlim(line_x[0], line_x[1] + x_span * 0.02)
 
     ax.set_title(
-        f"Score = AA Intelligence Index − what that price predicts, within the "
-        f"{TIER_LABELS[args.tier]} tier",
+        f"Score = AA Intelligence Index − what that price predicts ({TIER_LABELS[args.tier]} tier zoom)",
         fontsize=13,
         color=INK,
         pad=16,
@@ -207,7 +192,7 @@ def main() -> int:
 
     mid_x = (line_x[0] + line_x[1]) / 2
     ax.annotate(
-        "the price line: what this tier's models\ntypically score at that price",
+        "the market price line: what models\ntypically score at that price",
         (mid_x, intercept + slope * mid_x),
         textcoords="offset points",
         xytext=(18, -46),
@@ -221,7 +206,7 @@ def main() -> int:
         if abs(r["index"] - (intercept + slope * math.log10(r["price"]))) < sigma
     )
     caption = (
-        f"Pooled fit over {len(rows)} measured models: {slope:.1f} index points per 10× price; "
+        f"Continuous fit over {len(rows)} measured models: {slope:.1f} index points per 10× price; "
         f"residual σ {sigma:.1f} (shaded). {inside} of {len(tier_rows)} models in this tier sit "
         f"inside that band — their scores are ties, not a ranking.\n"
         f"Source: Artificial Analysis benchmark snapshot; prices from the roadmodel catalog."

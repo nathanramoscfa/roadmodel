@@ -10,10 +10,9 @@
 //   Ratings — Model (sticky), Provider, Jurisdiction, Input, Output (cost tier
 //     as a colored dot), AA Index (with a green ring for the cost/quality
 //     frontier, which is catalog-wide), Score (cost-adjusted index residual
-//     within the cost tier), then seven letter cells. The frontier ring sits
-//     on the AA Index, not the Score, so a within-tier figure never carries a
-//     whole-catalog mark; it is a ring, not a dot, so it never reads as the Low
-//     tier's dot. Letters only: the uniform figures live in the grid, and the
+//     against one continuous market price line), then seven letter cells. The
+//     frontier ring sits on the AA Index (a ring, not a dot, so it never reads
+//     as the Low tier's dot). Letters only: the uniform figures live in the grid, and the
 //     category header's tooltip names which grid column is evidence for it.
 //     Sorting a category orders by letter, then AA Index, then name.
 //   Benchmark scores — the full AA grid: one column per evaluation, every value
@@ -624,7 +623,7 @@ export function ModelCatalog({
           ) : grouping === "tier" ? (
             <>
               <strong className="font-semibold">Grouped by cost tier: the best buy at your budget.</strong>{" "}
-              Each Score is read against its own tier, {scoreOrder}.
+              Models in the same list-output cost tier, {scoreOrder}.
             </>
           ) : (
             <>Sorted by the column you chose; Group by puts the header rows back.</>
@@ -655,7 +654,7 @@ export function ModelCatalog({
           ) : (
             "every model in the catalog"
           )}
-          ; the Score compares a model with its own cost tier. Hover any AA Index for the top score
+          ; the Score measures each model against one continuous market price line across the catalog. Hover any AA Index for the top score
           at that price; the frontier chart above draws the whole line.
         </p>
         <p className="rounded-lg border border-brand-slate-200 bg-brand-slate-50 px-3 py-2 text-brand-slate-700 dark:border-brand-slate-700 dark:bg-brand-slate-800/60 dark:text-brand-slate-200">
@@ -748,7 +747,7 @@ export function ModelCatalog({
                 align="right"
                 detail={
                   scoreFit
-                    ? `Fit over ${scoreFit.n} measured models in ${Object.keys(scoreFit.tiers).length} cost tiers: ${scoreFit.slope.toFixed(1)} index points per 10× price, R² ${scoreFit.r2.toFixed(2)}, residual σ ${scoreFit.sigma.toFixed(1)} — treat gaps under about ${Math.round(scoreFit.sigma)} points as ties.`
+                    ? `Fit over ${scoreFit.n} measured models: ${scoreFit.slope.toFixed(1)} index points per 10× price, R² ${scoreFit.r2.toFixed(2)}, residual σ ${scoreFit.sigma.toFixed(1)} — treat gaps under about ${Math.round(scoreFit.sigma)} points as ties.`
                     : "Not enough measured models to fit the market line."
                 }
               />
@@ -794,7 +793,6 @@ export function ModelCatalog({
                 const groupStart =
                   grouping !== null && (i === 0 || groupKey(rows[i - 1], grouping) !== key);
                 const group = key !== null ? groupStats.get(key) : undefined;
-                const tierFit = scoreFit?.tiers[m.tier_cost];
                 const band = qualityBand(m.aa_index);
                 const count = group ? `${group.count} ${group.count === 1 ? "model" : "models"}` : "";
                 const prices = group && (
@@ -812,8 +810,7 @@ export function ModelCatalog({
                           <span className={"mr-1.5 inline-block h-2 w-2 rounded-full align-middle " + COST_TIER_DOT[m.tier_cost]} />
                           {tier.label} cost · {count}
                           <span className={GROUP_HEADER_DETAIL} data-testid="score-group-prices">
-                            {prices}
-                            {tierFit && <> · Score is vs. this tier&rsquo;s own price line</>}
+                            {prices} · {scoreOrder}
                           </span>
                         </td>
                       </tr>
@@ -1230,8 +1227,8 @@ export function ModelCatalog({
         </a>{" "}
         (snapshot {benchmarksGeneratedAt}; {measuredCount} of {models.length} models measured) —
         one lab, one harness, so every column is comparable down the page. Score is the AA
-        Index minus what the model&rsquo;s price predicts among its own cost tier (one market
-        fit, a baseline per tier), in index points. <strong>The green ring beside an AA Index
+        Index minus what the model&rsquo;s effort-adjusted price predicts on one continuous
+        market price line across the catalog, in index points. <strong>The green ring beside an AA Index
         marks the cost/quality frontier</strong>: each ringed model scores higher than every other
         {scope ? ` ${scope} model` : " model in the catalog"} at its price or less (blended). A
         filter changes which models show, never a Score: the price lines are fitted over the whole
