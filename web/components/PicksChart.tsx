@@ -10,12 +10,13 @@
 // each point says whether it meets the task's bar.
 //
 // It is drawn to be read at a glance, like the /models frontier chart:
-//   - every point on the frontier is named, with its effort, and no other
-//     point is: a point off the frontier is a small quiet dot (its card names
-//     it). A name that has no room against its point sits a little off it,
-//     joined by a thin line;
-//   - each pick is a lettered marker (C, B, Q), and its name on the frontier
-//     is set in the accent colour;
+//   - every point on the frontier is named, with its effort. So is every
+//     point of the selected pick's model (the blue line), while that pick is
+//     selected. No other point is: it is a small quiet dot, and its card
+//     names it. A name that has no room against its point sits a little off
+//     it, joined by a thin line;
+//   - each pick is a lettered marker (C, B, Q), and its name is set in the
+//     accent colour, as are the names along the selected pick's line;
 //   - a point below the task's bar is hollow, so Cost reads as what it is:
 //     the cheapest filled point on the line;
 //   - a model's efforts are joined only for the selected pick (the blue
@@ -186,36 +187,42 @@ export function PicksChart({
     return out;
   }, [line, sx, sy, plotW]);
 
-  // Every frontier point is named, with its effort; a pick's name is set
-  // apart. No other point is.
-  const labelled = useMemo(() => {
-    const picked = new Set(pickPts.filter((p) => p.plotted).map((p) => p.point.key));
-    const out = new Map<string, { text: string; pick: boolean }>();
-    for (const f of line) out.set(f.key, { text: pointName(f), pick: picked.has(f.key) });
-    return out;
-  }, [pickPts, line]);
+  // A model's efforts, joined lowest to highest: drawn for the selected pick
+  // and for the point under the pointer.
+  const pathOf = useCallback((id: string) => pts.filter((p) => p.row.id === id), [pts]);
+  const selectedPick = useMemo(
+    () => pickPts.find((p) => p.priority === selected && p.plotted),
+    [pickPts, selected],
+  );
+  const selectedPath = useMemo(
+    () => (selectedPick ? pathOf(selectedPick.point.row.id) : []),
+    [selectedPick, pathOf],
+  );
+  // A path as its segments, for the names to keep off it.
+  const segmentsOf = useCallback(
+    (path: readonly PlotPoint[]): Segment[] =>
+      path.slice(1).map((p, i) => ({ x1: sx(path[i].price), y1: sy(path[i].index), x2: sx(p.price), y2: sy(p.index) })),
+    [sx, sy],
+  );
 
-  const labels = useMemo(() => {
-    if (width === 0) return new Map<string, PlacedLabel>();
-    const marks: Mark[] = drawn.map((p) => {
-      const label = labelled.get(p.key);
+  // The marks on the chart, for the names to be placed among: every point,
+  // and a second marker where two picks share one.
+  const marks = useMemo(() => {
+    const out: Mark[] = drawn.map((p) => {
       const pick = pickedKeys.has(p.key);
       return {
         id: p.key,
         cx: sx(p.price),
         cy: sy(p.index),
         r: pick ? R_PICK + 2 : p.frontier ? R_RING : R_DOT,
-        text: label?.text ?? null,
+        text: null,
         hard: pick || p.frontier,
-        // A pick's name first, then the frontier from its top down: the same
-        // order whichever pick is selected, so the names never move.
-        priority: (label?.pick ? 3000 : 1000) + p.index,
+        priority: 0,
       };
     });
-    // Two picks on one point sit side by side: both markers are in the way.
     for (const p of pickPts) {
       if (p.dx === 0) continue;
-      marks.push({
+      out.push({
         id: `marker:${p.priority}`,
         cx: sx(p.point.price) + p.dx,
         cy: sy(p.point.index),
@@ -225,13 +232,57 @@ export function PicksChart({
         priority: 0,
       });
     }
+    return out;
+  }, [drawn, pickedKeys, pickPts, sx, sy]);
+  // Into the top margin: a name may sit over the highest point.
+  const nameBounds = useMemo(
+    () => ({ x: M.left + 2, y: 2, w: plotW - 4, h: M.top + plotH - 4 }),
+    [plotW, plotH],
+  );
+
+  // Every frontier point is named, with its effort; a pick's name is set
+  // apart. These names are the same whichever pick is selected, so they never
+  // move: they keep off every pick's own line, not the selected one's alone.
+  const frontierNames = useMemo(() => {
+    if (width === 0) return new Map<string, PlacedLabel>();
+    const picked = new Set(pickPts.filter((p) => p.plotted).map((p) => p.point.key));
+    const named = new Map(line.map((f) => [f.key, f]));
+    const lines = pickPts.filter((p) => p.plotted).flatMap((p) => segmentsOf(pathOf(p.point.row.id)));
     return placeEveryLabel(
-      marks,
-      // Into the top margin: a label may sit over the highest point.
-      { x: M.left + 2, y: 2, w: plotW - 4, h: M.top + plotH - 4 },
-      stepSegments,
+      marks.map((m) => {
+        const f = named.get(m.id);
+        // A pick's name first, then the frontier from its top down.
+        return f ? { ...m, text: pointName(f), priority: (picked.has(f.key) ? 3000 : 1000) + f.index } : m;
+      }),
+      nameBounds,
+      [...stepSegments, ...lines],
     );
-  }, [drawn, labelled, pickedKeys, pickPts, stepSegments, width, sx, sy, plotW, plotH]);
+  }, [marks, line, pickPts, pathOf, segmentsOf, stepSegments, nameBounds, width]);
+
+  // The selected pick's model is named at each of its efforts too, while that
+  // pick is selected: the points of the blue line that are off the frontier
+  // (the pick's own, where it is) join the names above, which stay where
+  // they are.
+  const pathKeys = useMemo(
+    () => new Set(selectedPath.filter((p) => !p.frontier).map((p) => p.key)),
+    [selectedPath],
+  );
+  const labels = useMemo(() => {
+    if (width === 0 || pathKeys.size === 0) return frontierNames;
+    const named = new Map(selectedPath.map((p) => [p.key, p]));
+    return placeEveryLabel(
+      marks.map((m) => {
+        const p = named.get(m.id);
+        return p && pathKeys.has(p.key)
+          ? { ...m, r: Math.max(m.r, R_DOT + 1), text: pointName(p), hard: true, priority: 1000 + p.index }
+          : m;
+      }),
+      nameBounds,
+      [...stepSegments, ...segmentsOf(selectedPath)],
+      undefined,
+      frontierNames,
+    );
+  }, [frontierNames, marks, selectedPath, pathKeys, segmentsOf, stepSegments, nameBounds, width]);
 
   useEffect(() => {
     if (!active) return;
@@ -274,11 +325,6 @@ export function PicksChart({
     return lead ? pointRow(frontier, lead) : null;
   };
 
-  // A model's efforts, joined lowest to highest: drawn for the selected pick
-  // and for the point under the pointer.
-  const pathOf = useCallback((id: string) => pts.filter((p) => p.row.id === id), [pts]);
-  const selectedPick = pickPts.find((p) => p.priority === selected && p.plotted);
-  const selectedPath = selectedPick ? pathOf(selectedPick.point.row.id) : [];
   const activePath =
     activePt && activePt.row.id !== selectedPick?.point.row.id ? pathOf(activePt.row.id) : [];
 
@@ -466,11 +512,12 @@ export function PicksChart({
                   );
                 })}
 
-                {/* Names: every frontier point and no other, on plates so a
-                    line under the text never hurts it. A name off its point
-                    is joined to it. */}
+                {/* Names: every frontier point, and the selected pick's model
+                    at each effort, on plates so a line under the text never
+                    hurts it. A name off its point is joined to it. */}
                 {[...labels.entries()].map(([id, l]) => {
-                  const isPick = labelled.get(id)?.pick === true;
+                  const isPick = pickedKeys.has(id);
+                  const onPath = pathKeys.has(id);
                   const dim = activePt && activePt.key !== id;
                   return (
                     <g
@@ -480,6 +527,7 @@ export function PicksChart({
                       data-testid="picks-chart-label"
                       data-key={id}
                       data-pick={isPick ? "1" : "0"}
+                      data-path={onPath ? "1" : "0"}
                     >
                       {l.leader && (
                         <line
@@ -508,7 +556,7 @@ export function PicksChart({
                         fontSize={LABEL_PX}
                         fontWeight={isPick ? 650 : 500}
                         className={
-                          isPick
+                          isPick || onPath
                             ? "fill-brand-accent dark:fill-blue-400"
                             : "fill-brand-slate-700 dark:fill-brand-slate-200"
                         }

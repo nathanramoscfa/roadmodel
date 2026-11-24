@@ -376,11 +376,17 @@ const total = (s: Spot) => s.blocked * 1000 + s.cost;
 // against its mark. Several orders are tried, each then improved by moving one
 // label at a time while that shortens the lines, and the layout with the least
 // to answer for is kept. The same marks always give the same layout.
+//
+// `fixed` holds names already on the chart: they stay exactly where they are,
+// the new names keep clear of them and of their lines, and the result holds
+// both. A chart names more marks for a selection that way without moving a
+// name the reader has already found.
 export function placeEveryLabel(
   marks: readonly Mark[],
   bounds: Box,
   avoid: readonly Segment[] = [],
   measure: (text: string) => number = textWidth,
+  fixed: ReadonlyMap<string, PlacedLabel> = new Map(),
 ): Map<string, PlacedLabel> {
   // Each mark's clearance, as the box a plate must keep out of.
   const dots = marks.map((m) => {
@@ -388,7 +394,7 @@ export function placeEveryLabel(
     return { m, x0: m.cx - reach, y0: m.cy - reach, x1: m.cx + reach, y1: m.cy + reach };
   });
   const dotOf = new Map(dots.map((d) => [d.m.id, d]));
-  const named = marks.filter((m) => m.text !== null);
+  const named = marks.filter((m) => m.text !== null && !fixed.has(m.id));
   const widths = new Map(named.map((m) => [m.id, measure(m.text as string) + 2 * PLATE_PAD]));
   // Spots judged so far: the search stops widening once it has done enough.
   let judged = 0;
@@ -596,7 +602,7 @@ export function placeEveryLabel(
 
   // Labels placed in a given order.
   const inOrder = (order: readonly Mark[]): Layout => {
-    const placed = new Map<string, PlacedLabel>();
+    const placed = new Map<string, PlacedLabel>(fixed);
     const spots = new Map<string, Spot>();
     for (const m of order) {
       const spot = best(m, placed);
@@ -609,7 +615,7 @@ export function placeEveryLabel(
   // Labels placed tightest first: each time, the mark with the fewest clear
   // spots left against it chooses.
   const tightestFirst = (): Layout => {
-    const placed = new Map<string, PlacedLabel>();
+    const placed = new Map<string, PlacedLabel>(fixed);
     const spots = new Map<string, Spot>();
     const left = [...named].sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id));
     const order: Mark[] = [];
@@ -652,7 +658,7 @@ export function placeEveryLabel(
     const tried = attempt();
     if (kept === null || tried.sum < kept.sum - 0.01) kept = tried;
   }
-  return kept?.placed ?? new Map();
+  return kept?.placed ?? new Map(fixed);
 }
 
 // x ticks for a log price axis: the roundest prices claim their place first

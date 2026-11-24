@@ -174,7 +174,10 @@ test("a ranked recommendation fits a phone: every rank on the card, the chart in
   // the names need and pans sideways inside its own box, its index axis held
   // in place, while the page itself never scrolls sideways.
   const frontier = await chart.locator('[data-frontier="1"]').evaluateAll((els) => [...new Set(els.map((e) => e.getAttribute("data-key")))]);
-  const named = await chart.getByTestId("picks-chart-label").evaluateAll((els) => els.map((e) => e.getAttribute("data-key")));
+  // (The selected pick's line adds names of its own, marked data-path.)
+  const named = await chart
+    .locator('[data-testid="picks-chart-label"][data-path="0"]')
+    .evaluateAll((els) => els.map((e) => e.getAttribute("data-key")));
   expect(named.sort()).toEqual(frontier.sort());
   const box = chart.getByTestId("picks-chart-scroll");
   const pan = await box.evaluate((el) => ({ full: el.scrollWidth, shown: el.clientWidth, at: el.scrollLeft }));
