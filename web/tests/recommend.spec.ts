@@ -178,12 +178,24 @@ test("the chart plots the picks among the catalog", async ({ page }) => {
   // Each pick at the effort it runs.
   await expect(page.getByRole("button", { name: /^Cost pick: Gemini 3\.8 Flash · Medium,/ })).toHaveCount(1);
   // A model's efforts are joined for the selected pick alone, until a point is hovered.
-  await expect(chart.locator('[data-testid="picks-chart-effort-path"][data-path="selected"]')).toHaveCount(1);
+  const selectedPath = chart.locator('[data-testid="picks-chart-effort-path"][data-path="selected"]');
+  await expect(selectedPath).toHaveCount(1);
   await expect(chart.locator('[data-testid="picks-chart-effort-path"][data-path="active"]')).toHaveCount(0);
+  // The key says what that line is, by the model's name.
+  const pathKey = chart.getByTestId("picks-chart-path-legend");
+  const selectedModel = await page.locator('[data-priority][data-selected="1"]').getByTestId("pick-model").innerText();
+  await expect(pathKey).toHaveText(`Selected pick: ${selectedModel} at each effort`);
   // Clicking a pick's marker selects its card.
   await chart.locator('[data-testid="picks-chart-pick"][data-pick="cheap"]').click();
   await expect(card(page, "cheap")).toHaveAttribute("data-selected", "1");
   await expect(page.getByTestId("pick-detail")).toHaveAttribute("data-pick", "cheap");
+  // The line and its key follow the selection: there while the selected
+  // pick's model is plotted at more than one effort.
+  const drawn = await selectedPath.count();
+  await expect(pathKey).toHaveCount(drawn);
+  if (drawn > 0) {
+    await expect(pathKey).toHaveText(`Selected pick: ${await card(page, "cheap").getByTestId("pick-model").innerText()} at each effort`);
+  }
 });
 
 // What made the old chart unreadable: a name beside every other dot. Every
