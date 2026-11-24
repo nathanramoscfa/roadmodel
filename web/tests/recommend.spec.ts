@@ -199,14 +199,20 @@ test("the chart plots the picks among the catalog", async ({ page }) => {
 });
 
 // What made the old chart unreadable: a name beside every other dot. Every
-// point on the cost/quality frontier is named, with its effort, and no other
-// point is; no name covers a dot or another name.
+// point on the cost/quality frontier is named, with its effort. So is every
+// point of the selected pick's model (the blue line) while that pick is
+// selected. No other point is named, and no name covers a dot or another name.
 async function expectFrontierNamed(page: Page) {
   const chart = page.getByTestId("picks-chart");
   await expect(chart.getByTestId("picks-chart-label").first()).toBeAttached();
-  const report = await chart.evaluate((el) => {
+  // The selected pick, where an answer is shown: its card says so.
+  const selectedCard = page.locator('[data-priority][data-selected="1"]');
+  const selected = (await selectedCard.count()) > 0 ? await selectedCard.first().getAttribute("data-priority") : null;
+  const report = await chart.evaluate((el, selected) => {
     const targets = [...el.querySelectorAll<SVGCircleElement>('[data-testid="picks-chart-point"], [data-testid="picks-chart-pick"]')].map((c) => ({
       key: c.getAttribute("data-key")!,
+      model: c.getAttribute("data-model-id")!,
+      pick: c.getAttribute("data-pick"),
       frontier: c.getAttribute("data-frontier") === "1",
       cx: Number(c.getAttribute("cx")),
       cy: Number(c.getAttribute("cy")),
@@ -216,6 +222,7 @@ async function expectFrontierNamed(page: Page) {
       const rect = g.querySelector("rect")!;
       return {
         key: g.getAttribute("data-key")!,
+        path: g.getAttribute("data-path") === "1",
         text: g.querySelector("text")!.textContent ?? "",
         x: Number(rect.getAttribute("x")),
         y: Number(rect.getAttribute("y")),
@@ -223,9 +230,13 @@ async function expectFrontierNamed(page: Page) {
         h: Number(rect.getAttribute("height")),
       };
     });
+    // The selected pick's model at every effort the chart plots it at.
+    const model = selected ? (targets.find((t) => t.pick === selected)?.model ?? null) : null;
     return {
-      labels: labels.map((l) => ({ key: l.key, text: l.text, frontier: byKey.get(l.key)?.frontier ?? false })),
+      labels: labels.map((l) => ({ ...l, frontier: byKey.get(l.key)?.frontier ?? false, model: byKey.get(l.key)?.model ?? null })),
       frontier: [...new Set(targets.filter((t) => t.frontier).map((t) => t.key))],
+      line: model ? [...new Set(targets.filter((t) => t.model === model).map((t) => t.key))] : [],
+      model,
       covered: labels.flatMap((l) =>
         targets
           .filter((t) => t.key !== l.key && t.cx > l.x && t.cx < l.x + l.w && t.cy > l.y && t.cy < l.y + l.h)
@@ -238,18 +249,22 @@ async function expectFrontierNamed(page: Page) {
           .map((b) => `${a.text} overlaps ${b.text}`),
       ),
     };
-  });
+  }, selected);
   expect(report.frontier.length).toBeGreaterThan(1);
-  // No point off the frontier is named,
-  for (const label of report.labels) expect(label.frontier, `${label.text} names a frontier point`).toBe(true);
-  // and every point on it is, once.
-  expect(report.labels.map((l) => l.key).sort()).toEqual([...report.frontier].sort());
+  // A name is a frontier point's, or a point's on the selected pick's line,
+  for (const label of report.labels) {
+    expect(label.frontier || label.model === report.model, `${label.text} names a frontier point or the selected pick's model`).toBe(true);
+    // and it is marked as the line's when it is off the frontier.
+    expect(label.path, `${label.text} is marked as the selected line's`).toBe(!label.frontier);
+  }
+  // and every one of those points is named, once.
+  expect(report.labels.map((l) => l.key).sort()).toEqual([...new Set([...report.frontier, ...report.line])].sort());
   expect(report.covered).toEqual([]);
   expect(report.stacked).toEqual([]);
   return report;
 }
 
-test("every point on the frontier is named on the chart and no other point is", async ({ page }) => {
+test("every point on the frontier is named on the chart, and off it only the selected pick's line", async ({ page }) => {
   await fulfill(page, FIXTURE);
   await openFreeText(page);
   // Before an answer: the frontier alone.
@@ -264,6 +279,43 @@ test("every point on the frontier is named on the chart and no other point is", 
   // The chart fits its box at these widths: nothing to pan.
   await expect(page.getByTestId("picks-chart-pan-hint")).toHaveCount(0);
   await expect(page.getByTestId("picks-chart-pinned-axis")).toHaveCount(0);
+});
+
+test("the selected pick's model is named at each effort while it is selected, and the frontier's names stay put", async ({ page }) => {
+  await fulfill(page, RANKED);
+  await openFreeText(page);
+  await ask(page);
+  const chart = page.getByTestId("picks-chart");
+  const frontierPlates = () =>
+    chart.locator('[data-testid="picks-chart-label"][data-path="0"]').evaluateAll((els) =>
+      Object.fromEntries(
+        els.map((g) => {
+          const r = g.querySelector("rect")!;
+          return [g.getAttribute("data-key"), `${r.getAttribute("x")},${r.getAttribute("y")}`];
+        }),
+      ),
+    );
+  let before: Record<string, string> | null = null;
+  let onLines = 0;
+  for (const priority of ["cheap", "balanced", "best"] as const) {
+    await card(page, priority).click();
+    await expect(card(page, priority)).toHaveAttribute("data-selected", "1");
+    const report = await expectFrontierNamed(page);
+    // The names along the line are the selected pick's model at an effort.
+    const model = await card(page, priority).getByTestId("pick-model").innerText();
+    const along = report.labels.filter((l) => l.path);
+    for (const label of along) expect(label.text.startsWith(`${model} · `), `${label.text} is ${model} at an effort`).toBe(true);
+    // Every point the blue line passes through carries a name.
+    const drawn = await chart.locator('[data-testid="picks-chart-effort-path"][data-path="selected"]').count();
+    if (drawn > 0) expect(report.line.length).toBeGreaterThan(1);
+    onLines += along.length;
+    // The frontier's names are where they were under the last selection.
+    const now = await frontierPlates();
+    if (before) expect(now).toEqual(before);
+    before = now;
+  }
+  // The fixture's picks include a model with an effort off the frontier.
+  expect(onLines).toBeGreaterThan(0);
 });
 
 test("renders the backup row with its platform and effort", async ({ page }) => {

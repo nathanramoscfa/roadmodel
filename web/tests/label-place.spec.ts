@@ -153,3 +153,17 @@ test("the same marks give the same layout, whichever pick is selected", () => {
   const again = placeEveryLabel([...marks].reverse(), BOUNDS, [], measure);
   expect(Object.fromEntries(again)).toEqual(Object.fromEntries(once));
 });
+
+test("names already on the chart stay put while new ones are placed round them", () => {
+  // A chart names more marks for a selection (the selected pick's line)
+  // without moving a name the reader has already found.
+  const marks = staircase();
+  const first = placeEveryLabel(marks, BOUNDS, [], measure);
+  const extra = marks.filter((m) => m.text === null).slice(0, 3).map((m) => m.id);
+  const more = marks.map((m) => (extra.includes(m.id) ? { ...m, text: `Extra ${m.id}`, hard: true } : m));
+  const second = placeEveryLabel(more, BOUNDS, [], measure, first);
+  for (const [id, label] of first) expect(second.get(id)).toEqual(label);
+  for (const id of extra) expect(second.get(id)?.text).toBe(`Extra ${id}`);
+  expect(second.size).toBe(first.size + extra.length);
+  expect(problems(more, second, BOUNDS)).toEqual([]);
+});
