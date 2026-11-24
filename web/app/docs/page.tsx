@@ -39,7 +39,7 @@ export default function DocsPage() {
               <strong>Balanced</strong>) and the strongest (<strong>Quality</strong>).
               Each names the <strong>model</strong>, the <strong>platform</strong> to run
               it on, the <strong>level</strong> to set there (reasoning effort, with
-              thinking and Max Mode where the platform has them) and what it{" "}
+              Max Mode where the platform has it) and what it{" "}
               <strong>costs</strong> you, with a plain-English rationale. Each pick is
               ranked three deep: a <strong>runner-up</strong> and a{" "}
               <strong>backup</strong> from other makers, each with its own platform and

@@ -46,12 +46,15 @@ import {
   LABEL_PX,
   LegendSwatch,
   pickPriceTicks,
-  placeLabels,
+  PinnedIndexAxis,
+  placeEveryLabel,
   fitTitle,
   PRICE_AXIS_TITLES,
-  useWidth,
+  useNamedWidth,
   type ChartFilter,
-  type Label,
+  type Mark,
+  type PlacedLabel,
+  type Segment,
 } from "./chart-kit";
 import { FloatingCard, type AnchorRect } from "./FloatingCard";
 import { FrontierPointCard, FrontierScope, FrontierStepCard } from "./ScoreCards";
@@ -115,13 +118,15 @@ function FrontierPlot({
   // model (the table's quality groups). Null when grouped by cost tier.
   bands: number[] | null;
 }) {
-  const wrap = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
-  const width = useWidth(wrap);
+  // In a box too narrow for its names (a phone) the chart keeps the width
+  // they need and pans sideways there.
+  const { width, pans } = useNamedWidth(scroller);
   const [active, setActive] = useState<Active>(null);
   const pinned = useRef(false);
 
-  const height = width > 0 && width < 640 ? 400 : 460;
+  const height = 460;
   const namedBands = bands !== null && width >= BAND_NAMES_MIN_WIDTH;
   const plotW = Math.max(40, width - M.left - (namedBands ? BAND_MARGIN : M.right));
   const plotH = height - M.top - M.bottom;
@@ -173,24 +178,36 @@ function FrontierPlot({
     [frontier],
   );
 
+  // Every frontier (ringed) model is named and no other: a name with no room
+  // against its dot sits a little off it, joined by a thin line. The other
+  // dots are in the names' way, and each one's card names it.
   const labels = useMemo(() => {
-    if (width === 0) return new Map<string, Label>();
-    return placeLabels(
-      // Only frontier (ringed) models get labels; off-frontier dots remain as
-      // obstacles so labels clear them, while hover/tap cards name every dot.
-      pts.map((p) => ({
-        id: p.row.id,
-        cx: sx(p.x),
-        cy: sy(p.index),
-        text: p.row.name,
-        priority: 1000 + p.index,
-        label: p.row.value_frontier,
-      })),
-      { x: M.left + 2, y: M.top + 2, w: plotW - 4, h: plotH - 4 },
-      Math.max(4, Math.min(16, Math.floor(plotW / 70))),
-      R,
-    );
-  }, [pts, width, sx, sy, plotW, plotH]);
+    if (width === 0) return new Map<string, PlacedLabel>();
+    const marks: Mark[] = pts.map((p) => ({
+      id: p.row.id,
+      cx: sx(p.x),
+      cy: sy(p.index),
+      r: R,
+      text: p.row.value_frontier ? p.row.name : null,
+      hard: p.row.value_frontier,
+      priority: 1000 + p.index,
+    }));
+    // The frontier line's runs and risers, for the names to keep off it.
+    const line: Segment[] = [];
+    drawn.forEach((f, i) => {
+      const x = sx(Math.max(f.x, x0));
+      const y = sy(f.index);
+      const next = drawn[i + 1];
+      const end = next ? sx(next.x) : sx(x1);
+      line.push({ x1: x, y1: y, x2: end, y2: y });
+      if (next) line.push({ x1: end, y1: y, x2: end, y2: sy(next.index) });
+    });
+    // And off the market price line, where there is another spot as near.
+    if (marketLine) {
+      line.push({ x1: sx(marketLine.a), y1: sy(marketLine.ya), x2: sx(marketLine.b), y2: sy(marketLine.yb) });
+    }
+    return placeEveryLabel(marks, { x: M.left + 2, y: M.top + 2, w: plotW - 4, h: plotH - 4 }, line);
+  }, [pts, drawn, marketLine, x0, x1, width, sx, sy, plotW, plotH]);
 
   const clear = useCallback(() => {
     pinned.current = false;
@@ -263,7 +280,9 @@ function FrontierPlot({
         </span>
       </figcaption>
 
-      <div ref={wrap} className="mt-2 w-full" style={{ height }}>
+      <div className="relative mt-2">
+        <div ref={scroller} className="overflow-x-auto overscroll-x-contain" data-testid="frontier-chart-scroll">
+      <div style={{ height, width: pans ? width : "100%" }}>
         {width > 0 && (
           <svg
             ref={svgRef}
@@ -459,6 +478,18 @@ function FrontierPlot({
                   data-testid="frontier-model-label"
                   data-model-id={id}
                 >
+                  {l.leader && (
+                    <line
+                      x1={l.leader.x1}
+                      y1={l.leader.y1}
+                      x2={l.leader.x2}
+                      y2={l.leader.y2}
+                      strokeWidth={1}
+                      strokeLinecap="round"
+                      className="stroke-brand-slate-400 dark:stroke-brand-slate-500"
+                      data-testid="frontier-label-leader"
+                    />
+                  )}
                   <rect
                     x={l.box.x}
                     y={l.box.y}
@@ -552,6 +583,26 @@ function FrontierPlot({
           </svg>
         )}
       </div>
+        </div>
+        {pans && width > 0 && (
+          <PinnedIndexAxis
+            left={M.left}
+            top={M.top}
+            plotH={plotH}
+            height={height}
+            ticks={yTicks.map((v) => ({ v, y: sy(v) }))}
+            testId="frontier-chart-pinned-axis"
+          />
+        )}
+      </div>
+      {pans && (
+        <p
+          className="mt-1 text-xs text-brand-slate-500 dark:text-brand-slate-400"
+          data-testid="frontier-chart-pan-hint"
+        >
+          Swipe the chart sideways to see all of it.
+        </p>
+      )}
 
       {card && (
         <FloatingCard getAnchor={getAnchor} placement="side" testId="frontier-card">

@@ -499,10 +499,11 @@ test("a Cost tier narrows the charts to its models; the frontier still spans eve
   for (const id of offBand) {
     await expect(panel.getByTestId("frontier-off-band")).toContainText(catalog.models.find((m) => m.id === id)!.name);
   }
+  // Every ringed model in the band is named, and no other.
   const tierLabeledIds = await panel
     .getByTestId("frontier-model-label")
     .evaluateAll((els) => els.map((e) => e.getAttribute("data-model-id")!));
-  for (const id of tierLabeledIds) expect(catalogFrontier.has(id)).toBe(true);
+  expect(tierLabeledIds.sort()).toEqual(inTier.filter((r) => catalogFrontier.has(r.m.id)).map((r) => r.m.id).sort());
   const offOnlyTier = ["very-high", "high", "medium", "low"].find(
     (t) => MEASURED.some((r) => r.m.tier_cost === t) && !MEASURED.some((r) => r.m.tier_cost === t && catalogFrontier.has(r.m.id)),
   );
@@ -592,8 +593,9 @@ test("a Provider narrows the charts to its models and redraws the frontier over 
   const providerLabeledIds = await panel
     .getByTestId("frontier-model-label")
     .evaluateAll((els) => els.map((e) => e.getAttribute("data-model-id")!));
+  // Every model on this provider's frontier is named, and no other.
   expect(providerLabeledIds.length).toBeGreaterThan(0);
-  for (const id of providerLabeledIds) expect(providerFrontierIds.has(id)).toBe(true);
+  expect(providerLabeledIds.sort()).toEqual([...providerFrontierIds].sort());
 });
 
 test("the benchmark-scores view is a uniform grid: one AA column per evaluation", async ({ page }) => {
@@ -1146,14 +1148,12 @@ test("the frontier chart plots every measured model and joins the frontier with 
   for (let i = 1; i < onFrontier.length; i += 1) {
     expect(onFrontier[i].index).toBeGreaterThan(onFrontier[i - 1].index);
   }
-  // Only models on the cost/quality frontier are labeled, and no placed label overlaps a dot.
-  const frontierIdSet = new Set(onFrontier.map((r) => r.m.id));
+  // Every model on the cost/quality frontier is named and no other model is,
+  // and no name overlaps a dot.
   const labeledIds = await panel
     .getByTestId("frontier-model-label")
     .evaluateAll((els) => els.map((e) => e.getAttribute("data-model-id")!));
-  expect(labeledIds.length).toBeGreaterThan(0);
-  expect(labeledIds.length).toBeLessThanOrEqual(onFrontier.length);
-  for (const id of labeledIds) expect(frontierIdSet.has(id)).toBe(true);
+  expect(labeledIds.sort()).toEqual(onFrontier.map((r) => r.m.id).sort());
   const labelOverlaps = await panel.getByTestId("frontier-chart").evaluate((fig) => {
     const num = (el: Element, a: string) => Number(el.getAttribute(a));
     const dots = [...fig.querySelectorAll('[data-testid="frontier-chart-point"]')].map((d) => ({

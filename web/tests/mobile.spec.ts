@@ -115,6 +115,24 @@ test("the models table scrolls sideways in its own box with the model column pin
   expect(w.scroll).toBeLessThanOrEqual(w.client);
 });
 
+test("the frontier chart names every frontier model on a phone and pans in its own box", async ({ page }) => {
+  await page.goto("/");
+  const chart = page.getByTestId("frontier-chart");
+  await chart.scrollIntoViewIfNeeded();
+  await expect(chart.getByTestId("frontier-model-label").first()).toBeAttached();
+  const ringed = await chart
+    .locator('[data-testid="frontier-chart-point"][data-frontier="1"]')
+    .evaluateAll((els) => els.map((e) => e.getAttribute("data-model-id")));
+  const named = await chart.getByTestId("frontier-model-label").evaluateAll((els) => els.map((e) => e.getAttribute("data-model-id")));
+  expect(ringed.length).toBeGreaterThan(1);
+  expect(named.sort()).toEqual(ringed.sort());
+  const pan = await chart.getByTestId("frontier-chart-scroll").evaluate((el) => ({ full: el.scrollWidth, shown: el.clientWidth }));
+  expect(pan.full).toBeGreaterThan(pan.shown);
+  await expect(chart.getByTestId("frontier-chart-pinned-axis")).toBeVisible();
+  await expect(chart.getByTestId("frontier-chart-pan-hint")).toBeVisible();
+  await expectNoSidewaysScroll(page, "/ with the frontier chart");
+});
+
 test("a recommendation reads as one card per pick, switched by tabs", async ({ page }) => {
   await page.route("**/api/recommend", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: FIXTURE }),
@@ -150,7 +168,28 @@ test("a ranked recommendation fits a phone: every rank on the card, the chart in
   await expect(card).toHaveCount(1);
   await expect(card.getByTestId("rank-runner_up")).toBeVisible();
   await expect(card.getByTestId("rank-backup")).toBeVisible();
-  await expect(page.getByTestId("picks-chart").getByTestId("picks-chart-pick")).toHaveCount(3);
+  const chart = page.getByTestId("picks-chart");
+  await expect(chart.getByTestId("picks-chart-pick")).toHaveCount(3);
+  // Every frontier point keeps its name on a phone: the chart keeps the width
+  // the names need and pans sideways inside its own box, its index axis held
+  // in place, while the page itself never scrolls sideways.
+  const frontier = await chart.locator('[data-frontier="1"]').evaluateAll((els) => [...new Set(els.map((e) => e.getAttribute("data-key")))]);
+  const named = await chart.getByTestId("picks-chart-label").evaluateAll((els) => els.map((e) => e.getAttribute("data-key")));
+  expect(named.sort()).toEqual(frontier.sort());
+  const box = chart.getByTestId("picks-chart-scroll");
+  const pan = await box.evaluate((el) => ({ full: el.scrollWidth, shown: el.clientWidth, at: el.scrollLeft }));
+  expect(pan.full).toBeGreaterThan(pan.shown);
+  await expect(chart.getByTestId("picks-chart-pinned-axis")).toBeVisible();
+  await expect(chart.getByTestId("picks-chart-pan-hint")).toHaveText("Swipe the chart sideways to see all of it.");
+  // It opens on the selected pick, not at the chart's left edge.
+  const selected = await page.locator("[data-priority]").getAttribute("data-priority");
+  const marker = chart.locator(`[data-testid="picks-chart-pick"][data-pick="${selected}"]`);
+  await expect
+    .poll(async () => {
+      const [m, b] = await Promise.all([marker.boundingBox(), box.boundingBox()]);
+      return m !== null && b !== null && m.x >= b.x && m.x + m.width <= b.x + b.width;
+    })
+    .toBe(true);
   await expectNoSidewaysScroll(page, "/recommend with a ranked result");
 });
 

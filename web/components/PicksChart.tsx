@@ -10,11 +10,12 @@
 // each point says whether it meets the task's bar.
 //
 // It is drawn to be read at a glance, like the /models frontier chart:
-//   - every point off the frontier is a small quiet dot with no label;
-//   - only a model on the frontier is named, once, at its top frontier point
-//     (a picked model at the point it was picked at, with its level);
-//   - each pick is a lettered marker (C, B, Q), so a pick is found without a
-//     label of its own;
+//   - every point on the frontier is named, with its effort, and no other
+//     point is: a point off the frontier is a small quiet dot (its card names
+//     it). A name that has no room against its point sits a little off it,
+//     joined by a thin line;
+//   - each pick is a lettered marker (C, B, Q), and its name on the frontier
+//     is set in the accent colour;
 //   - a point below the task's bar is hollow, so Cost reads as what it is:
 //     the cheapest filled point on the line;
 //   - a model's efforts are joined only for the selected pick and for the
@@ -40,16 +41,21 @@ import {
   LABEL_PX,
   LegendSwatch,
   pickPriceTicks,
-  placeLabels,
+  PinnedIndexAxis,
+  placeEveryLabel,
   PRICE_AXIS_TITLES,
-  useWidth,
-  type Label,
+  useNamedWidth,
+  type Mark,
+  type PlacedLabel,
+  type Segment,
 } from "./chart-kit";
 import { FloatingCard, type AnchorRect } from "./FloatingCard";
 import { FrontierPointCard } from "./ScoreCards";
 
-// The top margin is tall enough to hold a label over the highest point.
-const M = { top: 30, right: 22, bottom: 46, left: 46 };
+// The top margin is tall enough to hold two rows of names over the highest
+// points, where the frontier's top is most crowded.
+const M = { top: 40, right: 22, bottom: 46, left: 46 };
+const HEIGHT = 450;
 const R_DOT = 3; // a point off the frontier
 const R_FRONT = 4.5; // a frontier point, inside its ring
 const R_RING = 7.5;
@@ -87,9 +93,11 @@ export function PicksChart({
   selected?: BudgetPriority | null;
   onSelect?: (p: BudgetPriority) => void;
 }) {
-  const wrap = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
-  const width = useWidth(wrap);
+  // In a box too narrow for its names (a phone) the chart keeps the width
+  // they need and pans sideways there.
+  const { width, pans } = useNamedWidth(scroller);
   const [active, setActive] = useState<string | null>(null);
 
   const all = frontier.points;
@@ -140,7 +148,7 @@ export function PicksChart({
     () => [...pts, ...pickPts.filter((p) => !p.plotted).map((p) => p.point)],
     [pts, pickPts],
   );
-  const height = width > 0 && width < 640 ? 340 : 440;
+  const height = HEIGHT;
   const plotW = Math.max(40, width - M.left - M.right);
   const plotH = height - M.top - M.bottom;
   const xs = drawn.map((p) => Math.log10(p.price));
@@ -164,62 +172,66 @@ export function PicksChart({
     for (const f of line.slice(1)) d += ` H ${sx(f.price)} V ${sy(f.index)}`;
     return `${d} H ${M.left + plotW}`;
   }, [line, sx, sy, plotW]);
-
-  // One name per frontier model: a picked model at the point it was picked
-  // at, with its level; any other at its top frontier point. Every other dot
-  // keeps its clearance and no label.
-  const labelled = useMemo(() => {
-    const out = new Map<string, { text: string; pick: boolean; priority: number }>();
-    const pickedModels = new Set<string>();
-    for (const p of pickPts) {
-      if (!p.plotted || !p.point.frontier) continue;
-      pickedModels.add(p.point.row.id);
-      out.set(p.point.key, {
-        text: pointName(p.point),
-        pick: true,
-        priority: 3000 + (p.priority === selected ? 100 : 0),
-      });
-    }
-    const top = new Map<string, PlotPoint>();
-    for (const f of line) {
-      if (pickedModels.has(f.row.id) || f.index < yLo) continue;
-      const best = top.get(f.row.id);
-      if (!best || f.index > best.index) top.set(f.row.id, f);
-    }
-    for (const f of top.values()) out.set(f.key, { text: f.row.name, pick: false, priority: 1000 + f.index });
+  // The same line as its runs and risers, for the names to keep off it.
+  const stepSegments = useMemo(() => {
+    const out: Segment[] = [];
+    line.forEach((f, i) => {
+      const x = sx(f.price);
+      const y = sy(f.index);
+      const next = line[i + 1];
+      const end = next ? sx(next.price) : M.left + plotW;
+      out.push({ x1: x, y1: y, x2: end, y2: y });
+      if (next) out.push({ x1: end, y1: y, x2: end, y2: sy(next.index) });
+    });
     return out;
-  }, [pickPts, line, selected, yLo]);
+  }, [line, sx, sy, plotW]);
+
+  // Every frontier point is named, with its effort; a pick's name is set
+  // apart. No other point is.
+  const labelled = useMemo(() => {
+    const picked = new Set(pickPts.filter((p) => p.plotted).map((p) => p.point.key));
+    const out = new Map<string, { text: string; pick: boolean }>();
+    for (const f of line) out.set(f.key, { text: pointName(f), pick: picked.has(f.key) });
+    return out;
+  }, [pickPts, line]);
 
   const labels = useMemo(() => {
-    if (width === 0) return new Map<string, Label>();
-    return placeLabels(
-      drawn.map((p) => {
-        const label = labelled.get(p.key);
-        // A model named at its top frontier point may be named at any of
-        // its frontier points instead, where that one is crowded.
-        const others =
-          label && !label.pick
-            ? line.filter((f) => f.row.id === p.row.id && f.key !== p.key && f.index >= yLo).reverse()
-            : [];
-        return {
-          id: p.key,
-          cx: sx(p.price),
-          cy: sy(p.index),
-          text: label?.text ?? "",
-          priority: label?.priority ?? 0,
-          label: label !== undefined,
-          r: pickedKeys.has(p.key) ? R_PICK + 4 : p.frontier ? R_RING : R_DOT,
-          ...(others.length > 0
-            ? { anchors: [p, ...others].map((f) => ({ cx: sx(f.price), cy: sy(f.index) })) }
-            : {}),
-        };
-      }),
+    if (width === 0) return new Map<string, PlacedLabel>();
+    const marks: Mark[] = drawn.map((p) => {
+      const label = labelled.get(p.key);
+      const pick = pickedKeys.has(p.key);
+      return {
+        id: p.key,
+        cx: sx(p.price),
+        cy: sy(p.index),
+        r: pick ? R_PICK + 2 : p.frontier ? R_RING : R_DOT,
+        text: label?.text ?? null,
+        hard: pick || p.frontier,
+        // A pick's name first, then the frontier from its top down: the same
+        // order whichever pick is selected, so the names never move.
+        priority: (label?.pick ? 3000 : 1000) + p.index,
+      };
+    });
+    // Two picks on one point sit side by side: both markers are in the way.
+    for (const p of pickPts) {
+      if (p.dx === 0) continue;
+      marks.push({
+        id: `marker:${p.priority}`,
+        cx: sx(p.point.price) + p.dx,
+        cy: sy(p.point.index),
+        r: R_PICK + 2,
+        text: null,
+        hard: true,
+        priority: 0,
+      });
+    }
+    return placeEveryLabel(
+      marks,
       // Into the top margin: a label may sit over the highest point.
       { x: M.left + 2, y: 2, w: plotW - 4, h: M.top + plotH - 4 },
-      Math.max(4, Math.min(16, Math.floor(plotW / 70))),
-      R_RING,
+      stepSegments,
     );
-  }, [drawn, labelled, pickedKeys, line, yLo, width, sx, sy, plotW, plotH]);
+  }, [drawn, labelled, pickedKeys, pickPts, stepSegments, width, sx, sy, plotW, plotH]);
 
   useEffect(() => {
     if (!active) return;
@@ -270,6 +282,18 @@ export function PicksChart({
   const activePath =
     activePt && activePt.row.id !== selectedPick?.point.row.id ? pathOf(activePt.row.id) : [];
 
+  // Where the chart pans, it opens on the selected pick and follows the
+  // selection: the box moves, never the page.
+  const selectedX = selectedPick ? sx(selectedPick.point.price) : null;
+  const opened = useRef(false);
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el || !pans || selectedX === null) return;
+    const left = Math.max(0, Math.min(el.scrollWidth - el.clientWidth, selectedX - el.clientWidth / 2));
+    el.scrollTo({ left, behavior: opened.current ? "smooth" : "auto" });
+    opened.current = true;
+  }, [pans, selectedX]);
+
   if (all.length < 2) return null;
 
   const hasPicks = pickPts.length > 0;
@@ -294,7 +318,9 @@ export function PicksChart({
 
       <div className="space-y-4 border-t border-brand-slate-200 px-5 py-5 dark:border-brand-slate-700">
         <div className="rounded-lg border border-brand-slate-200 bg-white px-3 pb-2 pt-3 dark:border-brand-slate-700 dark:bg-brand-slate-900 sm:px-4">
-          <div ref={wrap} className="w-full" style={{ height }}>
+          <div className="relative">
+            <div ref={scroller} className="overflow-x-auto overscroll-x-contain" data-testid="picks-chart-scroll">
+              <div style={{ height, width: pans ? width : "100%" }}>
             {width > 0 && (
               <svg
                 ref={svgRef}
@@ -440,8 +466,9 @@ export function PicksChart({
                   );
                 })}
 
-                {/* Labels: frontier models only, on plates so a line under
-                    the text never hurts it. */}
+                {/* Names: every frontier point and no other, on plates so a
+                    line under the text never hurts it. A name off its point
+                    is joined to it. */}
                 {[...labels.entries()].map(([id, l]) => {
                   const isPick = labelled.get(id)?.pick === true;
                   const dim = activePt && activePt.key !== id;
@@ -454,6 +481,18 @@ export function PicksChart({
                       data-key={id}
                       data-pick={isPick ? "1" : "0"}
                     >
+                      {l.leader && (
+                        <line
+                          x1={l.leader.x1}
+                          y1={l.leader.y1}
+                          x2={l.leader.x2}
+                          y2={l.leader.y2}
+                          strokeWidth={1}
+                          strokeLinecap="round"
+                          className="stroke-brand-slate-400 dark:stroke-brand-slate-500"
+                          data-testid="picks-chart-leader"
+                        />
+                      )}
                       <rect
                         x={l.box.x}
                         y={l.box.y}
@@ -580,6 +619,18 @@ export function PicksChart({
                 </text>
               </svg>
             )}
+              </div>
+            </div>
+            {pans && width > 0 && (
+              <PinnedIndexAxis
+                left={M.left}
+                top={M.top}
+                plotH={plotH}
+                height={height}
+                ticks={yTicks.map((v) => ({ v, y: sy(v) }))}
+                testId="picks-chart-pinned-axis"
+              />
+            )}
           </div>
         </div>
 
@@ -630,7 +681,10 @@ export function PicksChart({
               Hollow: below this task&rsquo;s bar
             </li>
           )}
-          <li className="text-brand-slate-500 dark:text-brand-slate-400">Hover or tap any dot for its numbers.</li>
+          <li className="text-brand-slate-500 dark:text-brand-slate-400">
+            Hover or tap any dot for its numbers.
+            {pans && <span data-testid="picks-chart-pan-hint"> Swipe the chart sideways to see all of it.</span>}
+          </li>
         </ul>
 
         <p className="max-w-4xl text-sm leading-6 text-brand-slate-600 dark:text-brand-slate-300">
