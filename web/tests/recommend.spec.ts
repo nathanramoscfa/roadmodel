@@ -186,15 +186,15 @@ test("the chart plots the picks among the catalog", async ({ page }) => {
   await expect(page.getByTestId("pick-detail")).toHaveAttribute("data-pick", "cheap");
 });
 
-// What made the old chart unreadable: a name beside every other dot. Only a
-// model on the cost/quality frontier is named, once, and no name covers a dot.
-async function expectFrontierOnlyLabels(page: Page) {
+// What made the old chart unreadable: a name beside every other dot. Every
+// point on the cost/quality frontier is named, with its effort, and no other
+// point is; no name covers a dot or another name.
+async function expectFrontierNamed(page: Page) {
   const chart = page.getByTestId("picks-chart");
   await expect(chart.getByTestId("picks-chart-label").first()).toBeAttached();
   const report = await chart.evaluate((el) => {
     const targets = [...el.querySelectorAll<SVGCircleElement>('[data-testid="picks-chart-point"], [data-testid="picks-chart-pick"]')].map((c) => ({
       key: c.getAttribute("data-key")!,
-      model: c.getAttribute("data-model-id")!,
       frontier: c.getAttribute("data-frontier") === "1",
       cx: Number(c.getAttribute("cx")),
       cy: Number(c.getAttribute("cy")),
@@ -212,34 +212,46 @@ async function expectFrontierOnlyLabels(page: Page) {
       };
     });
     return {
-      labels: labels.map((l) => ({ ...l, frontier: byKey.get(l.key)?.frontier ?? false, model: byKey.get(l.key)?.model ?? null })),
+      labels: labels.map((l) => ({ key: l.key, text: l.text, frontier: byKey.get(l.key)?.frontier ?? false })),
+      frontier: [...new Set(targets.filter((t) => t.frontier).map((t) => t.key))],
       covered: labels.flatMap((l) =>
         targets
           .filter((t) => t.key !== l.key && t.cx > l.x && t.cx < l.x + l.w && t.cy > l.y && t.cy < l.y + l.h)
           .map((t) => `${l.text} covers ${t.key}`),
       ),
-      frontierModels: new Set(targets.filter((t) => t.frontier).map((t) => t.model)).size,
+      stacked: labels.flatMap((a, i) =>
+        labels
+          .slice(i + 1)
+          .filter((b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h)
+          .map((b) => `${a.text} overlaps ${b.text}`),
+      ),
     };
   });
-  expect(report.labels.length).toBeGreaterThan(0);
+  expect(report.frontier.length).toBeGreaterThan(1);
+  // No point off the frontier is named,
   for (const label of report.labels) expect(label.frontier, `${label.text} names a frontier point`).toBe(true);
-  // One name per model, never more names than frontier models.
-  expect(new Set(report.labels.map((l) => l.model)).size).toBe(report.labels.length);
-  expect(report.labels.length).toBeLessThanOrEqual(report.frontierModels);
+  // and every point on it is, once.
+  expect(report.labels.map((l) => l.key).sort()).toEqual([...report.frontier].sort());
   expect(report.covered).toEqual([]);
+  expect(report.stacked).toEqual([]);
+  return report;
 }
 
-test("only models on the frontier are named on the chart, and no name covers a dot", async ({ page }) => {
+test("every point on the frontier is named on the chart and no other point is", async ({ page }) => {
   await fulfill(page, FIXTURE);
   await openFreeText(page);
   // Before an answer: the frontier alone.
-  await expectFrontierOnlyLabels(page);
+  await expectFrontierNamed(page);
   await ask(page);
   await expect(page.getByTestId("recommend-result")).toBeVisible();
-  await expectFrontierOnlyLabels(page);
-  // Narrow, the rule holds with fewer names.
+  await expectFrontierNamed(page);
+  // Narrower, the rule holds: a name with no room by its point sits off it,
+  // joined by a line.
   await page.setViewportSize({ width: 820, height: 900 });
-  await expectFrontierOnlyLabels(page);
+  await expectFrontierNamed(page);
+  // The chart fits its box at these widths: nothing to pan.
+  await expect(page.getByTestId("picks-chart-pan-hint")).toHaveCount(0);
+  await expect(page.getByTestId("picks-chart-pinned-axis")).toHaveCount(0);
 });
 
 test("renders the backup row with its platform and effort", async ({ page }) => {
@@ -262,6 +274,9 @@ test("renders the backup row with its platform and effort", async ({ page }) => 
   await expect(page.getByTestId("backup-detail").first()).toHaveText("Codex · High");
   // An answer from before the ranks carries no Runner-up, so no such row.
   await expect(page.getByTestId("rank-runner_up")).toHaveCount(0);
+  // It carried the pick's level as `thinking`: the card reads it as the level.
+  await expect(page.getByTestId("pick-level").first()).toHaveText("High");
+  await expect(page.locator('[data-setting="thinking"]')).toHaveCount(0);
   await expect(page.getByTestId("ladder-note")).toContainText("Each Pick names a Backup from another maker.");
 });
 
@@ -291,7 +306,8 @@ test("humanizes settings labels and renders the rationale prominently", async ({
       settings: {
         // Max Mode ON so the row renders — an all-OFF dial is hidden.
         max_mode: "ON",
-        thinking: "High",
+        thinking: "On",
+        effort: "High",
         budget_priority: "balanced",
         rationale: "Chosen for deep reasoning on a hard task.",
       },
@@ -301,8 +317,12 @@ test("humanizes settings labels and renders the rationale prominently", async ({
   );
   await openFreeText(page);
   await ask(page, "prove a theorem");
-  await expect(page.getByText("Max Mode")).toBeVisible();
-  await expect(page.getByText("Thinking")).toBeVisible();
+  const card = page.locator('[data-priority="balanced"]');
+  await expect(card.getByText("Max Mode")).toBeVisible();
+  await expect(card.getByTestId("pick-level")).toHaveText("High");
+  // Thinking has no row, as in a roadmap's ladder: there is nothing to set.
+  await expect(card.locator('[data-setting="thinking"]')).toHaveCount(0);
+  await expect(card.getByTestId("pick-settings")).not.toContainText("Thinking");
   await expect(page.getByText("budget_priority")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /Why Opus 4\.8\?/i })).toBeVisible();
   await expect(page.getByText(/Chosen for deep reasoning/i)).toBeVisible();
@@ -471,7 +491,16 @@ test("the chart is drawn over the answer's own frontier, and every pick sits on 
   // A setting below the task's bar is hollow, and the key says so.
   expect(await chart.locator('[data-adequate="0"]').count()).toBeGreaterThan(0);
   await expect(chart.getByTestId("picks-chart-bar-legend")).toContainText("below this task’s bar");
-  await expectFrontierOnlyLabels(page);
+  // Each frontier point is named with the effort it stands at; a pick's name
+  // is the one its card carries.
+  const named = await expectFrontierNamed(page);
+  for (const priority of ["cheap", "balanced", "best"] as const) {
+    const key = await chart.locator(`[data-testid="picks-chart-pick"][data-pick="${priority}"]`).getAttribute("data-key");
+    const model = await card(page, priority).getByTestId("pick-model").innerText();
+    const level = await card(page, priority).getByTestId("pick-level").innerText();
+    expect(named.labels.find((l) => l.key === key)?.text).toBe(`${model} · ${level}`);
+    await expect(chart.locator(`[data-testid="picks-chart-label"][data-key="${key}"]`)).toHaveAttribute("data-pick", "1");
+  }
   // The Cost pick is the cheapest point on the line that meets the bar.
   const line = await chart.locator('[data-frontier="1"]').evaluateAll((els) =>
     els.map((e) => ({ x: Number(e.getAttribute("cx")), adequate: e.getAttribute("data-adequate") === "1", pick: e.getAttribute("data-pick") })),

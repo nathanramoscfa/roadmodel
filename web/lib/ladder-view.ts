@@ -73,8 +73,10 @@ const NO_VALUE = new Set(["", "—", "-", "off", "n/a", "na", "none"]);
 
 // The Pick's level has its own row, the tier is the column, and the
 // rationale has its own panel. Claude Code's Ultracode arrives as `ultracode`
-// (roadmodel >= 0.2.88), never as `orchestration`.
-const SETTINGS_SHOWN_ELSEWHERE = new Set(["rationale", "budget_priority", "orchestration", "effort", "intelligence"]);
+// (roadmodel >= 0.2.88), never as `orchestration`. Thinking has no row, as in
+// a roadmap's ladder: it is on wherever a platform has that switch, and every
+// AA Index and price is read with it on.
+const SETTINGS_NOT_LISTED = new Set(["rationale", "budget_priority", "orchestration", "effort", "intelligence", "thinking"]);
 
 export interface OptionView {
   rank: Rank;
@@ -346,11 +348,17 @@ function fromSettings(
   const s = settings ?? {};
   const effort = formatSettingValue(s.effort);
   const intelligence = !isShown(effort) && isShown(formatSettingValue(s.intelligence));
+  // An answer from before the level had a field of its own carried it as
+  // `thinking` ("High"); the switch's own values (On, Off) name no level.
+  const carried =
+    !isShown(effort) && !intelligence && typeof s.thinking === "string" && pickEffort({ effort: s.thinking }) !== null
+      ? s.thinking
+      : null;
   return option(data, frontier, {
     rank,
     model,
     platform,
-    level: intelligence ? String(s.intelligence) : typeof s.effort === "string" ? s.effort : null,
+    level: intelligence ? String(s.intelligence) : typeof s.effort === "string" && isShown(effort) ? s.effort : carried,
     intelligence,
     ultracode: String(s.ultracode ?? "").toLowerCase() === "on",
   });
@@ -362,7 +370,7 @@ function settingKeys(recs: readonly PriorityRecommendation[]): string[] {
   const seen: string[] = [];
   for (const rec of recs) {
     for (const key of Object.keys(rec.settings ?? {})) {
-      if (!SETTINGS_SHOWN_ELSEWHERE.has(key) && !seen.includes(key)) seen.push(key);
+      if (!SETTINGS_NOT_LISTED.has(key) && !seen.includes(key)) seen.push(key);
     }
   }
   return seen.filter((key) => recs.some((rec) => isShown(formatSettingValue((rec.settings ?? {})[key]))));

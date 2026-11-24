@@ -209,6 +209,8 @@ export function LadderResult({
                 tokens at that level&rsquo;s token use.{" "}
                 <b className="text-brand-slate-800 dark:text-brand-slate-100">Score</b> is how many index points the
                 option sits above or below the market&rsquo;s price line. Hover a figure for how it is read.
+                Leave Thinking on wherever a platform has that switch: every AA Index and price here is read with
+                it on.
               </p>
               <p>
                 The letters are the catalog&rsquo;s S&rarr;D ratings in coding, planning, agentic, multimodal,

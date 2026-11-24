@@ -224,15 +224,29 @@ test("the settings beside the level are the dials at least one pick sets", () =>
       rec("best", { settings: { effort: "Max", ultracode: "On", budget_priority: "best", rationale: "y" } }),
     ]),
   );
-  // Max Mode is Off for every pick, so it is not a row; the level has its own row.
-  expect(view.columns[0].settings).toEqual([
-    { key: "thinking", label: "Thinking", value: "On" },
-    { key: "ultracode", label: "Ultracode", value: "—" },
-  ]);
-  expect(view.columns[1].settings).toEqual([
-    { key: "thinking", label: "Thinking", value: "—" },
-    { key: "ultracode", label: "Ultracode", value: "On" },
-  ]);
+  // Max Mode is Off for every pick, so it is not a row; the level has its own
+  // row; and Thinking has none, as in a roadmap's ladder.
+  expect(view.columns[0].settings).toEqual([{ key: "ultracode", label: "Ultracode", value: "—" }]);
+  expect(view.columns[1].settings).toEqual([{ key: "ultracode", label: "Ultracode", value: "On" }]);
+});
+
+test("Thinking is never a row, and an older answer's level carried as thinking reads as the level", () => {
+  const view = engineLadder(
+    DATA,
+    answer([
+      // The switch's own values: nothing to list, and no level.
+      rec("cheap", { settings: { thinking: "On", max_mode: "ON", budget_priority: "cheap", rationale: "x" } }),
+      rec("balanced", { settings: { effort: "Medium", thinking: "Off", budget_priority: "balanced", rationale: "y" } }),
+      // Before the level had its own field, `thinking` carried it.
+      rec("best", { settings: { thinking: "XHigh", budget_priority: "best", rationale: "z" } }),
+    ]),
+  );
+  for (const column of view.columns) expect(column.settings.map((s) => s.key)).toEqual(["max_mode"]);
+  const [cost, balanced, quality] = view.columns;
+  expect(cost.pick.level).toBeNull();
+  expect(balanced.pick.level).toBe("Medium");
+  expect(quality.pick.level).toBe("Extra high");
+  expect(quality.pick.effort).toBe("xhigh");
 });
 
 test("what a pick costs the viewer comes from the funded row, else the session estimate", () => {
