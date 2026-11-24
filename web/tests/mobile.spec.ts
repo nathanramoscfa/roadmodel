@@ -124,13 +124,34 @@ test("a recommendation reads as one card per pick, switched by tabs", async ({ p
   await page.getByRole("button", { name: /^Recommend/ }).click();
   const tabs = page.getByTestId("picks-segmented").getByRole("tab");
   await expect(tabs).toHaveCount(3);
-  await expect(page.getByTestId("picks-matrix")).toBeHidden();
+  // One card at a time, not the three side by side.
+  await expect(page.getByTestId("picks-ladder")).toHaveCount(0);
+  await expect(page.locator("[data-priority]")).toHaveCount(1);
   for (const tab of await tabs.all()) {
     expect(await heightOf(page, tab)).toBeGreaterThanOrEqual(44);
   }
   await tabs.first().click();
   await expect(tabs.first()).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("[data-priority]")).toHaveAttribute("data-priority", "cheap");
+  // The pick shown in detail follows the tab.
+  await expect(page.getByTestId("pick-detail")).toHaveAttribute("data-pick", "cheap");
   await expectNoSidewaysScroll(page, "/recommend with a result");
+});
+
+test("a ranked recommendation fits a phone: every rank on the card, the chart inside the page", async ({ page }) => {
+  const ranked = readFileSync(path.join(__dirname, "fixtures", "recommend-ranked.json"), "utf8");
+  await page.route("**/api/recommend", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: ranked }),
+  );
+  await openFreeText(page);
+  await page.getByPlaceholder(/Describe the task/i).fill("refactor a pipeline");
+  await page.getByRole("button", { name: /^Recommend/ }).click();
+  const card = page.locator("[data-priority]");
+  await expect(card).toHaveCount(1);
+  await expect(card.getByTestId("rank-runner_up")).toBeVisible();
+  await expect(card.getByTestId("rank-backup")).toBeVisible();
+  await expect(page.getByTestId("picks-chart").getByTestId("picks-chart-pick")).toHaveCount(3);
+  await expectNoSidewaysScroll(page, "/recommend with a ranked result");
 });
 
 test("fields read 16px so iOS Safari doesn't zoom on focus", async ({ page }) => {

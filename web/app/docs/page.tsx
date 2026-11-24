@@ -34,21 +34,27 @@ export default function DocsPage() {
           </h2>
           <div className="mt-2 space-y-3 text-brand-slate-600 dark:text-brand-slate-300">
             <p>
-              Input your prompt and roadmodel recommends a <strong>model</strong>,
-              the <strong>platform</strong> to run it on, the{" "}
-              <strong>settings</strong> (reasoning effort, thinking, Max Mode), and an
-              estimated{" "}
-              <strong>cost</strong> &mdash; with a plain-English rationale. A{" "}
-              <strong>backup</strong> model is named in case the top pick is
-              unavailable to you.
+              Describe a task and roadmodel recommends three picks: the cheapest model
+              that does the job (<strong>Cost</strong>), the best value (
+              <strong>Balanced</strong>) and the strongest (<strong>Quality</strong>).
+              Each names the <strong>model</strong>, the <strong>platform</strong> to run
+              it on, the <strong>level</strong> to set there (reasoning effort, with
+              thinking and Max Mode where the platform has them) and what it{" "}
+              <strong>costs</strong> you, with a plain-English rationale. Each pick is
+              ranked three deep: a <strong>runner-up</strong> and a{" "}
+              <strong>backup</strong> from other makers, each with its own platform and
+              level, for when the pick&rsquo;s usage limit is reached or its provider is
+              down.
             </p>
             <p>
-              The pick is grounded in each model&rsquo;s <strong>per-category
-              rating</strong> (below) and the public benchmarks those ratings
-              synthesize. The selection algorithm reads your prompt&rsquo;s task
-              category and complexity to set a minimum required rating, then picks the
-              highest-rated available model that clears it &mdash; breaking ties by a
-              secondary category and finally by cost.
+              The picks are read from your <strong>cost/quality frontier</strong>: the
+              models you can run, each at every effort level, placed by its price there
+              and its Artificial Analysis Intelligence Index there. A model is on the
+              frontier when it scores higher than every other at its price or less. Your
+              task&rsquo;s category and complexity set the bar a pick must meet, from each
+              model&rsquo;s <strong>per-category rating</strong> (below) and the public
+              benchmarks behind it. Cost is the cheapest point on the frontier that meets
+              the bar, Quality the strongest, and Balanced the best value between them.
             </p>
             <p>
               Recommendations are produced by a fast free-tier engine, or a
@@ -116,9 +122,9 @@ export default function DocsPage() {
             <p>
               The calibrated postures let the ordinary Cost/Balanced/Quality model ladder
               apply on a flat plan; &ldquo;Always maximum effort&rdquo; is what lets a
-              flat plan hold the frontier model on every pick. The named{" "}
-              <strong>backup</strong> follows the same setting, shown with its own
-              platform and effort.
+              flat plan hold the frontier model on every pick. The{" "}
+              <strong>runner-up</strong> and the <strong>backup</strong> follow the same
+              setting, each shown with its own platform and level.
             </p>
           </div>
         </section>

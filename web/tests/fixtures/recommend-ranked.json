@@ -1,0 +1,932 @@
+{
+  "recommendations": [
+    {
+      "model": "Gemini 4 Carbon",
+      "platform": "Antigravity",
+      "settings": {
+        "effort": "Low",
+        "thinking": "On",
+        "budget_priority": "cheap",
+        "rationale": "TASK: Coding: a multi-file refactor with type safety and test coverage on a large codebase. PICK: Gemini 4 Carbon is the cheapest model on your cost/quality frontier that meets this task's bar (AA Index ≈46.2, $4.00 per 1M tokens at list price). EFFORT: Low is the effort the cheap posture sets for a high-complexity coding task."
+      },
+      "rationale": "TASK: Coding: a multi-file refactor with type safety and test coverage on a large codebase. PICK: Gemini 4 Carbon is the cheapest model on your cost/quality frontier that meets this task's bar (AA Index ≈46.2, $4.00 per 1M tokens at list price). EFFORT: Low is the effort the cheap posture sets for a high-complexity coding task.",
+      "rationale_sections": {
+        "task": "Coding: a multi-file refactor with type safety and test coverage on a large codebase.",
+        "pick": "Gemini 4 Carbon is the cheapest model on your cost/quality frontier that meets this task's bar (AA Index ≈46.2, $4.00 per 1M tokens at list price).",
+        "effort": "Low is the effort the cheap posture sets for a high-complexity coding task."
+      },
+      "conversation": "New",
+      "backup": {
+        "model": "Opus 5.5",
+        "platform": "Claude Code",
+        "settings": {
+          "effort": "High"
+        }
+      },
+      "specialist": false,
+      "specialist_category": null,
+      "ranks": {
+        "pick": {
+          "model": "Gemini 4 Carbon",
+          "model_id": "gemini-4-carbon",
+          "platform": "Antigravity",
+          "platform_id": "antigravity",
+          "effort": "low",
+          "level": "Low",
+          "aa_index": 46.2,
+          "aa_estimated": true,
+          "price_usd_per_1m": 2.3375,
+          "price_measured": true,
+          "stepped_down": false,
+          "ultracode": false
+        },
+        "runner_up": {
+          "model": "GPT-6.2 Sol",
+          "model_id": "gpt-6.2-sol",
+          "platform": "Codex",
+          "platform_id": "codex-cli",
+          "effort": "high",
+          "level": "High",
+          "aa_index": 52.2,
+          "aa_estimated": true,
+          "price_usd_per_1m": 2.6875,
+          "price_measured": true,
+          "stepped_down": false,
+          "ultracode": false
+        },
+        "backup": {
+          "model": "Sonnet 5.5",
+          "model_id": "claude-sonnet-5-5",
+          "platform": "Claude Code",
+          "platform_id": "claude-code",
+          "effort": "xhigh",
+          "level": "XHigh",
+          "aa_index": 51.9,
+          "aa_estimated": false,
+          "price_usd_per_1m": 3.7225,
+          "price_measured": true,
+          "stepped_down": false,
+          "ultracode": false
+        }
+      },
+      "session_cost_estimate": {
+        "model_id": "gemini-4-carbon",
+        "model_name": "Gemini 4 Carbon",
+        "platform_id": "antigravity",
+        "platform_name": "Antigravity",
+        "input_tokens": 1000,
+        "output_tokens": 2000,
+        "max_mode": false,
+        "input_usd": 0.002,
+        "output_usd": 0.02,
+        "total_usd": 0.022,
+        "funding_source": "per-token",
+        "subscription_label": null,
+        "notes": []
+      },
+      "comparison_table": [
+        {
+          "model_id": "gemini-4-carbon",
+          "model_name": "Gemini 4 Carbon",
+          "platform_id": "antigravity",
+          "platform_name": "Antigravity",
+          "input_tokens": 1000,
+          "output_tokens": 2000,
+          "max_mode": false,
+          "input_usd": 0.002,
+          "output_usd": 0.02,
+          "total_usd": 0.022,
+          "funding_source": "per-token",
+          "subscription_label": null,
+          "notes": [],
+          "your_cost": "$0 · Google AI Pro",
+          "funded": true
+        },
+        {
+          "model_id": "gemini-4-carbon",
+          "model_name": "Gemini 4 Carbon",
+          "platform_id": "gemini-app",
+          "platform_name": "Gemini (web / app)",
+          "input_tokens": 1000,
+          "output_tokens": 2000,
+          "max_mode": false,
+          "input_usd": 0.002,
+          "output_usd": 0.02,
+          "total_usd": 0.022,
+          "funding_source": "per-token",
+          "subscription_label": null,
+          "notes": [],
+          "your_cost": "$0 · Google AI Pro",
+          "funded": true
+        },
+        {
+          "model_id": "gemini-4-carbon",
+          "model_name": "Gemini 4 Carbon",
+          "platform_id": "cursor",
+          "platform_name": "Cursor",
+          "input_tokens": 1000,
+          "output_tokens": 2000,
+          "max_mode": false,
+          "input_usd": 0.002,
+          "output_usd": 0.02,
+          "total_usd": 0.022,
+          "funding_source": "subscription-pool",
+          "subscription_label": "Cursor Cursor Ultra $200/mo",
+          "notes": [],
+          "your_cost": "pay-per-token (not funded)",
+          "funded": false
+        }
+      ],
+      "priority": "cheap"
+    },
+    {
+      "model": "Gemini 4 Argon",
+      "platform": "Antigravity",
+      "settings": {
+        "effort": "High",
+        "thinking": "On",
+        "budget_priority": "balanced",
+        "rationale": "TASK: Coding: a multi-file refactor with type safety and test coverage on a large codebase. PICK: Gemini 4 Argon is the best value on your cost/quality frontier between the cheapest and the strongest picks (AA Index 52.6, $4.00 per 1M tokens at list price). EFFORT: High is the effort the balanced posture sets for a high-complexity coding task."
+      },
+      "rationale": "TASK: Coding: a multi-file refactor with type safety and test coverage on a large codebase. PICK: Gemini 4 Argon is the best value on your cost/quality frontier between the cheapest and the strongest picks (AA Index 52.6, $4.00 per 1M tokens at list price). EFFORT: High is the effort the balanced posture sets for a high-complexity coding task.",
+      "rationale_sections": {
+        "task": "Coding: a multi-file refactor with type safety and test coverage on a large codebase.",
+        "pick": "Gemini 4 Argon is the best value on your cost/quality frontier between the cheapest and the strongest picks (AA Index 52.6, $4.00 per 1M tokens at list price).",
+        "effort": "High is the effort the balanced posture sets for a high-complexity coding task."
+      },
+      "conversation": "New",
+      "backup": {
+        "model": "Opus 5.5",
+        "platform": "Claude Code",
+        "settings": {
+          "effort": "XHigh"
+        }
+      },
+      "specialist": false,
+      "specialist_category": null,
+      "ranks": {
+        "pick": {
+          "model": "Gemini 4 Argon",
+          "model_id": "gemini-4-argon",
+          "platform": "Antigravity",
+          "platform_id": "antigravity",
+          "effort": "high",
+          "level": "High",
+          "aa_index": 52.6,
+          "aa_estimated": false,
+          "price_usd_per_1m": 6.135,
+          "price_measured": true,
+          "stepped_down": false,
+          "ultracode": false
+        },
+        "runner_up": {
+          "model": "Opus 5.5",
+          "model_id": "claude-opus-5-5",
+          "platform": "Claude Code",
+          "platform_id": "claude-code",
+          "effort": "high",
+          "level": "High",
+          "aa_index": 53.6,
+          "aa_estimated": false,
+          "price_usd_per_1m": 6.765,
+          "price_measured": true,
+          "stepped_down": false,
+          "ultracode": false
+        },
+        "backup": {
+          "model": "GPT-6.2 Sol",
+          "model_id": "gpt-6.2-sol",
+          "platform": "Codex",
+          "platform_id": "codex-cli",
+          "effort": "high",
+          "level": "High",
+          "aa_index": 52.2,
+          "aa_estimated": true,
+          "price_usd_per_1m": 2.6875,
+          "price_measured": true,
+          "stepped_down": false,
+          "ultracode": false
+        }
+      },
+      "session_cost_estimate": {
+        "model_id": "gemini-4-argon",
+        "model_name": "Gemini 4 Argon",
+        "platform_id": "antigravity",
+        "platform_name": "Antigravity",
+        "input_tokens": 1000,
+        "output_tokens": 2000,
+        "max_mode": false,
+        "input_usd": 0.002,
+        "output_usd": 0.02,
+        "total_usd": 0.022,
+        "funding_source": "per-token",
+        "subscription_label": null,
+        "notes": []
+      },
+      "comparison_table": [
+        {
+          "model_id": "gemini-4-argon",
+          "model_name": "Gemini 4 Argon",
+          "platform_id": "antigravity",
+          "platform_name": "Antigravity",
+          "input_tokens": 1000,
+          "output_tokens": 2000,
+          "max_mode": false,
+          "input_usd": 0.002,
+          "output_usd": 0.02,
+          "total_usd": 0.022,
+          "funding_source": "per-token",
+          "subscription_label": null,
+          "notes": [],
+          "your_cost": "$0 · Google AI Pro",
+          "funded": true
+        },
+        {
+          "model_id": "gemini-4-argon",
+          "model_name": "Gemini 4 Argon",
+          "platform_id": "gemini-app",
+          "platform_name": "Gemini (web / app)",
+          "input_tokens": 1000,
+          "output_tokens": 2000,
+          "max_mode": false,
+          "input_usd": 0.002,
+          "output_usd": 0.02,
+          "total_usd": 0.022,
+          "funding_source": "per-token",
+          "subscription_label": null,
+          "notes": [],
+          "your_cost": "$0 · Google AI Pro",
+          "funded": true
+        },
+        {
+          "model_id": "gemini-4-argon",
+          "model_name": "Gemini 4 Argon",
+          "platform_id": "cursor",
+          "platform_name": "Cursor",
+          "input_tokens": 1000,
+          "output_tokens": 2000,
+          "max_mode": false,
+          "input_usd": 0.002,
+          "output_usd": 0.02,
+          "total_usd": 0.022,
+          "funding_source": "subscription-pool",
+          "subscription_label": "Cursor Cursor Ultra $200/mo",
+          "notes": [],
+          "your_cost": "pay-per-token (not funded)",
+          "funded": false
+        }
+      ],
+      "priority": "balanced"
+    },
+    {
+      "model": "Opus 5.5",
+      "platform": "Claude Code",
+      "settings": {
+        "effort": "XHigh",
+        "budget_priority": "best",
+        "rationale": "TASK: Coding: a multi-file refactor with type safety and test coverage on a large codebase. PICK: Opus 5.5 is the strongest model on your cost/quality frontier for coding work (AA Index 56, $8.00 per 1M tokens at list price). EFFORT: XHigh is the effort the best posture sets for a high-complexity coding task."
+      },
+      "rationale": "TASK: Coding: a multi-file refactor with type safety and test coverage on a large codebase. PICK: Opus 5.5 is the strongest model on your cost/quality frontier for coding work (AA Index 56, $8.00 per 1M tokens at list price). EFFORT: XHigh is the effort the best posture sets for a high-complexity coding task.",
+      "rationale_sections": {
+        "task": "Coding: a multi-file refactor with type safety and test coverage on a large codebase.",
+        "pick": "Opus 5.5 is the strongest model on your cost/quality frontier for coding work (AA Index 56, $8.00 per 1M tokens at list price).",
+        "effort": "XHigh is the effort the best posture sets for a high-complexity coding task."
+      },
+      "conversation": "New",
+      "backup": {
+        "model": "Gemini 4 Argon",
+        "platform": "Antigravity",
+        "settings": {
+          "effort": "High",
+          "thinking": "On"
+        }
+      },
+      "specialist": false,
+      "specialist_category": null,
+      "ranks": {
+        "pick": {
+          "model": "Opus 5.5",
+          "model_id": "claude-opus-5-5",
+          "platform": "Claude Code",
+          "platform_id": "claude-code",
+          "effort": "xhigh",
+          "level": "XHigh",
+          "aa_index": 56,
+          "aa_estimated": false,
+          "price_usd_per_1m": 8.29,
+          "price_measured": true,
+          "stepped_down": false,
+          "ultracode": false
+        },
+        "runner_up": {
+          "model": "Gemini 4 Argon",
+          "model_id": "gemini-4-argon",
+          "platform": "Antigravity",
+          "platform_id": "antigravity",
+          "effort": "high",
+          "level": "High",
+          "aa_index": 52.6,
+          "aa_estimated": false,
+          "price_usd_per_1m": 6.135,
+          "price_measured": true,
+          "stepped_down": false,
+          "ultracode": false
+        },
+        "backup": {
+          "model": "GPT-6.2 Sol",
+          "model_id": "gpt-6.2-sol",
+          "platform": "Codex",
+          "platform_id": "codex-cli",
+          "effort": "xhigh",
+          "level": "XHigh",
+          "aa_index": 53,
+          "aa_estimated": true,
+          "price_usd_per_1m": 3.225,
+          "price_measured": true,
+          "stepped_down": false,
+          "ultracode": false
+        }
+      },
+      "session_cost_estimate": {
+        "model_id": "claude-opus-5-5",
+        "model_name": "Opus 5.5",
+        "platform_id": "claude-code",
+        "platform_name": "Claude Code",
+        "input_tokens": 1000,
+        "output_tokens": 2000,
+        "max_mode": false,
+        "input_usd": 0.004,
+        "output_usd": 0.04,
+        "total_usd": 0.044,
+        "funding_source": "subscription-or-key",
+        "subscription_label": "Anthropic claude.ai Max ($100) $100/mo",
+        "notes": []
+      },
+      "comparison_table": [
+        {
+          "model_id": "claude-opus-5-5",
+          "model_name": "Opus 5.5",
+          "platform_id": "claude-web",
+          "platform_name": "claude.ai web / desktop",
+          "input_tokens": 1000,
+          "output_tokens": 2000,
+          "max_mode": false,
+          "input_usd": 0.004,
+          "output_usd": 0.04,
+          "total_usd": 0.044,
+          "funding_source": "subscription-included",
+          "subscription_label": "Anthropic claude.ai Max ($100) $100/mo",
+          "notes": [],
+          "your_cost": "$0 · Claude Max",
+          "funded": true
+        },
+        {
+          "model_id": "claude-opus-5-5",
+          "model_name": "Opus 5.5",
+          "platform_id": "claude-code",
+          "platform_name": "Claude Code",
+          "input_tokens": 1000,
+          "output_tokens": 2000,
+          "max_mode": false,
+          "input_usd": 0.004,
+          "output_usd": 0.04,
+          "total_usd": 0.044,
+          "funding_source": "subscription-or-key",
+          "subscription_label": "Anthropic claude.ai Max ($100) $100/mo",
+          "notes": [],
+          "your_cost": "$0 · Claude Max",
+          "funded": true
+        },
+        {
+          "model_id": "claude-opus-5-5",
+          "model_name": "Opus 5.5",
+          "platform_id": "cursor",
+          "platform_name": "Cursor",
+          "input_tokens": 1000,
+          "output_tokens": 2000,
+          "max_mode": false,
+          "input_usd": 0.004,
+          "output_usd": 0.04,
+          "total_usd": 0.044,
+          "funding_source": "subscription-pool",
+          "subscription_label": "Cursor Cursor Ultra $200/mo",
+          "notes": [],
+          "your_cost": "pay-per-token (not funded)",
+          "funded": false
+        }
+      ],
+      "priority": "best"
+    }
+  ],
+  "primary": "balanced",
+  "engine": {
+    "hint": "openai-gpt-6-luna",
+    "name": "GPT-6 Luna",
+    "maker": "OpenAI",
+    "requested": "openai-gpt-6-luna",
+    "requested_name": "GPT-6 Luna",
+    "fell_back": false,
+    "latency_ms": 9800,
+    "cost_usd": 0.0021,
+    "cost_source": "measured",
+    "cached_share": 0.97,
+    "funded_by": "operator"
+  },
+  "task": {
+    "category": "coding",
+    "complexity": "high",
+    "novel": false
+  },
+  "points": [
+    {
+      "model_id": "claude-opus-5-5",
+      "platform_id": "claude-code",
+      "effort": "low",
+      "aa_index": 42.3,
+      "margin": 0,
+      "price_usd_per_1m": 5.935,
+      "adequate": false,
+      "estimated": false
+    },
+    {
+      "model_id": "claude-opus-5-5",
+      "platform_id": "claude-code",
+      "effort": "medium",
+      "aa_index": 51.2,
+      "margin": 0,
+      "price_usd_per_1m": 6.39,
+      "adequate": true,
+      "estimated": false
+    },
+    {
+      "model_id": "claude-opus-5-5",
+      "platform_id": "claude-code",
+      "effort": "high",
+      "aa_index": 53.6,
+      "margin": 0,
+      "price_usd_per_1m": 6.765,
+      "adequate": true,
+      "estimated": false
+    },
+    {
+      "model_id": "claude-opus-5-5",
+      "platform_id": "claude-code",
+      "effort": "xhigh",
+      "aa_index": 56,
+      "margin": 0,
+      "price_usd_per_1m": 8.29,
+      "adequate": true,
+      "estimated": false
+    },
+    {
+      "model_id": "claude-sonnet-5-5",
+      "platform_id": "claude-code",
+      "effort": "low",
+      "aa_index": 35.9,
+      "margin": 0,
+      "price_usd_per_1m": 3.1825,
+      "adequate": false,
+      "estimated": false
+    },
+    {
+      "model_id": "claude-sonnet-5-5",
+      "platform_id": "claude-code",
+      "effort": "medium",
+      "aa_index": 40.8,
+      "margin": 0,
+      "price_usd_per_1m": 3.1825,
+      "adequate": false,
+      "estimated": false
+    },
+    {
+      "model_id": "claude-sonnet-5-5",
+      "platform_id": "claude-code",
+      "effort": "high",
+      "aa_index": 46.8,
+      "margin": 0,
+      "price_usd_per_1m": 3.395,
+      "adequate": false,
+      "estimated": false
+    },
+    {
+      "model_id": "claude-sonnet-5-5",
+      "platform_id": "claude-code",
+      "effort": "xhigh",
+      "aa_index": 51.9,
+      "margin": 0,
+      "price_usd_per_1m": 3.7225,
+      "adequate": true,
+      "estimated": false
+    },
+    {
+      "model_id": "gemini-4-argon",
+      "platform_id": "antigravity",
+      "effort": "high",
+      "aa_index": 52.6,
+      "margin": 0,
+      "price_usd_per_1m": 6.135,
+      "adequate": true,
+      "estimated": false
+    },
+    {
+      "model_id": "gemini-4-hydrogen",
+      "platform_id": "antigravity",
+      "effort": "low",
+      "aa_index": 43.1,
+      "margin": 2.2,
+      "price_usd_per_1m": 3.1669,
+      "adequate": false,
+      "estimated": true
+    },
+    {
+      "model_id": "gemini-4-hydrogen",
+      "platform_id": "antigravity",
+      "effort": "medium",
+      "aa_index": 48.8,
+      "margin": 2.2,
+      "price_usd_per_1m": 4.0237,
+      "adequate": true,
+      "estimated": true
+    },
+    {
+      "model_id": "gemini-4-hydrogen",
+      "platform_id": "antigravity",
+      "effort": "high",
+      "aa_index": 51.6,
+      "margin": 2.2,
+      "price_usd_per_1m": 4.2112,
+      "adequate": true,
+      "estimated": true
+    },
+    {
+      "model_id": "gemini-4-hydrogen",
+      "platform_id": "antigravity",
+      "effort": "xhigh",
+      "aa_index": 53.6,
+      "margin": 2.2,
+      "price_usd_per_1m": 10.5431,
+      "adequate": true,
+      "estimated": true
+    },
+    {
+      "model_id": "claude-fable-5.2",
+      "platform_id": "claude-code",
+      "effort": "low",
+      "aa_index": 50.8,
+      "margin": 1.8,
+      "price_usd_per_1m": 12.81,
+      "adequate": true,
+      "estimated": true
+    },
+    {
+      "model_id": "claude-fable-5.2",
+      "platform_id": "claude-code",
+      "effort": "medium",
+      "aa_index": 52.9,
+      "margin": 1.8,
+      "price_usd_per_1m": 13.24,
+      "adequate": true,
+      "estimated": true
+    },
+    {
+      "model_id": "claude-fable-5.2",
+      "platform_id": "claude-code",
+      "effort": "high",
+      "aa_index": 55.2,
+      "margin": 1.8,
+      "price_usd_per_1m": 14.2,
+      "adequate": true,
+      "estimated": true
+    },
+    {
+      "model_id": "claude-fable-5.2",
+      "platform_id": "claude-code",
+      "effort": "xhigh",
+      "aa_index": 57.2,
+      "margin": 1.8,
+      "price_usd_per_1m": 17.81,
+      "adequate": true,
+      "estimated": true
+    },
+    {
+      "model_id": "gemini-4-neon",
+      "platform_id": "antigravity",
+      "effort": "low",
+      "aa_index": 46.4,
+      "margin": 2.2,
+      "price_usd_per_1m": 7.0388,
+      "adequate": true,
+      "estimated": true
+    },
+    {
+      "model_id": "gemini-4-neon",
+      "platform_id": "antigravity",
+      "effort": "medium",
+      "aa_index": 52.1,
+      "margin": 2.2,
+      "price_usd_per_1m": 9.0787,
+      "adequate": true,
+      "estimated": true
+    },
+    {
+      "model_id": "gemini-4-neon",
+      "platform_id": "antigravity",
+      "effort": "high",
+      "aa_index": 54.9,
+      "margin": 2.2,
+      "price_usd_per_1m": 10.2937,
+      "adequate": true,
+      "estimated": true
+    },
+    {
+      "model_id": "gemini-4-neon",
+      "platform_id": "antigravity",
+      "effort": "xhigh",
+      "aa_index": 56.9,
+      "margin": 2.2,
+      "price_usd_per_1m": 20.3325,
+      "adequate": true,
+      "estimated": true
+    },
+    {
+      "model_id": "gemini-4-carbon",
+      "platform_id": "antigravity",
+      "effort": "low",
+      "aa_index": 46.2,
+      "margin": 1.8,
+      "price_usd_per_1m": 2.3375,
+      "adequate": true,
+      "estimated": true
+    },
+    {
+      "model_id": "gemini-4-carbon",
+      "platform_id": "antigravity",
+      "effort": "medium",
+      "aa_index": 50.8,
+      "margin": 1.8,
+      "price_usd_per_1m": 4.7925,
+      "adequate": true,
+      "estimated": true
+    },
+    {
+      "model_id": "gemini-4-carbon",
+      "platform_id": "antigravity",
+      "effort": "high",
+      "aa_index": 53.6,
+      "margin": 1.8,
+      "price_usd_per_1m": 11.1425,
+      "adequate": true,
+      "estimated": true
+    },
+    {
+      "model_id": "gpt-6.2-astra",
+      "platform_id": "codex-cli",
+      "effort": "low",
+      "aa_index": 48.1,
+      "margin": 1.8,
+      "price_usd_per_1m": 8.73,
+      "adequate": false,
+      "estimated": true
+    },
+    {
+      "model_id": "gpt-6.2-astra",
+      "platform_id": "codex-cli",
+      "effort": "medium",
+      "aa_index": 51.9,
+      "margin": 1.8,
+      "price_usd_per_1m": 8.89,
+      "adequate": false,
+      "estimated": true
+    },
+    {
+      "model_id": "gpt-6.2-astra",
+      "platform_id": "codex-cli",
+      "effort": "high",
+      "aa_index": 53.2,
+      "margin": 1.8,
+      "price_usd_per_1m": 9.39,
+      "adequate": true,
+      "estimated": true
+    },
+    {
+      "model_id": "gpt-6.2-astra",
+      "platform_id": "codex-cli",
+      "effort": "xhigh",
+      "aa_index": 54.7,
+      "margin": 1.8,
+      "price_usd_per_1m": 11.45,
+      "adequate": true,
+      "estimated": true
+    },
+    {
+      "model_id": "gpt-6.2-sol",
+      "platform_id": "codex-cli",
+      "effort": "low",
+      "aa_index": 44.1,
+      "margin": 1.8,
+      "price_usd_per_1m": 2.2025,
+      "adequate": false,
+      "estimated": true
+    },
+    {
+      "model_id": "gpt-6.2-sol",
+      "platform_id": "codex-cli",
+      "effort": "medium",
+      "aa_index": 49.8,
+      "margin": 1.8,
+      "price_usd_per_1m": 2.3625,
+      "adequate": false,
+      "estimated": true
+    },
+    {
+      "model_id": "gpt-6.2-sol",
+      "platform_id": "codex-cli",
+      "effort": "high",
+      "aa_index": 52.2,
+      "margin": 1.8,
+      "price_usd_per_1m": 2.6875,
+      "adequate": true,
+      "estimated": true
+    },
+    {
+      "model_id": "gpt-6.2-sol",
+      "platform_id": "codex-cli",
+      "effort": "xhigh",
+      "aa_index": 53,
+      "margin": 1.8,
+      "price_usd_per_1m": 3.225,
+      "adequate": true,
+      "estimated": true
+    },
+    {
+      "model_id": "gpt-6.1-terra",
+      "platform_id": "codex-cli",
+      "effort": "low",
+      "aa_index": 32.1,
+      "margin": 1.8,
+      "price_usd_per_1m": 1.1387,
+      "adequate": false,
+      "estimated": true
+    },
+    {
+      "model_id": "gpt-6.1-terra",
+      "platform_id": "codex-cli",
+      "effort": "medium",
+      "aa_index": 34.7,
+      "margin": 1.8,
+      "price_usd_per_1m": 1.1538,
+      "adequate": false,
+      "estimated": true
+    },
+    {
+      "model_id": "gpt-6.1-terra",
+      "platform_id": "codex-cli",
+      "effort": "high",
+      "aa_index": 38.8,
+      "margin": 1.8,
+      "price_usd_per_1m": 1.1812,
+      "adequate": false,
+      "estimated": true
+    },
+    {
+      "model_id": "gpt-6.1-terra",
+      "platform_id": "codex-cli",
+      "effort": "xhigh",
+      "aa_index": 42.6,
+      "margin": 1.8,
+      "price_usd_per_1m": 1.2338,
+      "adequate": false,
+      "estimated": true
+    },
+    {
+      "model_id": "claude-haiku-5-5",
+      "platform_id": "claude-code",
+      "effort": "low",
+      "aa_index": 29.5,
+      "margin": 0,
+      "price_usd_per_1m": 0.1925,
+      "adequate": false,
+      "estimated": false
+    },
+    {
+      "model_id": "claude-haiku-5-5",
+      "platform_id": "claude-code",
+      "effort": "medium",
+      "aa_index": 34.5,
+      "margin": 0,
+      "price_usd_per_1m": 0.2289,
+      "adequate": false,
+      "estimated": false
+    },
+    {
+      "model_id": "claude-haiku-5-5",
+      "platform_id": "claude-code",
+      "effort": "high",
+      "aa_index": 37.8,
+      "margin": 0,
+      "price_usd_per_1m": 0.2576,
+      "adequate": false,
+      "estimated": false
+    },
+    {
+      "model_id": "claude-haiku-5-5",
+      "platform_id": "claude-code",
+      "effort": "xhigh",
+      "aa_index": 41.2,
+      "margin": 0,
+      "price_usd_per_1m": 0.4696,
+      "adequate": false,
+      "estimated": false
+    },
+    {
+      "model_id": "gemini-3.8-flash",
+      "platform_id": "antigravity",
+      "effort": "low",
+      "aa_index": 33.5,
+      "margin": 0,
+      "price_usd_per_1m": 0.9844,
+      "adequate": false,
+      "estimated": false
+    },
+    {
+      "model_id": "gemini-3.8-flash",
+      "platform_id": "antigravity",
+      "effort": "medium",
+      "aa_index": 39.8,
+      "margin": 0,
+      "price_usd_per_1m": 1.9922,
+      "adequate": false,
+      "estimated": false
+    },
+    {
+      "model_id": "gemini-3.8-flash",
+      "platform_id": "antigravity",
+      "effort": "high",
+      "aa_index": 40.9,
+      "margin": 0,
+      "price_usd_per_1m": 3.1575,
+      "adequate": false,
+      "estimated": false
+    },
+    {
+      "model_id": "gpt-6-luna",
+      "platform_id": "codex-cli",
+      "effort": "low",
+      "aa_index": 21.5,
+      "margin": 0,
+      "price_usd_per_1m": 0.1015,
+      "adequate": false,
+      "estimated": false
+    },
+    {
+      "model_id": "gpt-6-luna",
+      "platform_id": "codex-cli",
+      "effort": "medium",
+      "aa_index": 29.9,
+      "margin": 0,
+      "price_usd_per_1m": 0.1015,
+      "adequate": false,
+      "estimated": false
+    },
+    {
+      "model_id": "gpt-6-luna",
+      "platform_id": "codex-cli",
+      "effort": "high",
+      "aa_index": 32.9,
+      "margin": 0,
+      "price_usd_per_1m": 0.1633,
+      "adequate": false,
+      "estimated": false
+    },
+    {
+      "model_id": "gpt-6-luna",
+      "platform_id": "codex-cli",
+      "effort": "xhigh",
+      "aa_index": 34.6,
+      "margin": 0,
+      "price_usd_per_1m": 0.1929,
+      "adequate": false,
+      "estimated": false
+    },
+    {
+      "model_id": "gpt-oss-120b",
+      "platform_id": "antigravity",
+      "effort": "low",
+      "aa_index": 10.2,
+      "margin": 0,
+      "price_usd_per_1m": 0.2355,
+      "adequate": false,
+      "estimated": false
+    },
+    {
+      "model_id": "gpt-oss-120b",
+      "platform_id": "antigravity",
+      "effort": "high",
+      "aa_index": 11.6,
+      "margin": 0,
+      "price_usd_per_1m": 0.615,
+      "adequate": false,
+      "estimated": false
+    }
+  ]
+}

@@ -1,49 +1,22 @@
 // web/components/RecommendResult.tsx
 //
-// A finished recommendation: the task and the engine that answered it (with
-// what that run took and cost, and a way to ask another engine), the three
-// picks side by side, then the selected pick's reasoning and cost beside the
-// chart of where all three sit in the market.
+// A finished recommendation from the AI recommender: the task as written and
+// what it was read as, the engine that answered (with what that run took and
+// cost, and a way to ask another engine), then the answer itself
+// (LadderResult): the three picks ranked three deep, the selected pick's
+// reasoning and cost, and the chart of where they sit on the frontier.
 "use client";
 
-import Link from "next/link";
-import { AlertTriangle, Cpu, Sparkles } from "lucide-react";
-import { useEffect, useState } from "react";
+import { AlertTriangle, Cpu } from "lucide-react";
+import { useMemo } from "react";
 
-import type { MultiRecommendResponse, PriorityRecommendation } from "@/lib/api";
+import type { MultiRecommendResponse } from "@/lib/api";
 import { cents, runCostNote, seconds } from "@/lib/engine-format";
-import type { BudgetPriority } from "@/lib/profile";
+import { engineLadder } from "@/lib/ladder-view";
 import type { EngineOption } from "@/lib/recommend-engines";
-import { pickEffort } from "@/lib/pick-effort";
-import { rowForPick, type PicksData } from "@/lib/recommend-picks";
-import { BenchmarkReference } from "./BenchmarkReference";
+import type { PicksData } from "@/lib/recommend-picks";
 import { EnginePicker } from "./EnginePicker";
-import { PicksChart } from "./PicksChart";
-import { PicksMatrix } from "./PicksMatrix";
-import { FrontierScope, YOUR_MODELS } from "./ScoreCards";
-import { RatingScale } from "./RatingScale";
-import { TierDetail } from "./TierDetail";
-
-// The trade-off line when every pick costs the user $0 (a subscription funds
-// all three): then the picks differ in capability and effort, not price.
-function fundedZeroInsight(recs: PriorityRecommendation[]): { source: string | null } | null {
-  if (recs.length < 2) return null;
-  const fundedRows = recs.map((r) =>
-    (r.comparison_table ?? []).find(
-      (row) => row.funded === true && typeof row.your_cost === "string" && row.your_cost.includes("$0"),
-    ),
-  );
-  if (fundedRows.some((f) => !f)) return null;
-  const sources = new Set(
-    fundedRows.map((f) => {
-      const raw = typeof f!.your_cost === "string" ? f!.your_cost : "";
-      const s = raw.replace(/^✓\s*/, "").replace(/\$0/, "").replace(/^[\s·\-–—]+/, "").trim();
-      return !s || s.length > 24 || s.includes("$") ? "" : s;
-    }),
-  );
-  const source = sources.size === 1 ? [...sources][0] : null;
-  return { source: source || null };
-}
+import { LadderResult, TaskChips } from "./LadderResult";
 
 function EngineLine({
   data,
@@ -118,6 +91,11 @@ function EngineLine({
   );
 }
 
+const BAR_BUTTON =
+  "rounded-md border border-brand-slate-300 px-2.5 py-1 text-xs font-semibold text-brand-slate-600 hover:border-brand-accent hover:text-brand-accent dark:border-brand-slate-600 dark:text-brand-slate-300";
+const BAR_LABEL =
+  "whitespace-nowrap text-[11px] font-semibold uppercase tracking-wide text-brand-slate-400 dark:text-brand-slate-500";
+
 export function RecommendResult({
   data,
   task,
@@ -145,174 +123,48 @@ export function RecommendResult({
   signedIn: boolean;
   pending: boolean;
 }) {
-  const [primary, setPrimary] = useState<BudgetPriority>(data.primary);
-  const [selected, setSelected] = useState<BudgetPriority>(data.primary);
-  const [persisting, setPersisting] = useState(false);
+  const view = useMemo(() => engineLadder(picks, data), [picks, data]);
 
-  useEffect(() => {
-    setPrimary(data.primary);
-    setSelected(data.primary);
-  }, [data]);
-
-  function setDefault(priority: BudgetPriority) {
-    setPrimary(priority);
-    if (!canPersist) return;
-    setPersisting(true);
-    void fetch("/api/profile", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ budget_priority: priority }),
-    })
-      .then((response) => response.arrayBuffer())
-      .catch(() => {})
-      .finally(() => setPersisting(false));
-  }
-
-  const recs = data.recommendations;
-  const selectedRec = recs.find((r) => r.priority === selected) ?? recs[0];
-  const insight = fundedZeroInsight(recs);
-  const rows = Object.values(picks.rows);
-
-  return (
-    // With saved Settings, every frontier card speaks of the viewer's models.
-    <FrontierScope.Provider value={picks.pool ? YOUR_MODELS : null}>
-      <div className="space-y-4" data-testid="recommend-result">
-        <div className="space-y-3 rounded-xl border border-brand-slate-200 bg-white px-4 py-3 shadow-sm dark:border-brand-slate-700 dark:bg-brand-slate-800">
-          <div className="flex items-start gap-3">
-            <span className="mt-0.5 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wide text-brand-slate-400 dark:text-brand-slate-500">
-              Your task
-            </span>
-            <p className="line-clamp-2 min-w-0 flex-1 text-sm text-brand-slate-800 dark:text-brand-slate-100" data-testid="result-task">
-              {task || "—"}
-            </p>
-            <div className="flex flex-none gap-1.5">
-              <button
-                type="button"
-                onClick={onEdit}
-                className="rounded-md border border-brand-slate-300 px-2.5 py-1 text-xs font-semibold text-brand-slate-600 hover:border-brand-accent hover:text-brand-accent dark:border-brand-slate-600 dark:text-brand-slate-300"
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                onClick={onNew}
-                className="rounded-md border border-brand-slate-300 px-2.5 py-1 text-xs font-semibold text-brand-slate-600 hover:border-brand-accent hover:text-brand-accent dark:border-brand-slate-600 dark:text-brand-slate-300"
-              >
-                New task
-              </button>
-            </div>
-          </div>
-          <div className="border-t border-brand-slate-100 pt-3 dark:border-brand-slate-700/70">
-            <EngineLine
-              data={data}
-              engines={engines}
-              rerunEngine={rerunEngine}
-              onRerunEngineChange={onRerunEngineChange}
-              onRerun={onRerun}
-              signedIn={signedIn}
-              pending={pending}
-            />
+  const header = (
+    <div className="rounded-xl border border-brand-slate-200 bg-white shadow-sm dark:border-brand-slate-700 dark:bg-brand-slate-800">
+      <div className="space-y-2.5 px-5 py-3.5">
+        <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+          <span className={"mt-0.5 w-16 flex-none " + BAR_LABEL}>Your task</span>
+          <p
+            className="line-clamp-2 min-w-0 flex-1 basis-48 text-sm text-brand-slate-800 dark:text-brand-slate-100"
+            data-testid="result-task"
+          >
+            {task || "—"}
+          </p>
+          <div className="ml-auto flex flex-none gap-1.5">
+            <button type="button" onClick={onEdit} className={BAR_BUTTON}>
+              Edit
+            </button>
+            <button type="button" onClick={onNew} className={BAR_BUTTON}>
+              New task
+            </button>
           </div>
         </div>
-
-        <section
-          aria-label="The three picks"
-          className="rounded-xl border border-brand-slate-200 bg-white p-3 shadow-sm dark:border-brand-slate-700 dark:bg-brand-slate-800 sm:p-4"
-        >
-          <div className="flex items-baseline justify-between gap-3 px-1 pb-2">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
-              Your {recs.length === 3 ? "three " : ""}picks
-            </h2>
-            <span className="hidden text-xs text-brand-slate-400 md:inline dark:text-brand-slate-500">
-              Select a pick for its reasoning and cost
-            </span>
+        {view.task && (
+          <div className="flex items-center gap-3">
+            <span className={"w-16 flex-none " + BAR_LABEL}>Read as</span>
+            <TaskChips task={view.task} />
           </div>
-          {insight && (
-            <div className="mb-2.5 flex items-center gap-2.5 rounded-md border border-brand-accent/30 bg-brand-accent/10 px-3 py-1.5 text-[13px] text-brand-slate-700 dark:text-brand-slate-200">
-              <Sparkles className="h-4 w-4 flex-none text-brand-accent" aria-hidden />
-              <span>
-                All {recs.length === 3 ? "three " : ""}picks run at{" "}
-                <b className="font-semibold text-brand-slate-900 dark:text-brand-slate-50">$0 to you</b>
-                {insight.source ? ` on ${insight.source}` : ""}: the trade-off is{" "}
-                <b className="font-semibold text-brand-slate-900 dark:text-brand-slate-50">capability and effort</b>,
-                not price.
-              </span>
-            </div>
-          )}
-          <PicksMatrix
-            recommendations={recs}
-            data={picks}
-            selected={selected}
-            primary={primary}
-            onSelect={setSelected}
-          />
-        </section>
-
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
-          {selectedRec && (
-            <TierDetail
-              rec={selectedRec}
-              canPersist={canPersist}
-              persisting={persisting}
-              isDefault={selectedRec.priority === primary}
-              onSetDefault={setDefault}
-            />
-          )}
-          <PicksChart
-            rows={rows}
-            pool={picks.pool}
-            picks={recs.map((r) => ({
-              priority: r.priority,
-              model: r.model,
-              row: rowForPick(picks, r.model),
-              level: pickEffort(r.settings),
-            }))}
-            selected={selected}
-            onSelect={setSelected}
-          />
-        </div>
-
-        <details className="group rounded-xl border border-brand-slate-200 bg-brand-slate-50/60 dark:border-brand-slate-700 dark:bg-brand-slate-800/40">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-5 py-3 text-sm font-semibold text-brand-slate-800 dark:text-brand-slate-100">
-            How to read these picks
-            <span className="text-xs font-normal text-brand-slate-500 group-open:hidden dark:text-brand-slate-400">show</span>
-            <span className="hidden text-xs font-normal text-brand-slate-500 group-open:inline dark:text-brand-slate-400">hide</span>
-          </summary>
-          <div className="grid gap-6 border-t border-brand-slate-200 px-5 py-5 text-sm text-brand-slate-600 dark:border-brand-slate-700 dark:text-brand-slate-300 md:grid-cols-2">
-            <div className="space-y-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
-                The three picks
-              </h3>
-              <p>
-                <b className="text-brand-slate-800 dark:text-brand-slate-100">Quality</b> is the strongest model for the
-                task. <b className="text-brand-slate-800 dark:text-brand-slate-100">Balanced</b> is the best value below
-                it, and <b className="text-brand-slate-800 dark:text-brand-slate-100">Cost</b> is the cheapest model that
-                still does the job. Each comes with the platform to run it on and its settings.
-              </p>
-              <p>
-                The letters are the catalog&rsquo;s S&rarr;D ratings in coding, planning, agentic, multimodal,
-                long-context, knowledge and speed. A filled letter is measured from an Artificial Analysis benchmark; a
-                dashed one is estimated. The <Link href="/#how-to-read" className="font-medium text-brand-accent hover:underline">catalog key</Link> has the rules.
-              </p>
-            </div>
-            <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
-                Rating scale
-              </h3>
-              <RatingScale compact />
-            </div>
-            <div className="md:col-span-2">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
-                The benchmarks behind the ratings
-              </h3>
-              <BenchmarkReference compact />
-              <Link href="/docs" className="mt-3 inline-block text-xs font-medium text-brand-accent hover:underline">
-                Full reference &rarr;
-              </Link>
-            </div>
-          </div>
-        </details>
+        )}
       </div>
-    </FrontierScope.Provider>
+      <div className="border-t border-brand-slate-200 px-5 py-3 dark:border-brand-slate-700">
+        <EngineLine
+          data={data}
+          engines={engines}
+          rerunEngine={rerunEngine}
+          onRerunEngineChange={onRerunEngineChange}
+          onRerun={onRerun}
+          signedIn={signedIn}
+          pending={pending}
+        />
+      </div>
+    </div>
   );
+
+  return <LadderResult view={view} picks={picks} header={header} canPersist={canPersist} testId="recommend-result" />;
 }

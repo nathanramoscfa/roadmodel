@@ -41,7 +41,9 @@ import { recordRejectedVisitorKey } from "@/lib/ratelimit";
 import { clientContext, type ClientContext } from "@/lib/recommend-context";
 import { fundingNoteForModel, personalizeComparison } from "@/lib/funding";
 import { env } from "@/lib/env";
-import type { EngineRun } from "@/lib/api";
+import type { EngineRun, LadderPoint, LadderTask } from "@/lib/api";
+import { parsePoints } from "@/lib/frontier-points";
+import { parseLadderTask } from "@/lib/ladder-task";
 import { recordSpend } from "@/lib/spend-guard";
 import { readPin, schedulePin } from "@/lib/classification-pin";
 
@@ -109,13 +111,18 @@ function visitorFailure(status: number, text: string): VisitorFailure {
 interface LadderPayload {
   picks?: Partial<Record<"quality" | "balanced" | "cost", RecommenderPayload>>;
   guard?: { healthy?: boolean; [k: string]: unknown };
+  // What the engine read the task as: the frontier-table row its picks were
+  // copied from (service app/models.py LadderTask); null when it matched none.
+  task?: unknown;
+  // The settings that row's ladder weighed, for the page's chart.
+  points?: unknown;
   // The engines.json hint that answered (after any service-side fallback) and
   // its provider-reported token counts.
   engine?: string;
   usage?: unknown;
 }
 
-// Ladder tier -> the priority id the frontend/matrix expect, in cost→best order.
+// Ladder tier -> the priority id the page expects, in cost→best order.
 const LADDER_TIER_TO_PRIORITY: ReadonlyArray<
   readonly [keyof NonNullable<LadderPayload["picks"]>, BudgetPriority]
 > = [
@@ -603,6 +610,12 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
       return { ...pick, priority };
     };
 
+    // What the ladder read the task as, for the page to say so, and the
+    // settings its ladder weighed, for the page's chart. The fan-out
+    // classifies nothing, so both stay null there.
+    let ladderTask: LadderTask | null = null;
+    let ladderPoints: LadderPoint[] | null = null;
+
     // What the engine call(s) reported: the hint that answered (it differs
     // from the chosen one when the service fell back) and the token counts.
     let answeredHint: string | undefined;
@@ -682,6 +695,8 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
         if (!pick) return null; // incomplete ladder -> fall back
         recs.push(toRecommendation(pick, priority));
       }
+      ladderTask = parseLadderTask(parsed?.task);
+      ladderPoints = parsePoints(parsed?.points);
       return recs;
     };
 
@@ -739,6 +754,8 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
       noteCall(parsed);
       pinFrom(parsed);
       ingestServiceTimings(upstream.headers.get("X-Roadmodel-Timing"));
+      ladderTask = parseLadderTask(parsed?.task);
+      ladderPoints = parsePoints(parsed?.points);
       return {
         ok: true,
         recs: LADDER_TIER_TO_PRIORITY.map(([tier, priority]) => toRecommendation(picks[tier]!, priority)),
@@ -884,7 +901,13 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
     };
 
     return new NextResponse(
-      JSON.stringify({ recommendations, primary: budgetPriority, engine: engineRun }),
+      JSON.stringify({
+        recommendations,
+        primary: budgetPriority,
+        engine: engineRun,
+        task: ladderTask,
+        points: ladderPoints,
+      }),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
   });

@@ -128,21 +128,43 @@ test.describe("signed in with saved Settings", () => {
     await page.getByRole("button", { name: /^Recommend/ }).click();
 
     const pool = viewerPool(getModelRows(), reachableModelIds(["claude-max"], [], ALL))!;
+    const chart = page.getByTestId("picks-chart");
     await expect(page.getByTestId("picks-chart-scope")).toContainText("models you can use");
-    const points = page.getByTestId("picks-chart-point");
-    await expect(points.first()).toBeVisible();
+    await expect(chart).toContainText("Where the picks sit");
+    const points = chart.getByTestId("picks-chart-point");
+    await expect(points.first()).toBeAttached();
+    // Every plotted point is a model Claude Max reaches: the rest of the
+    // catalog is no candidate, and is not drawn.
     for (const id of await points.evaluateAll((els) => els.map((e) => e.getAttribute("data-model-id")))) {
       expect(pool.has(id!), `${id} is a model Claude Max reaches`).toBe(true);
     }
-    // The rest of the catalog stays in the background, not as candidates.
-    expect(await page.getByTestId("picks-chart-outside").count()).toBeGreaterThan(0);
+    await expect(chart).toContainText("On your frontier");
 
-    // Sonnet 5.5 is on the Claude Max frontier, and its card says so of the
-    // viewer's models.
+    // Sonnet 5.5 at High is the top score at its price among the Claude Max
+    // models, and its card says so of the viewer's models.
     const quality = page.locator('[data-priority="best"]');
-    await expect(quality.getByTestId("pick-frontier")).toHaveText("your frontier");
-    await page.locator('[data-pick="best"][data-row="__aa"]').getByTestId("pick-aa-index").hover();
+    await expect(quality.getByTestId("pick-frontier")).toHaveText("On your frontier");
+    await quality.getByTestId("pick-aa-index").hover();
     await expect(page.getByTestId("frontier-status")).toContainText("Across your models");
+  });
+
+  test("before any answer the page draws the viewer's own frontier", async ({ page }) => {
+    await signInViaCallback(page);
+    await page.getByLabel(/Claude Max.*\$200\/mo/i).check();
+    await page.getByRole("button", { name: /Save and continue/i }).click();
+    await expect(page).toHaveURL("/");
+    await page.goto("/recommend");
+    const pool = viewerPool(getModelRows(), reachableModelIds(["claude-max"], [], ALL))!;
+    const chart = page.getByTestId("picks-chart");
+    await expect(chart).toContainText("Your cost/quality frontier");
+    await expect(page.getByTestId("picks-chart-scope")).toContainText("models you can use");
+    await expect(chart.getByTestId("picks-chart-pick")).toHaveCount(0);
+    const ids = await chart
+      .getByTestId("picks-chart-point")
+      .evaluateAll((els) => els.map((e) => e.getAttribute("data-model-id")));
+    expect(ids.length).toBeGreaterThan(1);
+    for (const id of ids) expect(pool.has(id!), `${id} is a model Claude Max reaches`).toBe(true);
+    await expect(page.getByTestId("recommend-intro")).toContainText("It reads your frontier");
   });
 
   test("a category specialist off the frontier reads as the top model for its category", async ({ page }) => {

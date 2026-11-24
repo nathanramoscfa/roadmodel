@@ -1294,3 +1294,176 @@ def test_settings_ladder_falls_back_when_no_agent_subscription_is_funded() -> No
     assert got_api_only is not None
     got_empty = scoring.settings_ladder(PLANNING_MEDIUM, "", catalog=catalog, benchmarks=bench)
     assert got_empty is not None
+
+
+def test_a_roadmaps_settings_are_the_ranked_columns_at_headroom_on_its_surfaces() -> None:
+    """settings_ladder is ranked_columns read with every pool at headroom on
+    the roadmap's coding-agent surfaces, so the two can never drift."""
+    catalog, bench = _multi_surface_google_catalog()
+    text = _three_sub_with_google_key_context()
+    got = scoring.settings_ladder(PLANNING_MEDIUM, text, catalog=catalog, benchmarks=bench)
+    ranked = scoring.ranked_columns(
+        PLANNING_MEDIUM,
+        text,
+        neutral_pools=True,
+        allowed_platforms=scoring._roadmap_allowed_platforms(text, catalog),
+        catalog=catalog,
+        benchmarks=bench,
+    )
+    assert got is not None and ranked is not None
+    assert got["columns"] == ranked.columns
+
+
+def test_ranked_columns_rank_every_platform_the_operator_reaches() -> None:
+    """/recommend's ladder (2026-11-23): the same three ranks from three
+    makers, read on every platform the operator can reach, API keys and chat
+    apps included, where a roadmap's Settings stay on the coding agents."""
+    catalog, bench = _multi_surface_google_catalog()
+    text = _three_sub_with_google_key_context()
+    ranked = scoring.ranked_columns(PLANNING_MEDIUM, text, catalog=catalog, benchmarks=bench)
+    assert ranked is not None
+    lad, columns = ranked.ladder, ranked.columns
+    plain = scoring.ladder(PLANNING_MEDIUM, text, catalog=catalog, benchmarks=bench)
+    assert plain is not None
+    makers = {m["id"]: m["provider"] for m in catalog["models"]}
+    for tier in scoring.LADDER_TIERS:
+        col = columns[tier]
+        # The Pick is the ladder's own rung, at the level it sets.
+        rung = plain.rungs[tier]
+        assert lad.rungs[tier] == rung
+        assert (col["model_id"], col["platform_id"], col["effort"]) == (
+            rung.candidate.model_id,
+            rung.candidate.platform_id,
+            scoring.normalize_level(rung.level),
+        )
+        ranks = [o for o in _options(col) if o is not None and not o["stepped_down"]]
+        assert len({makers[o["model_id"]] for o in ranks}) == len(ranks)
+    # Carbon runs only outside the coding agents: a roadmap's ladder leaves it
+    # out, and /recommend's can rank it.
+    reached = {o["model_id"] for col in columns.values() for o in _options(col) if o is not None}
+    assert "carbon" in reached
+    roadmap = scoring.settings_ladder(PLANNING_MEDIUM, text, catalog=catalog, benchmarks=bench)
+    assert roadmap is not None
+    assert "carbon" not in {
+        o["model_id"] for col in roadmap["columns"].values() for o in _options(col) if o is not None
+    }
+
+
+def test_ranked_columns_read_the_pools_as_they_stand() -> None:
+    """A roadmap's Settings ignore a pool's state; /recommend's ranks follow
+    the ladder its picks are read from, which does not."""
+    task = scoring.Task("planning", "medium")
+    for state in ("tight", "exhausted"):
+        live = scoring.ladder(task, _context(state), catalog=CATALOG, benchmarks=BENCH)
+        ranked = scoring.ranked_columns(task, _context(state), catalog=CATALOG, benchmarks=BENCH)
+        assert live is not None and ranked is not None
+        for tier in scoring.LADDER_TIERS:
+            rung = live.rungs[tier]
+            assert (ranked.columns[tier]["model_id"], ranked.columns[tier]["effort"]) == (
+                rung.candidate.model_id,
+                scoring.normalize_level(rung.level),
+            )
+
+
+def test_ranked_columns_need_a_frontier() -> None:
+    assert (
+        scoring.ranked_columns(PLANNING_MEDIUM, _context(), catalog=CATALOG, benchmarks={}) is None
+    )
+
+
+def test_ranked_columns_carry_every_setting_the_ladder_weighed() -> None:
+    """The points a page plots (2026-11-23): each pool model at each effort the
+    task may run, so the frontier drawn over them is the one the picks were
+    read from, and a pick sits where the ladder found it."""
+    catalog, bench = _multi_surface_google_catalog()
+    text = _three_sub_with_google_key_context()
+    ranked = scoring.ranked_columns(PLANNING_MEDIUM, text, catalog=catalog, benchmarks=bench)
+    assert ranked is not None
+    lad, points = ranked.ladder, ranked.points
+    assert points == scoring.ladder_points(lad, bench)
+    assert len(points) == len(
+        [c for c in lad.settings if scoring._candidate_aa(c, bench) is not None]
+    )
+    by_key = {(p["model_id"], p["effort"]): p for p in points}
+    assert mine_frontier(points) == [
+        (f.candidate.model_id, f.candidate.evidence_level) for f in lad.points
+    ]
+    # Every pick is one of them, at the price the frontier places it at and
+    # meeting the task's bar.
+    for rung in lad.rungs.values():
+        c = rung.candidate
+        point = by_key[(c.model_id, c.evidence_level)]
+        assert point["price_usd_per_1m"] == scoring.frontier_price(c)
+        assert point["adequate"] is True
+        assert point["platform_id"] == c.platform_id
+    assert {p["adequate"] for p in points} <= {True, False}
+
+
+def mine_frontier(points: list[dict[str, Any]]) -> list[tuple[str, str | None]]:
+    """The frontier a page draws over ``points``: each where the scorer ranks
+    it (its index less its margin), cheapest first, keeping every point that
+    scores higher than all before it."""
+    best, out = float("-inf"), []
+    for p in sorted(
+        points,
+        key=lambda p: (p["price_usd_per_1m"], -(p["aa_index"] - p["margin"]), p["model_id"]),
+    ):
+        if p["aa_index"] - p["margin"] > best:
+            out.append((p["model_id"], p["effort"]))
+            best = p["aa_index"] - p["margin"]
+    return out
+
+
+def test_a_point_prints_an_estimate_itself_and_says_how_far_below_it_ranks() -> None:
+    """The scorer ranks an estimated index a margin below it; a ladder, and so
+    a chart, prints the estimate, and the point carries the margin so the
+    frontier a page draws is still the one the picks were read from."""
+    bench = {
+        **BENCH,
+        # Sonnet stands on roadmodel's estimate of 55, ranked 2 points below it.
+        "sonnet": {
+            "evaluations": {"artificial_analysis_intelligence_index": 53.0},
+            "estimated": {"penalty": 2.0},
+        },
+    }
+    lad = scoring.ladder(PLANNING_MEDIUM, _context(), catalog=CATALOG, benchmarks=bench)
+    assert lad is not None
+    listed = scoring.ladder_points(lad, bench)
+    points = {p["model_id"]: p for p in listed}
+    assert (points["sonnet"]["aa_index"], points["sonnet"]["margin"]) == (55.0, 2.0)
+    assert points["sonnet"]["estimated"] is True
+    assert (points["opus"]["aa_index"], points["opus"]["margin"]) == (58, 0.0)
+    assert points["opus"]["estimated"] is False
+    # Drawn where each is ranked, the frontier is the ladder's own.
+    assert mine_frontier(listed) == [
+        (f.candidate.model_id, f.candidate.evidence_level) for f in lad.points
+    ]
+
+
+def test_a_rank_is_a_model_the_operator_can_run() -> None:
+    """One plan, in a catalog that lists other makers' models too
+    (2026-11-23: a Claude Max holder was ranked GPT-6.2 Sol on Codex). With
+    the Pick's maker off the table the ladder reads the whole catalog, as it
+    does for a caller who funds nothing; for an operator who funds something
+    that is no rank of theirs, so the ranks are the Pick stepped down."""
+    claude_only = _context().replace("| ChatGPT Pro ($100) | $100 | OpenAI | Codex |\n", "")
+    assert "ChatGPT" not in claude_only
+    ranked = scoring.ranked_columns(PLANNING_MEDIUM, claude_only, catalog=CATALOG, benchmarks=BENCH)
+    assert ranked is not None
+    makers = {m["id"]: m["provider"] for m in CATALOG["models"]}
+    assert {makers[p["model_id"]] for p in ranked.points} == {"anthropic"}
+    for col in ranked.columns.values():
+        assert makers[col["model_id"]] == "anthropic"
+        for option in (col["runner_up"], col["backup"]):
+            if option is not None:
+                assert option["stepped_down"] and option["model_id"] == col["model_id"]
+    # A caller who funds nothing is ranked the whole catalog, every maker.
+    anonymous = scoring.ranked_columns(PLANNING_MEDIUM, "", catalog=CATALOG, benchmarks=BENCH)
+    assert anonymous is not None
+    seen = {
+        makers[o["model_id"]]
+        for col in anonymous.columns.values()
+        for o in _options(col)
+        if o is not None and not o["stepped_down"]
+    }
+    assert seen == {"anthropic", "openai"}

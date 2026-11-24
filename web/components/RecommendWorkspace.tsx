@@ -2,10 +2,10 @@
 //
 // /recommend's interactive half. One request at a time moves through three
 // states: composing (the task, its files, the engine), running (the engine at
-// work, with its real elapsed time), and a result (the three picks, with a way
-// to ask another engine the same task). Every result is saved in this browser
-// and nowhere else (SavedRecommendations), so a reload, a comparison or a
-// return visit costs nothing.
+// work, with its real elapsed time), and a result (the three picks, each
+// ranked three deep, with a way to ask another engine the same task). Every
+// result is saved in this browser and nowhere else (SavedRecommendations), so
+// a reload, a comparison or a return visit costs nothing.
 //
 // A visitor may pay with their own API key (VisitorKeyPanel). The key lives in
 // one React state holder here (lib/use-visitor-key.ts), shared by the composer
@@ -396,13 +396,14 @@ export function RecommendWorkspace({
 
   if (activeLane !== "key") {
     return (
-      <div ref={top} className="scroll-mt-20 space-y-5">
+      <div ref={top} className="scroll-mt-20 space-y-6">
         <LaneChooser lane={activeLane} openRouter={false} onChoose={chooseLane} />
         {activeLane === "agent" ? (
           <OwnAgentPanel />
         ) : quickResult ? (
           <KeylessResult
             data={quickResult.data}
+            picks={picks}
             agreement={agreement}
             onChange={() => setQuickResult(null)}
             onDescribe={() => chooseLane("key")}
@@ -416,7 +417,7 @@ export function RecommendWorkspace({
   }
 
   return (
-    <div ref={top} className="scroll-mt-20 space-y-5">
+    <div ref={top} className="scroll-mt-20 space-y-6">
       {showChooser && (
         <LaneChooser lane="key" openRouter={visitor.provider === "openrouter"} onChoose={chooseLane} />
       )}
@@ -520,12 +521,13 @@ export function RecommendWorkspace({
         // A saved Quick pick, opened where there is no Quick pick lane.
         <KeylessResult
           data={quickResult.data}
+          picks={picks}
           agreement={agreement}
           onChange={() => setQuickResult(null)}
           onDescribe={() => setQuickResult(null)}
         />
       ) : !result ? (
-        <RecommendIntro modelCount={modelCount} measuredCount={measuredCount} />
+        <RecommendIntro modelCount={modelCount} measuredCount={measuredCount} picks={picks} />
       ) : null}
 
       {savedList(result?.id ?? quickResult?.id ?? null)}

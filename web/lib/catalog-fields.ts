@@ -93,6 +93,15 @@ export interface ModelRow {
   // setting its launch table reports; null when AA names none or the figure
   // is cited or copied.
   aa_index_effort?: string | null;
+  // Set on a row read at one effort for /recommend (lib/pick-effort.ts): the
+  // index there is roadmodel's estimate from the efforts AA measured the
+  // model at, since AA did not measure that one (shown ≈).
+  aa_index_level_estimated?: boolean;
+  // Set on a row /recommend reads off an answer's frontier
+  // (lib/frontier-points.ts): the index points the recommender counts this
+  // row's estimate below it, for the estimate's uncertainty. The frontier
+  // stands on the counted figure, so the cards compare with it.
+  aa_index_margin?: number;
   // The AA Intelligence Index at each effort AA measured the model at (its
   // headline row's level included), keyed by level ("low" … "max"). A pick
   // that runs at one of them reads its figure (lib/pick-effort.ts). Absent

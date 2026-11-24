@@ -92,6 +92,11 @@ def _bootstrap_user_context() -> Path:
 
 _BUNDLED_USER_CONTEXT = _bootstrap_user_context()
 
+# Imported below the bootstrap above on purpose: the security review pins that
+# function's fixed /tmp path to its line (.github/security-allowances.json), so
+# a new import cannot go in the block above it.
+from . import ranks  # noqa: E402
+
 # Point roadmodel.cost's funding resolution at the bundled user-context so
 # session_cost_estimate / comparison_table reflect the funded-platform
 # discounts (#164). cost.estimate_session_cost reads ROADMODEL_USER_CONTEXT
@@ -641,22 +646,38 @@ def ladder_once(
         temperature=temperature,
         **kwargs,
     )
-    picks = {
-        tier: _pick_response(
+    usage = _call_usage()
+    guard = ladder.get("guard", {})
+    task, columns, points = _ranked(guard, ins)
+    picks: dict[str, RecommendResponse] = {}
+    for tier, pick in ladder["picks"].items():
+        response = _pick_response(
             pick,
             req.task_description,
             ins.funding_guard,
             ins.access_guard,
             _TIER_TO_PRIORITY.get(tier, "balanced"),
         )
-        for tier, pick in ladder["picks"].items()
-    }
+        picks[tier] = response.model_copy(
+            update={"ranks": ranks.for_pick(columns.get(tier), response.model, response.platform)}
+        )
     return LadderResponse(
-        picks=picks,
-        guard=ladder.get("guard", {}),
-        engine=hint,
-        usage=_call_usage(),
+        picks=picks, guard=guard, task=task, points=points, engine=hint, usage=usage
     )
+
+
+def _ranked(guard: dict[str, Any], ins: _LadderInputs) -> ranks.Placed:
+    """What the task was read as, its picks ranked three deep and the settings
+    its ladder weighed (app/ranks.py), read over what the package read its
+    frontier table over: this request's scoring context (the bundled template
+    for a request that declares no funding) and its unavailable models."""
+    text = ins.scoring_kwargs.get("scoring_context_text")
+    if not isinstance(text, str):
+        try:
+            text = _BUNDLED_USER_CONTEXT.read_text(encoding="utf-8")
+        except OSError:
+            return ranks.Placed(None, {}, None)
+    return ranks.placed(guard, text, ins.unavailable_models)
 
 
 def recommend_ladder(req: RecommendRequest) -> LadderResponse:

@@ -56,6 +56,85 @@ class BackupPick(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class RankedOption(BaseModel):
+    """One ranked option of a ladder column (app/ranks.py): a model on a
+    platform at a level, with the figures a roadmap's Settings print for it."""
+
+    model: str
+    model_id: str
+    platform: str
+    platform_id: str
+    # The scorer's level (low / medium / high / xhigh / max), or `fixed` for a
+    # configuration whose level is not set.
+    effort: str
+    # The level as the ladder table words it (`XHigh`); `—` where the surface
+    # has no reasoning dial.
+    level: str
+    # The AA Intelligence Index at that level: AA's own row there, else
+    # roadmodel's estimate from the levels AA did measure (`aa_estimated`).
+    aa_index: float | None = None
+    aa_estimated: bool = False
+    # USD per 1M blended tokens at that level's token use; `price_measured`
+    # says whether that token use was measured or derived.
+    price_usd_per_1m: float | None = None
+    price_measured: bool | None = None
+    # The Pick's own model one or two levels lower, filling a rank no other
+    # maker could.
+    stepped_down: bool = False
+    ultracode: bool = False
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class Ranks(BaseModel):
+    """A pick ranked three deep, each rank from another maker: the Pick, the
+    Runner-up with the Pick's maker off the table, and the Backup with both
+    makers above off it. A rank the caller's models cannot fill is None."""
+
+    pick: RankedOption
+    runner_up: RankedOption | None = None
+    backup: RankedOption | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class LadderTask(BaseModel):
+    """What the task was read as: the category and complexity the picks were
+    ranked for, and whether it is a new kind of problem."""
+
+    category: str
+    complexity: str
+    novel: bool = False
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class LadderPoint(BaseModel):
+    """One setting the ladder weighed (app/ranks.py): a model the caller can
+    run at an effort the task may run. The cost/quality frontier the picks
+    are read from is drawn over these, so a page that plots them shows a pick
+    where the ladder found it."""
+
+    model_id: str
+    platform_id: str = ""
+    # The scorer's level; None for a model AA names no effort for, at its
+    # headline figure.
+    effort: str | None = None
+    # The AA Intelligence Index there, as a ladder prints it, and how far
+    # below it the scorer ranks it (an estimate's uncertainty; 0 for AA's own
+    # measurement): the frontier stands on `aa_index - margin`.
+    aa_index: float
+    margin: float = 0.0
+    # USD per 1M blended tokens at that effort's token use.
+    price_usd_per_1m: float
+    # Meets the task's bar: Cost is the cheapest setting that does.
+    adequate: bool = True
+    # The index is roadmodel's estimate (AA has not measured the model).
+    estimated: bool = False
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class RecommendResponse(BaseModel):
     model: str
     platform: str
@@ -92,6 +171,12 @@ class RecommendResponse(BaseModel):
     # for <category> work" in place of the frontier mark.
     specialist: bool = False
     specialist_category: str | None = None
+    # The pick ranked three deep, as a roadmap's Settings rank it: this pick,
+    # a Runner-up and a Backup from other makers, each with its level, AA
+    # Index and price there (app/ranks.py). Present on a ladder pick the
+    # frontier table placed; None on the single-pick path, on a pick a guard
+    # replaced, and whenever the ranks cannot be read.
+    ranks: Ranks | None = None
     session_cost_estimate: dict[str, Any] | None = None
     comparison_table: list[dict[str, Any]] = Field(default_factory=list)
     # The engine that produced this answer (an engines.json hint). It differs
@@ -121,6 +206,12 @@ class LadderResponse(BaseModel):
 
     picks: dict[str, RecommendResponse]
     guard: dict[str, Any] = Field(default_factory=dict)
+    # What the engine read the task as (the frontier table's row the picks
+    # were copied from); None when the response matched no row.
+    task: LadderTask | None = None
+    # Every setting that row's ladder weighed, for the page's chart; None
+    # when the response matched no row or they could not be read.
+    points: list[LadderPoint] | None = None
     # The engine that answered and its token counts, for the whole ladder (one
     # call); see RecommendResponse.engine / .usage.
     engine: str | None = None

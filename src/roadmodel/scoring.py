@@ -60,7 +60,7 @@ import statistics
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timedelta, timezone
-from typing import Any, Final
+from typing import Any, Final, NamedTuple
 
 from roadmodel import agent_configurations as _configurations
 from roadmodel import cost as _cost
@@ -3162,21 +3162,72 @@ def _roadmap_allowed_platforms(text: str, catalog: dict[str, Any]) -> set[str] |
     return funded_agents or None
 
 
-def settings_ladder(
+def ladder_points(lad: Ladder, benchmarks: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every setting ``lad`` weighed, as a chart plots it: each pool model at
+    each effort it may run for the task (:func:`effort_settings`), with its AA
+    Intelligence Index there, its price there (:func:`frontier_price`) and
+    whether it meets the task's bar. The cost/quality frontier the picks are
+    read from is drawn over exactly these, so a page that plots them shows a
+    pick where the ladder found it.
+
+    The index is the figure a ladder prints (:func:`ladder_aa`): roadmodel's
+    estimate itself for a model AA has not measured. ``margin`` is how far
+    below it the scorer ranks that estimate for its uncertainty (0 for AA's
+    own measurement), so ``aa_index - margin`` is where the setting stands on
+    the frontier, and the frontier drawn over those figures is the ladder's
+    own. ``estimated`` marks a model AA has not measured. A setting with no
+    AA Index (a category specialist's row) is left out."""
+    out: list[dict[str, Any]] = []
+    for c in lad.settings:
+        aa = _candidate_aa(c, benchmarks)
+        if aa is None:
+            continue
+        out.append(
+            {
+                "model_id": c.model_id,
+                "platform_id": c.platform_id,
+                "effort": c.evidence_level,
+                "aa_index": round(aa + c.aa_estimate_penalty, 1),
+                "margin": c.aa_estimate_penalty,
+                "price_usd_per_1m": frontier_price(c),
+                "adequate": c.requirement_penalty == 0,
+                "estimated": c.aa_estimated or c.aa_inherited_from is not None,
+            }
+        )
+    return out
+
+
+class Ranked(NamedTuple):
+    """:func:`ranked_columns`' answer: the ladder the picks are read from,
+    each tier's Pick with its ``runner_up`` and ``backup``, and every setting
+    the ladder weighed (:func:`ladder_points`)."""
+
+    ladder: Ladder
+    columns: dict[str, dict[str, Any]]
+    points: list[dict[str, Any]]
+
+
+def ranked_columns(
     task: Task,
     user_context_text: str,
     *,
     phase: bool = False,
+    neutral_pools: bool = False,
+    allowed_platforms: set[str] | frozenset[str] | None = None,
     unavailable_models: list[str] | None = None,
     catalog: dict[str, Any] | None = None,
     benchmarks: dict[str, Any] | None = None,
-) -> dict[str, Any] | None:
-    """A roadmap's Settings as the full ladder: the Cost / Balanced / Quality
-    picks /recommend shows, each ranked three deep. Read with every pool at
-    `headroom` (``neutral_pools``): a pool's state is informational and never
-    steers a roadmap's Settings. The ladder names no column to run; the
-    operator picks the option (2026-10-29). ``phase`` is a phase-roadmap
-    session: its Quality column runs at the deepest rung its dial allows.
+) -> Ranked | None:
+    """The Cost / Balanced / Quality picks for ``task``, each ranked three
+    deep: the ladder the picks are read from (:func:`ladder`), per tier the
+    Pick (:func:`_option`) with its ``runner_up`` and ``backup``, and the
+    settings that ladder weighed (:func:`ladder_points`).
+    ``neutral_pools`` and ``allowed_platforms`` are :func:`ladder`'s: a
+    roadmap's Settings read every pool at `headroom` on the coding-agent
+    surfaces (:func:`settings_ladder`), /recommend reads the pools as they
+    stand on every platform the operator can reach. ``phase`` is a
+    phase-roadmap session: its Quality column runs at the deepest rung its
+    dial allows.
 
     Each column ranks three options from three makers, each with its effort,
     its AA Intelligence Index (:func:`ladder_aa_index`) and its price there.
@@ -3192,16 +3243,17 @@ def settings_ladder(
     Where the pool holds too few makers, a missing rank is the Pick's own
     model one level lower on its dial (``stepped_down``; ↓ in the table),
     a cheaper run of the same model; with one maker, the Runner-up and Backup
-    step down one and two levels. None below the dial's lowest level.
+    step down one and two levels. None below the dial's lowest level. A rank
+    is a model the operator can run: with their funded makers off the table
+    :func:`ladder` reads the whole catalog, as it does for a caller who funds
+    nothing, and for an operator who funds something that is no rank of
+    theirs (2026-11-23: a Claude Max holder was shown GPT-6.2 Sol on Codex).
 
     The ranks follow the column's own rule, not the AA Index: Cost ranks each
     maker's cheapest adequate option, so its AA Index may rise down the
-    column. Returns the columns and the ladder table's Markdown
-    (:mod:`roadmodel.ladder_layout`); None when no pool model carries an AA
-    Index."""
+    column. None when no pool model carries an AA Index."""
     cat = catalog if catalog is not None else _cost._load_catalog()
     bench = benchmarks if benchmarks is not None else with_unmeasured(_load_benchmarks(), cat)
-    roadmap_allowed = _roadmap_allowed_platforms(user_context_text or "", cat)
     off = list(unavailable_models or [])
     seen: dict[frozenset[str], Ladder | None] = {}
 
@@ -3214,8 +3266,8 @@ def settings_ladder(
                 unavailable_models=sorted(key),
                 catalog=cat,
                 benchmarks=bench,
-                neutral_pools=True,
-                allowed_platforms=roadmap_allowed,
+                neutral_pools=neutral_pools,
+                allowed_platforms=allowed_platforms,
             )
         return seen[key]
 
@@ -3239,6 +3291,9 @@ def settings_ladder(
     def level_of(tier: str, r: Rung) -> str:
         return _deepest_level(r.candidate, cat) if phase and tier == "quality" else r.level
 
+    # The operator funds something: a rank read off the unfunded catalog is
+    # not theirs to run.
+    funds = any(c.funding != "unfunded" for c in lad.settings)
     columns: dict[str, dict[str, Any]] = {}
     for tier in LADDER_TIERS:
         rung = lad.rungs[tier]
@@ -3249,7 +3304,11 @@ def settings_ladder(
         while len(ranked) < 3:
             rest = read(sorted(m for maker in makers for m in by_maker.get(maker, ())))
             nxt = None if rest is None else rest.rungs[tier]
-            if nxt is None or nxt.candidate.provider in makers:
+            if (
+                nxt is None
+                or nxt.candidate.provider in makers
+                or (funds and nxt.candidate.funding == "unfunded")
+            ):
                 break
             ranked.append(_option(nxt.candidate, level_of(tier, nxt), bench, cat))
             makers.append(nxt.candidate.provider)
@@ -3263,6 +3322,45 @@ def settings_ladder(
             )
             steps += 1
         columns[tier] = {**pick, "runner_up": ranked[1], "backup": ranked[2]}
+    return Ranked(lad, columns, ladder_points(lad, bench))
+
+
+def settings_ladder(
+    task: Task,
+    user_context_text: str,
+    *,
+    phase: bool = False,
+    unavailable_models: list[str] | None = None,
+    catalog: dict[str, Any] | None = None,
+    benchmarks: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """A roadmap's Settings as the full ladder: the Cost / Balanced / Quality
+    picks /recommend shows, each ranked three deep (:func:`ranked_columns`).
+    Read with every pool at `headroom` (``neutral_pools``): a pool's state is
+    informational and never steers a roadmap's Settings, and on the
+    coding-agent surfaces a roadmap step runs on
+    (:func:`_roadmap_allowed_platforms`). The ladder names no column to run;
+    the operator picks the option (2026-10-29). ``phase`` is a phase-roadmap
+    session: its Quality column runs at the deepest rung its dial allows.
+
+    Returns the columns and the ladder table's Markdown
+    (:mod:`roadmodel.ladder_layout`); None when no pool model carries an AA
+    Index."""
+    cat = catalog if catalog is not None else _cost._load_catalog()
+    bench = benchmarks if benchmarks is not None else with_unmeasured(_load_benchmarks(), cat)
+    ranked = ranked_columns(
+        task,
+        user_context_text,
+        phase=phase,
+        neutral_pools=True,
+        allowed_platforms=_roadmap_allowed_platforms(user_context_text or "", cat),
+        unavailable_models=unavailable_models,
+        catalog=cat,
+        benchmarks=bench,
+    )
+    if ranked is None:
+        return None
+    lad, columns = ranked.ladder, ranked.columns
     table = _layout.ladder_markdown(
         {
             t: {
