@@ -72,10 +72,13 @@ const RULE = "border-brand-slate-200 dark:border-brand-slate-600";
 const usd = (v: number) => `$${v.toFixed(2)}`;
 
 // One decimal, typographic minus, no sign for positives: "57.6", "−5.2".
-// "≈" before an index AA has not measured: an earlier version's copy or
-// roadmodel's estimate from the launch table.
-function approx(m: Pick<ModelRow, "aa_index_source">): string {
-  return m.aa_index_source === "inherited" || m.aa_index_source === "estimated" ? "≈" : "";
+// "≈" before an index AA has not measured: an earlier version's copy,
+// roadmodel's estimate from the launch table, or, on /recommend, a measured
+// model read at an effort AA did not measure it at.
+function approx(m: Pick<ModelRow, "aa_index_source" | "aa_index_level_estimated">): string {
+  return m.aa_index_source === "inherited" || m.aa_index_source === "estimated" || m.aa_index_level_estimated
+    ? "≈"
+    : "";
 }
 
 // "A", "A and B", "A, B and C".
@@ -92,7 +95,9 @@ function num(v: number): string {
 // A model's index as the cards print it: AA's to one decimal; an estimate, good
 // to about four points, as the whole number the table shows; either marked ≈
 // when AA has not measured it.
-function indexText(m: Pick<ModelRow, "aa_index" | "aa_index_source">): string {
+export function indexText(
+  m: Pick<ModelRow, "aa_index" | "aa_index_source" | "aa_index_level_estimated">,
+): string {
   if (m.aa_index === null) return "—";
   return `${approx(m)}${m.aa_index_source === "estimated" ? String(Math.round(m.aa_index)) : num(m.aa_index)}`;
 }
@@ -185,7 +190,12 @@ export function FrontierStatus({
   }
   const price = headlinePrice(m);
   const leaderPrice = headlinePrice(leader);
-  const scores = leader.aa_index > m.aa_index ? "scores higher" : "scores the same";
+  // On /recommend an estimate stands on the frontier where the recommender
+  // counts it, a margin below the figure it prints (aa_index_margin), so the
+  // two are compared as counted.
+  const counted = (r: ModelRow) => (r.aa_index ?? 0) - (r.aa_index_margin ?? 0);
+  const asCounted = (m.aa_index_margin ?? 0) > 0 || (leader.aa_index_margin ?? 0) > 0;
+  const scores = counted(leader) > counted(m) ? "scores higher" : "scores the same";
   const costs = leaderPrice < price - 1e-9 ? "costs less" : "costs the same";
   const priceLabel = m.aa_index_effort || leader.aa_index_effort ? "Effort-adjusted price" : "Blended price";
   return (
@@ -204,9 +214,14 @@ export function FrontierStatus({
       </p>
       <Row
         className="mt-1"
-        label="AA Index"
-        value={`${indexText(leader)}${leader.aa_index_source === "cited" ? " (cited)" : ""} vs ${indexText(m)}`}
+        label={asCounted ? "AA Index, as counted" : "AA Index"}
+        value={
+          asCounted
+            ? `${num(counted(leader))} vs ${num(counted(m))}`
+            : `${indexText(leader)}${leader.aa_index_source === "cited" ? " (cited)" : ""} vs ${indexText(m)}`
+        }
         valueClass={STRONG}
+        testId="frontier-status-index"
       />
       <Row label={priceLabel} value={`${usd(leaderPrice)} vs ${usd(price)}`} valueClass={STRONG} />
     </div>
@@ -219,11 +234,21 @@ export function FrontierPointCard({ model: m, leader }: { model: ModelRow; leade
   if (m.aa_index === null) return null;
   const price = headlinePrice(m);
   const share = headlineTokenShare(m);
+  // /recommend: how far below its estimate the recommender counts this point.
+  const margin = m.aa_index_margin ?? 0;
   return (
     <div className="w-[19rem] max-w-full" data-testid="frontier-point-card">
       <CardHeader name={m.name} tier={m.tier_cost} />
       <div className="mt-2 space-y-0.5">
         <Row label="AA Index" value={`${indexText(m)}`} valueClass={"font-semibold " + STRONG} />
+        {margin > 0 && (
+          <Row
+            label="Counted as"
+            value={num(m.aa_index - margin)}
+            valueClass={STRONG}
+            testId="frontier-point-counted"
+          />
+        )}
         <Row
           label={m.aa_index_effort ? `Price at ${effortWord(m.aa_index_effort)}` : "Blended price"}
           value={`${usd(price)} per 1M tokens`}
@@ -233,6 +258,13 @@ export function FrontierPointCard({ model: m, leader }: { model: ModelRow; leade
           (3 × {formatUsd(m.input_price_per_1m)} input + {formatUsd(m.output_price_per_1m)} output
           {share !== null && <> × {share.toFixed(2)}</>}) ÷ 4
         </p>
+        {margin > 0 && (
+          <p className={"pt-1 text-xs leading-[1.125rem] " + MUTED}>
+            The index is roadmodel&rsquo;s estimate until Artificial Analysis measures this model. The
+            recommender counts it {num(margin)} points lower for its uncertainty, and the chart plots it
+            there.
+          </p>
+        )}
       </div>
       <div className="mt-2.5">
         <FrontierStatus model={m} leader={leader} />
@@ -504,7 +536,7 @@ export function ScoreBreakdownCard({
         <Row
           label="AA Intelligence Index"
           value={
-            m.aa_index_source === "estimated" || m.aa_index_source === "inherited"
+            m.aa_index_source === "estimated" || m.aa_index_source === "inherited" || m.aa_index_level_estimated
               ? indexText(m)
               : num(s.index)
           }
@@ -572,6 +604,8 @@ export function ScoreBreakdownCard({
             </>
           ) : m.aa_index_source === "cited"
             ? "AA Index as cited in the catalog; this model is not in the Artificial Analysis data snapshot yet."
+            : m.aa_index_level_estimated && m.aa_index_source === "snapshot"
+              ? `Artificial Analysis measured this model at other efforts (snapshot of ${snapshot}); roadmodel estimates its AA Index${m.aa_index_effort ? ` at ${effortWord(m.aa_index_effort)}` : ""} from those, so this Score is an estimate too.`
             : m.aa_index_source === "inherited"
               ? `AA Index estimated from ${m.aa_inherited_from}'s in the Artificial Analysis snapshot of ${snapshot}.`
               : m.aa_index_source === "estimated"

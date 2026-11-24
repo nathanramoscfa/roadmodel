@@ -201,6 +201,9 @@ def test_recommend_returns_200(
         # pick alone can be one).
         "specialist": False,
         "specialist_category": None,
+        # Ranks (Pick / Runner-up / Backup) belong to a ladder pick the
+        # frontier table placed; a single pick has none.
+        "ranks": None,
         "session_cost_estimate": None,
         "comparison_table": [],
         # The engine that answered: the chain's Anthropic link, the only
@@ -491,6 +494,7 @@ def test_response_schema_matches_phase2_contract(
         "backup",  # fallback model (Step 7) — same boundary, carried through
         "specialist",  # a ladder Quality pick off the frontier, top for its category
         "specialist_category",
+        "ranks",  # a ladder pick ranked three deep (app/ranks.py); None on a single pick
         "session_cost_estimate",
         "comparison_table",
         "engine",  # the engines.json hint that answered (after any fallback)

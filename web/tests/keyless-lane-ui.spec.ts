@@ -51,13 +51,22 @@ test("signed out: the chooser opens on Quick pick, and its form returns three ex
   const result = page.getByTestId("keyless-result");
   await expect(result).toBeVisible(RUN);
   expect(sent).toEqual([{ category: "planning", complexity: "high", novel: true, budget_priority: "best" }]);
-  for (const rung of ["quality", "balanced", "cost"]) {
-    const card = page.getByTestId(`keyless-rung-${rung}`);
-    await expect(card).toBeVisible();
-    await expect(card).toContainText("Strength");
-    await expect(card).toContainText("Fit to the task");
+  // The same answer view as the AI recommender's: three cards, the chosen
+  // priority leading, and each pick's three plain sentences on selection.
+  await expect(result.locator("[data-priority]")).toHaveCount(3);
+  const quality = result.locator('[data-priority="best"]');
+  await expect(quality.getByTestId("pick-default-badge")).toHaveText("Your priority");
+  await expect(quality).toHaveAttribute("data-selected", "1");
+  const detail = page.getByTestId("pick-detail");
+  for (const priority of ["best", "balanced", "cheap"]) {
+    await result.locator(`[data-priority="${priority}"]`).click();
+    await expect(detail).toHaveAttribute("data-pick", priority);
+    for (const label of ["Strength", "Fit to the task", "Cost"]) {
+      await expect(detail.getByRole("heading", { name: label, exact: true })).toBeVisible();
+    }
   }
-  await expect(page.getByTestId("keyless-rung-quality")).toContainText("Your priority");
+  await expect(page.getByTestId("ladder-note")).toContainText("Ranked for planning, high complexity, a new kind of problem.");
+  await expect(result.getByTestId("picks-chart")).toBeVisible();
   await expect(page.getByTestId("keyless-task")).toHaveText("Planning · High difficulty · a new kind of problem");
 
   // The agreement, from the synced record.

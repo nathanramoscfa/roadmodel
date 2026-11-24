@@ -416,6 +416,27 @@ priority, and `/roadmap-step` moved off a `tight` or `exhausted` pool by
 rule): the operator picks the option, and `/roadmap-step` runs the one they
 opened.
 
+**/recommend shows the same ranks.** `scoring.ranked_columns` is the ranking
+both surfaces read: a roadmap's Settings call it with every pool at `headroom`
+on the coding-agent surfaces (`settings_ladder`), and the hosted service calls
+it with the pools as they stand on every platform the caller reaches
+(`service/app/ranks.py`), so each of /recommend's three picks carries the
+Runner-up and the Backup a roadmap would print beside it, with the same level,
+AA Index and price. Two rules hold for both:
+- **A rank is a model the operator can run.** With the Pick's maker off the
+  table `ladder` reads the whole catalog, as it does for a caller who funds
+  nothing; for an operator who funds something that is no rank of theirs, so
+  the rank is the Pick stepped down instead (a Claude Max holder is not ranked
+  GPT-6.2 Sol on Codex).
+- **The page draws the ladder's own frontier.** `ranked_columns` also returns
+  every setting the ladder weighed (`ladder_points`: each pool model at each
+  effort the task may run, with its AA Index as a ladder prints it, the
+  `margin` the scorer ranks an estimate below that figure, its price there and
+  whether it meets the task's bar). /recommend's chart plots each point at
+  `aa_index - margin`, where the scorer counts it, so the frontier it draws is
+  the one the picks were read from: every pick sits on the line, and Cost is
+  the cheapest point on it that meets the bar.
+
 **Near ties.** A benchmark separates models only as finely as its own
 run-to-run noise. Each candidate carries its category evidence on the
 scorer's 0–100 scale (`evidence_points`), and two within the band

@@ -1,5 +1,6 @@
 // web/app/recommend/page.tsx
 import { cookies } from "next/headers";
+import Link from "next/link";
 
 import { RecommendWorkspace } from "@/components/RecommendWorkspace";
 import { getServerSession } from "@/lib/auth";
@@ -16,7 +17,7 @@ import { VISITOR_PROVIDERS, type VisitorProvider } from "@/lib/visitor-key";
 export const metadata = {
   title: "Recommend — roadmodel",
   description:
-    "Describe a task and get three model picks (Cost, Balanced and Quality), each with the platform to run it on, its settings and what it costs you, weighed across the whole catalog. Quick pick computes them free from published benchmarks and prices.",
+    "Describe a task and get three model picks (Cost, Balanced and Quality), each with a runner-up and a backup from other makers: the platform to run it on, the level to set and what it costs you, read from the cost/quality frontier of the models you can run. Quick pick computes them free from published benchmarks and prices.",
 };
 
 export default async function RecommendPage() {
@@ -46,21 +47,28 @@ export default async function RecommendPage() {
   });
 
   return (
-    <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
+    // The catalog page's frame (app/page.tsx): the same width, header and
+    // rhythm, so the two halves of the site read as one.
+    <section className="mx-auto max-w-7xl px-6 py-12 sm:py-16">
       <header className="max-w-3xl">
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-accent">roadmodel</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-brand-slate-900 dark:text-brand-slate-50 sm:text-4xl">
           Recommend a model
         </h1>
         <p className="mt-3 text-brand-slate-600 dark:text-brand-slate-300">
-          Describe a task. An engine reads it and weighs every model in the catalog for it (the S&nbsp;&rarr;&nbsp;D
-          ratings, Artificial Analysis&rsquo;s benchmarks, prices, and the subscriptions you hold), then returns
-          three picks: the cheapest model that does the job, the best value, and the strongest, each with the
-          platform to run it on, its settings, and what it costs you.
+          Describe a task. An engine reads it and ranks the models you can run for it, from Artificial
+          Analysis&rsquo;s benchmarks, the <strong>S&nbsp;&rarr;&nbsp;D</strong> ratings, prices and the plans you
+          hold. You get three picks (the cheapest model that does the job, the best value and the strongest), each
+          with a runner-up and a backup from other makers, the platform to run it on, the level to set there and
+          what it costs you. Every model behind them is in the{" "}
+          <Link href="/" className="font-medium text-brand-accent hover:underline">
+            catalog
+          </Link>
+          .
         </p>
       </header>
 
-      <div className="mt-8">
+      <div className="mt-10">
         <RecommendWorkspace
           key={session?.id ?? "anonymous"}
           engines={engines}

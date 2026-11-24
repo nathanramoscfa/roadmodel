@@ -49,7 +49,9 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
 
 
 class _Spy:
-    """Records the user-context text each scoring.ladder call receives."""
+    """Records the user-context text each scoring.ladder call receives: the
+    picks' own read first, then the reads that rank each pick's Runner-up and
+    Backup (app/ranks.py), which leave makers out of the same context."""
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
         self.texts: list[str | None] = []
@@ -143,7 +145,7 @@ def test_an_empty_profile_ranks_the_whole_catalog(
     spy = _Spy(monkeypatch)
     response = client.post(_PATH, json=_TASK)
     assert response.status_code == 200
-    assert spy.texts == [""]
+    assert spy.texts and set(spy.texts) == {""}
     # "" funds nothing: every model is in the pool, none of them as funded.
     ranking = scoring.rank(scoring.Task("coding", "high"), "")
     assert ranking.candidates
@@ -162,7 +164,8 @@ def test_a_jurisdiction_only_profile_keeps_its_jurisdictions_and_funds_nothing(
     spy = _Spy(monkeypatch)
     body = {**_TASK, "allowed_jurisdictions": ["us"], "platforms_excluded": ["claude-web"]}
     assert client.post(_PATH, json=body).status_code == 200
-    (text,) = spy.texts
+    assert len(set(spy.texts)) == 1
+    text = spy.texts[0]
     assert text
     assert scoring.allowed_jurisdictions(text) == {"us"}
     assert scoring.platform_filters(text) == (set(), {"claude-web"})
@@ -178,7 +181,8 @@ def test_a_declared_profile_reaches_the_scorer_as_tables(
     body = {**_TASK, "subscriptions": ["claude-max"], "consumption_headroom": "capped"}
     response = client.post(_PATH, json=body)
     assert response.status_code == 200
-    (text,) = spy.texts
+    assert len(set(spy.texts)) == 1
+    text = spy.texts[0]
     assert text is not None
     assert "| claude.ai Max ($200) |" in text
     for rung in response.json()["rungs"]:
@@ -198,10 +202,16 @@ def test_a_model_too_small_for_the_input_is_left_out(
     monkeypatch.setattr(scoring, "ladder", ladder)
     body = {**_TASK, "unavailable_models": ["benched-model"], "input_tokens": 300000}
     assert client.post(_PATH, json=body).status_code == 200
-    (unavailable,) = seen
+    # The picks' own read, then the reads that rank them (app/ranks.py).
+    unavailable = seen[0]
     assert unavailable is not None
     assert unavailable[0] == "benched-model"
-    assert set(unavailable[1:]) == set(scoring.too_small_for(300000)) != set()
+    small = set(scoring.too_small_for(300000))
+    assert set(unavailable[1:]) == small != set()
+    # A Runner-up or Backup is never a model the picks themselves leave out.
+    for later in seen[1:]:
+        assert later is not None
+        assert {"benched-model", *small} <= set(later)
     assert client.post(_PATH, json={**_TASK, "input_tokens": 0}).status_code == 422
 
 

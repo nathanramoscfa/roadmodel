@@ -9,6 +9,7 @@
 //
 // Pure: safe to import from client components.
 
+import type { LadderPoint, Ranks } from "./api";
 import type { BudgetPriority } from "./profile";
 
 export const KEYLESS_CATEGORIES = [
@@ -85,6 +86,9 @@ export interface KeylessRung {
     effort: string;
     ultracode?: boolean;
   } | null;
+  // The rung with its Runner-up and Backup, as a roadmap's Settings rank it
+  // (absent on an answer from before the field).
+  ranks?: Ranks | null;
   terms: { quality: number; requirement_shortfall: number; cost: number };
   why: { quality: string; requirement_shortfall: string; cost: string };
 }
@@ -92,6 +96,9 @@ export interface KeylessRung {
 export interface KeylessResponse {
   rungs: KeylessRung[];
   task: { category: string; complexity: string; novel: boolean; budget_priority: string };
+  // The settings the ladder weighed, for the chart (absent on an answer from
+  // before the field).
+  points?: LadderPoint[] | null;
   backup_warning: string | null;
   engine: "scoring-core";
   cost_usd: number;

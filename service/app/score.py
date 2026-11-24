@@ -27,9 +27,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StringConstraints, field_validator
 from roadmodel import scoring  # type: ignore[import-untyped]
 
+from . import ranks
 from .auth import require_bearer
 from .context import validate_pools
 from .funding import resolve_allowed_jurisdictions, scoring_context_from_request
+from .models import LadderPoint, Ranks
 
 Category = Literal[
     "coding", "planning", "agentic", "multimodal", "long-context", "knowledge", "speed"
@@ -126,6 +128,10 @@ class ScoreRung(BaseModel):
     ultracode: bool = False
     specialist: bool = False
     backup: ScoreBackup | None = None
+    # The rung ranked three deep, as a roadmap's Settings rank it: this pick,
+    # a Runner-up and a Backup from other makers, each with its level, AA
+    # Index and price there (app/ranks.py). None when they cannot be read.
+    ranks: Ranks | None = None
     terms: Terms
     why: Why
 
@@ -133,6 +139,9 @@ class ScoreRung(BaseModel):
 class ScoreResponse(BaseModel):
     rungs: list[ScoreRung]
     task: dict[str, Any]
+    # Every setting the ladder weighed, for the page's chart (app/ranks.py);
+    # None when they could not be read.
+    points: list[LadderPoint] | None = None
     backup_warning: str | None = None
     engine: Literal["scoring-core"] = "scoring-core"
     cost_usd: float = 0.0
@@ -216,13 +225,14 @@ def _why(c: Any, task: scoring.Task) -> Why:
     return Why(quality=quality, requirement_shortfall=shortfall, cost=cost)
 
 
-def _rung(tier: str, r: Any, task: scoring.Task) -> ScoreRung:
+def _rung(tier: str, r: Any, task: scoring.Task, column: dict[str, Any] | None = None) -> ScoreRung:
     c = r.candidate
     b = r.backup
+    model_name = getattr(c, "configuration_picker_model", None) or c.model_name
     return ScoreRung(
         priority=tier,
         model_id=c.model_id,
-        model_name=getattr(c, "configuration_picker_model", None) or c.model_name,
+        model_name=model_name,
         platform_id=c.platform_id,
         platform_name=c.platform_name,
         effort=r.level,
@@ -242,6 +252,7 @@ def _rung(tier: str, r: Any, task: scoring.Task) -> ScoreRung:
             if b is not None
             else None
         ),
+        ranks=ranks.for_pick(column, model_name, c.platform_name),
         terms=Terms(
             quality=c.quality,
             requirement_shortfall=c.requirement_penalty,
@@ -263,12 +274,19 @@ def score_endpoint(req: ScoreRequest) -> ScoreResponse:
             # Larger than every known context window: no model holds it.
             raise HTTPException(status_code=422, detail="input_exceeds_every_context_window")
         unavailable += scoring.too_small_for(req.input_tokens)
-    lad = scoring.ladder(task, scoring_text(req), unavailable_models=unavailable or None)
+    text = scoring_text(req)
+    lad = scoring.ladder(task, text, unavailable_models=unavailable or None)
     if lad is None:
         # The declared filters leave no model with an AA Index: no frontier.
         raise HTTPException(status_code=422, detail="no_frontier")
+    # Each rung's Runner-up and Backup and the settings the ladder weighed,
+    # read from the same ladder (None on any failure: the picks stand without
+    # them).
+    got = ranks.read(task, text, unavailable)
+    columns = got.columns if got is not None else {}
     return ScoreResponse(
-        rungs=[_rung(t, lad.rungs[t], task) for t in RUNG_ORDER],
+        rungs=[_rung(t, lad.rungs[t], task, columns.get(t)) for t in RUNG_ORDER],
+        points=ranks.points(got.points) if got is not None else None,
         task={
             "category": task.category,
             "complexity": task.complexity,

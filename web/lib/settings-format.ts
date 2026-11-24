@@ -1,9 +1,8 @@
 // web/lib/settings-format.ts
 //
 // Shared humanization for the per-surface settings the recommender emits
-// (effort / thinking / max_mode / intelligence …), used by TierMatrix to render
-// each settings dimension as a comparison row. Mirrors the logic that used to
-// live (privately) in the pre-redesign SettingsList card.
+// (effort / thinking / max_mode / intelligence …), used by /recommend's pick
+// cards (lib/ladder-view.ts) to name each setting and word its value.
 
 // snake_case / spaced key -> Title Case ("max_mode" -> "Max Mode").
 export function humanizeSettingKey(key: string): string {

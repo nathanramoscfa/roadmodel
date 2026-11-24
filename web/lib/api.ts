@@ -31,6 +31,71 @@ export function visitorRequestHeaders(req: Request, lane: VisitorLane): Record<s
   };
 }
 
+// One ranked option of a pick's column, as the service reads it off the
+// frontier (service/app/ranks.py): a model on a platform at a level, with its
+// AA Intelligence Index and price there, the figures a roadmap's Settings
+// print for it.
+export interface RankedOption {
+  model: string;
+  model_id: string;
+  platform: string;
+  platform_id: string;
+  // The scorer's level (low / medium / high / xhigh / max), or "fixed".
+  effort: string;
+  // The level as the ladder words it ("XHigh"); "—" where the surface has no
+  // reasoning dial.
+  level: string;
+  aa_index: number | null;
+  // The index at that level is roadmodel's estimate from the levels
+  // Artificial Analysis measured.
+  aa_estimated: boolean;
+  // USD per 1M blended tokens at that level's token use.
+  price_usd_per_1m: number | null;
+  // Whether that token use was measured (false: derived).
+  price_measured: boolean | null;
+  // The Pick's own model one or two levels lower, where no other maker's
+  // model fills the rank.
+  stepped_down: boolean;
+  ultracode: boolean;
+}
+
+// A pick ranked three deep, each rank from another maker: the Pick, the
+// Runner-up with the Pick's maker left out, the Backup with both left out.
+export interface Ranks {
+  pick: RankedOption;
+  runner_up: RankedOption | null;
+  backup: RankedOption | null;
+}
+
+// One setting an answer's ladder weighed (service/app/models.py LadderPoint):
+// a model the viewer can run at an effort the task may run, with its AA
+// Intelligence Index and price there. The frontier the picks were read from
+// is drawn over these (lib/frontier-points.ts).
+export interface LadderPoint {
+  model_id: string;
+  platform_id: string;
+  // The scorer's level; null for a model AA names no effort for.
+  effort: string | null;
+  // The index as a ladder prints it, and how far below it the recommender
+  // counts it (an estimate's uncertainty; 0 for a measurement): the frontier
+  // stands on aa_index - margin.
+  aa_index: number;
+  margin: number;
+  price_usd_per_1m: number;
+  // Meets the task's bar.
+  adequate: boolean;
+  // The index is roadmodel's estimate: AA has not measured the model.
+  estimated: boolean;
+}
+
+// What a task was read as: the category and complexity its picks were ranked
+// for, and whether it is a new kind of problem.
+export interface LadderTask {
+  category: string;
+  complexity: string;
+  novel: boolean;
+}
+
 export interface RecommendResponse {
   model: string;
   platform: string;
@@ -59,6 +124,10 @@ export interface RecommendResponse {
   // on a payload from before the field, or false.
   specialist?: boolean;
   specialist_category?: string | null;
+  // The pick with its Runner-up and Backup, as a roadmap's Settings rank it.
+  // Absent or null on a payload from before the field, on a pick the frontier
+  // table did not place, and whenever the service could not read them.
+  ranks?: Ranks | null;
 }
 
 // One recommendation computed at a specific budget priority. The /recommend
@@ -83,6 +152,12 @@ export interface MultiRecommendResponse {
   // The engine run that produced the picks (absent on a payload from before
   // the engine menu).
   engine?: EngineRun;
+  // What the engine read the task as (absent on a payload from before the
+  // field; null when the answer matched no row of the frontier table).
+  task?: LadderTask | null;
+  // The settings the answer's ladder weighed, for the chart (absent or null
+  // like `task`).
+  points?: LadderPoint[] | null;
 }
 
 // The engine that wrote the picks: the user's menu choice, or the service's

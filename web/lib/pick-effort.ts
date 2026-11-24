@@ -219,13 +219,33 @@ export interface PickAtEffort {
   tokenShare: number | null;
 }
 
-export function pickAtEffort(data: PicksData, row: SlimRow, level: EffortLevel | null): PickAtEffort {
-  const index = level ? row.aa_index_by_effort?.[level] : undefined;
+// The AA Index and price the service read for an option at its level
+// (lib/api.ts RankedOption): the figures a roadmap's Settings print. The index
+// may be an estimate for a level Artificial Analysis did not measure the model
+// at, which the catalog's rows cannot supply.
+export interface OptionFacts {
+  index?: number | null;
+  // Whether the service read that index as an estimate. A model Artificial
+  // Analysis names no effort for is measured once, and that figure stands at
+  // whatever level a surface with no dial runs it: measured, at a level the
+  // catalog's rows do not name.
+  indexEstimated?: boolean;
+  price?: number | null;
+}
+
+export function pickAtEffort(
+  data: PicksData,
+  row: SlimRow,
+  level: EffortLevel | null,
+  facts: OptionFacts = {},
+): PickAtEffort {
+  const measured = level ? row.aa_index_by_effort?.[level] : undefined;
+  const index = level ? (measured ?? facts.index ?? undefined) : undefined;
   if (!level || index === undefined) {
     const leader = row.value_beaten_by ? (data.rows[row.value_beaten_by] ?? null) : null;
     return { row, leader, level: null, tokenShare: null };
   }
-  const price = effortPrice(row, level);
+  const price = facts.price ?? effortPrice(row, level);
   // The strongest point the viewer can run at this price or less that scores
   // higher; ties on index go to the cheaper.
   const rowInPool = (r: SlimRow) => data.pool === null || data.pool.includes(r.id);
@@ -241,6 +261,10 @@ export function pickAtEffort(data: PicksData, row: SlimRow, level: EffortLevel |
   const tokenShare = tokenMultiplier(row, level);
   const at: SlimRow = {
     ...named(row, level, index),
+    // A level Artificial Analysis did not measure this model at: the index
+    // is roadmodel's estimate from the levels it did (shown ≈), unless the
+    // service says the figure it read is a measurement.
+    aa_index_level_estimated: measured === undefined && facts.indexEstimated !== false,
     value_score: scoreFor(data.fit, price, index),
     value_frontier: rowInPool(row) && leader === null,
     value_beaten_by: leader ? leader.row.id : null,

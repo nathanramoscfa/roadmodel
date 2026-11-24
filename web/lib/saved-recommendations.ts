@@ -26,6 +26,23 @@ const priority = z.enum(["cheap", "balanced", "best"]);
 const text = z.string().max(50_000);
 const scalar = z.union([text, z.number().finite(), z.boolean(), z.null()]);
 const fields = z.record(z.string().max(100), z.union([scalar, z.array(scalar).max(128)])).refine((v) => Object.keys(v).length <= 64);
+// A pick's Runner-up and Backup, each with its level, AA Index and price there
+// (lib/api.ts Ranks). A saved entry from before the field has none.
+const figure = z.number().finite().nullable();
+const rankedOption = z.object({
+  model: text, model_id: text, platform: text, platform_id: text, effort: text, level: text,
+  aa_index: figure, aa_estimated: z.boolean(), price_usd_per_1m: figure, price_measured: z.boolean().nullable(),
+  stepped_down: z.boolean(), ultracode: z.boolean(),
+});
+const ranks = z.object({ pick: rankedOption, runner_up: rankedOption.nullable(), backup: rankedOption.nullable() }).nullable().optional();
+const ladderTask = z.object({ category: text, complexity: text, novel: z.boolean() });
+// The settings an answer's ladder weighed, which its chart is drawn over
+// (lib/frontier-points.ts MAX_POINTS).
+const points = z.array(z.object({
+  model_id: text, platform_id: text, effort: text.nullable(), aa_index: z.number().finite(),
+  margin: z.number().finite().nonnegative().default(0),
+  price_usd_per_1m: z.number().finite().positive(), adequate: z.boolean(), estimated: z.boolean(),
+})).max(600).nullable().optional();
 const pick = z.object({
   priority, model: z.string().min(1).max(256), platform: z.string().max(256),
   settings: fields, session_cost_estimate: fields.default({}),
@@ -33,6 +50,7 @@ const pick = z.object({
   rationale_sections: z.record(z.string(), text).nullable().optional(),
   backup: z.object({ model: text, platform: text.nullable(), settings: z.record(z.string(), text) }).nullable().optional(),
   specialist: z.boolean().optional(), specialist_category: text.nullable().optional(),
+  ranks,
 });
 const engine = z.object({
   hint: text, name: text, maker: text, requested: text, requested_name: text,
@@ -41,21 +59,27 @@ const engine = z.object({
   cached_share: z.number().finite().min(0).max(1).nullable(),
   funded_by: z.enum(["operator", "visitor"]).optional(),
 });
-const engineData = z.object({ primary: priority, recommendations: z.array(pick).min(1).max(3), engine: engine.optional() });
+const engineData = z.object({
+  primary: priority, recommendations: z.array(pick).min(1).max(3), engine: engine.optional(),
+  task: ladderTask.nullable().optional(), points,
+});
 
 // A Quick pick (lib/keyless.ts): three rungs, quality first.
 const RUNGS = ["quality", "balanced", "cost"] as const;
 const term = z.number().finite();
-const quickBackup = z.object({ model_id: text, model_name: text, platform_id: text, platform_name: text, effort: text });
+const quickBackup = z.object({
+  model_id: text, model_name: text, platform_id: text, platform_name: text, effort: text, ultracode: z.boolean().optional(),
+});
 const rung = z.object({
   priority: z.enum(RUNGS), model_id: text, model_name: text, platform_id: text, platform_name: text, effort: text,
-  specialist: z.boolean(), backup: quickBackup.nullable(),
+  ultracode: z.boolean().optional(), specialist: z.boolean(), backup: quickBackup.nullable(), ranks,
   terms: z.object({ quality: term, requirement_shortfall: term, cost: term }),
   why: z.object({ quality: text, requirement_shortfall: text, cost: text }),
 });
 const quickData = z.object({
   rungs: z.array(rung).length(3).refine((rungs) => rungs.every((r, i) => r.priority === RUNGS[i])),
   task: z.object({ category: text, complexity: text, novel: z.boolean(), budget_priority: text.optional() }),
+  points,
   backup_warning: text.nullable(),
   engine: z.literal("scoring-core"),
   cost_usd: z.number().finite().nonnegative(),

@@ -95,6 +95,8 @@ const DOT_CLEARANCE = 3;
 // other anchors to try in turn (a line's two ends and middle), and an item
 // that is not a dot (dot: false) keeps no clearance of its own. An item
 // with label: false keeps its dot clearance as an obstacle without being labeled.
+// An item drawn at its own size (r) keeps that much clearance and sets its
+// label that far off; the rest use the chart's dotR.
 export interface LabelItem {
   id: string;
   cx: number;
@@ -104,6 +106,7 @@ export interface LabelItem {
   anchors?: { cx: number; cy: number }[];
   dot?: boolean;
   label?: boolean;
+  r?: number;
 }
 
 export function placeLabels(
@@ -113,19 +116,18 @@ export function placeLabels(
   dotR: number = DOT_R,
 ): Map<string, Label> {
   const taken: Box[] = [];
-  const reach = dotR + DOT_CLEARANCE;
   const dots = pts
     .filter((p) => p.dot !== false)
-    .map((p) => ({
-      id: p.id,
-      box: { x: p.cx - reach, y: p.cy - reach, w: 2 * reach, h: 2 * reach },
-    }));
+    .map((p) => {
+      const reach = (p.r ?? dotR) + DOT_CLEARANCE;
+      return { id: p.id, box: { x: p.cx - reach, y: p.cy - reach, w: 2 * reach, h: 2 * reach } };
+    });
   const out = new Map<string, Label>();
   for (const p of [...pts].sort((a, b) => b.priority - a.priority)) {
     if (p.label === false) continue;
     if (out.size >= maxLabels) break;
     const w = textWidth(p.text);
-    const off = dotR + 5;
+    const off = (p.r ?? dotR) + 5;
     // The diagonal offset: the plate's corner sits just off the dot.
     const d = off - 3;
     for (const { cx, cy } of p.anchors ?? [{ cx: p.cx, cy: p.cy }]) {

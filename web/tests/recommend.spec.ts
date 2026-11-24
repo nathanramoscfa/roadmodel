@@ -6,6 +6,9 @@ import path from "node:path";
 import { test, expect, type Page } from "@playwright/test";
 
 import registry from "../data/engines.json";
+import type { MultiRecommendResponse } from "../lib/api";
+import { getModelRows } from "../lib/catalog-models";
+import { effortPrice } from "../lib/pick-effort";
 import { openFreeText } from "./fixtures/lanes";
 import { E2E_AUTH_COOKIE, E2E_USER_ID, setE2eSessionCookie } from "./fixtures/onboarding-auth";
 
@@ -18,6 +21,15 @@ type Pick = Record<string, unknown> & { priority?: string };
 // cost rows), captured from production and stripped of personal detail, with
 // the engine run the route now reports.
 const FIXTURE = readFileSync(path.join(__dirname, "fixtures", "recommend-response.json"), "utf8");
+
+// An answer as the service sends it now, captured from a local copy of the
+// service for a three-plan profile (Claude Max, ChatGPT Pro, Google AI Pro):
+// each pick ranked three deep (`ranks`), what the task was read as (`task`)
+// and the settings its ladder weighed (`points`), which the chart is drawn
+// over.
+const RANKED = readFileSync(path.join(__dirname, "fixtures", "recommend-ranked.json"), "utf8");
+const ranked = (): MultiRecommendResponse => JSON.parse(RANKED) as MultiRecommendResponse;
+const card = (page: Page, priority: "cheap" | "balanced" | "best") => page.locator(`[data-priority="${priority}"]`);
 
 // `mk` wraps a single legacy pick into the multi-pick response shape.
 function mk(pick: Pick, primary = "balanced", engine?: Record<string, unknown>) {
@@ -47,6 +59,11 @@ test("/recommend renders the composer, the engine menu and how it works", async 
   await expect(page.getByTestId("engine-picker")).toBeVisible();
   await expect(page.getByTestId("recommend-intro")).toBeVisible();
   await expect(page.getByRole("heading", { name: "How a recommendation is made" })).toBeVisible();
+  // The frontier the picks will be read from is already drawn, with no pick on it.
+  const chart = page.getByTestId("picks-chart");
+  await expect(chart).toContainText("The cost/quality frontier");
+  await expect(chart.getByTestId("picks-chart-point").first()).toBeAttached();
+  await expect(chart.getByTestId("picks-chart-pick")).toHaveCount(0);
   // No pre-submit budget toggle: all three priorities come back together.
   await expect(page.getByRole("radiogroup", { name: /Budget priority/i })).toHaveCount(0);
 });
@@ -81,29 +98,35 @@ test("a single submit renders all three priority picks (Cost / Balanced / Qualit
   await expect(page.locator('[data-priority="balanced"]').getByText("Default")).toBeVisible();
 });
 
-test("a pick carries the catalog's facts: blended price, AA Index, Score, ratings", async ({ page }) => {
+test("a pick carries its figures at the level it runs: AA Index, price, Score, ratings", async ({ page }) => {
   await fulfill(page, FIXTURE);
   await openFreeText(page);
   await ask(page, "Refactor a 3,000-line Python data pipeline into typed modules with tests.");
-  const quality = page.locator('[data-priority="best"]');
-  await expect(quality.getByText("Sonnet 5.5")).toBeVisible();
-  // One row each, read across the three picks. Sonnet 5.5: ($2 × 3 + $10) ÷ 4.
-  const cell = (row: string) => page.locator(`[data-pick="best"][data-row="${row}"]`);
-  await expect(cell("__price").getByTestId("pick-price")).toHaveText("$4.00");
-  await expect(cell("__aa").getByTestId("pick-aa-index")).toHaveText(/^\d+\.\d$/);
-  await expect(cell("__score").getByTestId("pick-score")).toHaveText(/^([+−]\d+\.\d|0\.0)$/);
+  const quality = card(page, "best");
+  await expect(quality.getByTestId("pick-model")).toHaveText("Sonnet 5.5");
+  await expect(quality.getByTestId("pick-platform")).toHaveText("Claude Code");
+  await expect(quality.getByTestId("pick-level")).toHaveText("High");
+  // The price is the list price with its output part scaled by the tokens
+  // Sonnet 5.5 writes at High: the figure a roadmap's ladder prints.
+  const sonnet = getModelRows().find((m) => m.name === "Sonnet 5.5")!;
+  await expect(quality.getByTestId("pick-price")).toHaveText(`$${effortPrice(sonnet, "high").toFixed(2)}`);
+  await expect(quality.getByTestId("pick-aa-index")).toHaveText(/^\d+\.\d$/);
+  await expect(quality.getByTestId("pick-score")).toHaveText(/^([+−]\d+\.\d|0\.0)$/);
   await expect(page.getByTestId("pick-price")).toHaveCount(3);
   await expect(page.getByTestId("pick-score")).toHaveCount(3);
   // Seven S→D letters per pick, each marked measured or estimated.
   await expect(page.getByTestId("pick-ratings")).toHaveCount(3);
   await expect(page.getByTestId("pick-ratings").first().locator("[data-basis]")).toHaveCount(7);
-  // Hovering the AA Index opens the same card /models shows, and the Score
-  // the card that shows how it adds up.
-  await cell("__aa").getByTestId("pick-aa-index").hover();
+  // Hovering the AA Index opens the same card /models shows, the price how
+  // it is read, and the Score the card that shows how it adds up.
+  await quality.getByTestId("pick-aa-index").hover();
   await expect(page.getByTestId("frontier-point-card")).toBeVisible();
   await page.mouse.move(2, 2);
   await expect(page.getByTestId("frontier-point-card")).toHaveCount(0);
-  await cell("__score").getByTestId("pick-score").hover();
+  await quality.getByTestId("pick-price").hover();
+  await expect(page.getByTestId("price-card")).toContainText(/at High this one writes \d+\.\d\d× the tokens a typical model writes at High/);
+  await page.mouse.move(2, 2);
+  await quality.getByTestId("pick-score").hover();
   await expect(page.getByTestId("score-breakdown")).toBeVisible();
   // The pick runs at High: its Score prices the tokens it draws there, as the
   // chart places it, not the bare list price.
@@ -147,16 +170,76 @@ test("the chart plots the picks among the catalog", async ({ page }) => {
   await fulfill(page, FIXTURE);
   await openFreeText(page);
   await ask(page);
-  await expect(page.getByTestId("picks-chart")).toBeVisible();
-  await expect(page.getByTestId("picks-chart-pick")).toHaveCount(3);
+  const chart = page.getByTestId("picks-chart");
+  await expect(chart).toBeVisible();
+  await expect(chart.getByTestId("picks-chart-pick")).toHaveCount(3);
   // Signed out there are no saved Settings: the whole catalog's frontier.
   await expect(page.getByTestId("picks-chart-scope")).toContainText("measured models");
-  await expect(page.getByTestId("picks-chart-outside")).toHaveCount(0);
-  // Each model at its measured efforts, and each pick at the effort it runs.
-  expect(await page.getByTestId("picks-chart-effort-path").count()).toBeGreaterThan(0);
-  await expect(
-    page.getByRole("button", { name: /^Cost pick: Gemini 3\.8 Flash · Medium,/ }),
-  ).toHaveCount(1);
+  // Each pick at the effort it runs.
+  await expect(page.getByRole("button", { name: /^Cost pick: Gemini 3\.8 Flash · Medium,/ })).toHaveCount(1);
+  // A model's efforts are joined for the selected pick alone, until a point is hovered.
+  await expect(chart.locator('[data-testid="picks-chart-effort-path"][data-path="selected"]')).toHaveCount(1);
+  await expect(chart.locator('[data-testid="picks-chart-effort-path"][data-path="active"]')).toHaveCount(0);
+  // Clicking a pick's marker selects its card.
+  await chart.locator('[data-testid="picks-chart-pick"][data-pick="cheap"]').click();
+  await expect(card(page, "cheap")).toHaveAttribute("data-selected", "1");
+  await expect(page.getByTestId("pick-detail")).toHaveAttribute("data-pick", "cheap");
+});
+
+// What made the old chart unreadable: a name beside every other dot. Only a
+// model on the cost/quality frontier is named, once, and no name covers a dot.
+async function expectFrontierOnlyLabels(page: Page) {
+  const chart = page.getByTestId("picks-chart");
+  await expect(chart.getByTestId("picks-chart-label").first()).toBeAttached();
+  const report = await chart.evaluate((el) => {
+    const targets = [...el.querySelectorAll<SVGCircleElement>('[data-testid="picks-chart-point"], [data-testid="picks-chart-pick"]')].map((c) => ({
+      key: c.getAttribute("data-key")!,
+      model: c.getAttribute("data-model-id")!,
+      frontier: c.getAttribute("data-frontier") === "1",
+      cx: Number(c.getAttribute("cx")),
+      cy: Number(c.getAttribute("cy")),
+    }));
+    const byKey = new Map(targets.map((t) => [t.key, t]));
+    const labels = [...el.querySelectorAll('[data-testid="picks-chart-label"]')].map((g) => {
+      const rect = g.querySelector("rect")!;
+      return {
+        key: g.getAttribute("data-key")!,
+        text: g.querySelector("text")!.textContent ?? "",
+        x: Number(rect.getAttribute("x")),
+        y: Number(rect.getAttribute("y")),
+        w: Number(rect.getAttribute("width")),
+        h: Number(rect.getAttribute("height")),
+      };
+    });
+    return {
+      labels: labels.map((l) => ({ ...l, frontier: byKey.get(l.key)?.frontier ?? false, model: byKey.get(l.key)?.model ?? null })),
+      covered: labels.flatMap((l) =>
+        targets
+          .filter((t) => t.key !== l.key && t.cx > l.x && t.cx < l.x + l.w && t.cy > l.y && t.cy < l.y + l.h)
+          .map((t) => `${l.text} covers ${t.key}`),
+      ),
+      frontierModels: new Set(targets.filter((t) => t.frontier).map((t) => t.model)).size,
+    };
+  });
+  expect(report.labels.length).toBeGreaterThan(0);
+  for (const label of report.labels) expect(label.frontier, `${label.text} names a frontier point`).toBe(true);
+  // One name per model, never more names than frontier models.
+  expect(new Set(report.labels.map((l) => l.model)).size).toBe(report.labels.length);
+  expect(report.labels.length).toBeLessThanOrEqual(report.frontierModels);
+  expect(report.covered).toEqual([]);
+}
+
+test("only models on the frontier are named on the chart, and no name covers a dot", async ({ page }) => {
+  await fulfill(page, FIXTURE);
+  await openFreeText(page);
+  // Before an answer: the frontier alone.
+  await expectFrontierOnlyLabels(page);
+  await ask(page);
+  await expect(page.getByTestId("recommend-result")).toBeVisible();
+  await expectFrontierOnlyLabels(page);
+  // Narrow, the rule holds with fewer names.
+  await page.setViewportSize({ width: 820, height: 900 });
+  await expectFrontierOnlyLabels(page);
 });
 
 test("renders the backup row with its platform and effort", async ({ page }) => {
@@ -172,10 +255,14 @@ test("renders the backup row with its platform and effort", async ({ page }) => 
   );
   await openFreeText(page);
   await ask(page);
-  await expect(page.getByText("Backup", { exact: true })).toBeVisible();
-  await expect(page.getByText(/GPT-5\.5/)).toBeVisible();
+  const backup = page.getByTestId("rank-backup");
+  await expect(backup).toContainText("Backup");
+  await expect(backup).toContainText("GPT-5.5");
   // Running the backup needs where and at what level, not just its name.
-  await expect(page.getByTestId("backup-detail").first()).toHaveText("Codex · Intelligence: High");
+  await expect(page.getByTestId("backup-detail").first()).toHaveText("Codex · High");
+  // An answer from before the ranks carries no Runner-up, so no such row.
+  await expect(page.getByTestId("rank-runner_up")).toHaveCount(0);
+  await expect(page.getByTestId("ladder-note")).toContainText("Each Pick names a Backup from another maker.");
 });
 
 test("each pick's AA Index is read at the effort it runs", async ({ page }) => {
@@ -187,13 +274,12 @@ test("each pick's AA Index is read at the effort it runs", async ({ page }) => {
   await fulfill(page, FIXTURE);
   await openFreeText(page);
   await ask(page);
-  const cell = (pick: string) => page.locator(`[data-pick="${pick}"][data-row="__aa"]`).first();
   // Gemini 3.8 Flash at Medium (its headline row is High); GPT-6 Luna at
   // High on Codex's Intelligence dial (headline Max).
-  await expect(cell("cheap")).toContainText(at("gemini-3.8-flash", "medium"));
-  await expect(cell("cheap").getByTestId("pick-aa-effort")).toHaveText("at Medium");
-  await expect(cell("balanced")).toContainText(at("gpt-6-luna", "high"));
-  await expect(cell("balanced").getByTestId("pick-aa-effort")).toHaveText("at High");
+  await expect(card(page, "cheap").getByTestId("pick-aa-index")).toHaveText(at("gemini-3.8-flash", "medium"));
+  await expect(card(page, "cheap").getByTestId("pick-aa-effort")).toHaveText("at Medium");
+  await expect(card(page, "balanced").getByTestId("pick-aa-index")).toHaveText(at("gpt-6-luna", "high"));
+  await expect(card(page, "balanced").getByTestId("pick-aa-effort")).toHaveText("at High");
 });
 
 test("humanizes settings labels and renders the rationale prominently", async ({ page }) => {
@@ -222,13 +308,18 @@ test("humanizes settings labels and renders the rationale prominently", async ({
   await expect(page.getByText(/Chosen for deep reasoning/i)).toBeVisible();
 });
 
-test("one Effort row carries Codex's Intelligence value", async ({ page }) => {
+test("each pick names its level by its platform's own dial: Intelligence on Codex", async ({ page }) => {
   await fulfill(page, FIXTURE);
   await openFreeText(page);
   await ask(page);
-  const matrix = page.getByTestId("picks-matrix");
-  await expect(matrix.getByText("Effort", { exact: true })).toBeVisible();
-  await expect(matrix.getByText("Intelligence", { exact: true })).toHaveCount(1); // the Codex cell's note, not a row
+  const ladder = page.getByTestId("picks-ladder");
+  // Codex calls its level dial Intelligence; every other surface calls it Effort.
+  await expect(ladder.getByText("Intelligence", { exact: true })).toHaveCount(1);
+  const codex = card(page, "balanced").getByTestId("pick-settings");
+  await expect(codex).toContainText("Intelligence");
+  await expect(card(page, "balanced").getByTestId("pick-level")).toHaveText("High");
+  await expect(card(page, "best").getByTestId("pick-settings")).toContainText("Effort");
+  await expect(card(page, "cheap").getByTestId("pick-level")).toHaveText("Medium");
 });
 
 test("renders the rationale as readable lines with glossary popovers (#270, #269)", async ({ page }) => {
@@ -294,6 +385,180 @@ test("renders sub-headed rationale sections when the service supplies them", asy
   await expect(why.getByRole("heading", { name: "Why this effort" })).toBeVisible();
   await expect(why.getByRole("heading", { name: "How to run it" })).toHaveCount(0);
   await expect(why.getByText(/Max thinking fits the deep, long-context reasoning/i)).toBeVisible();
+});
+
+// --- The ranked ladder: what a roadmap's Settings show, on the page -----------
+
+// A level as the cards word it: the ladder's XHigh is the dials' "Extra high".
+const levelWord = (level: string) => (level === "XHigh" ? "Extra high" : level);
+const usd = (price: number | null) => `$${price!.toFixed(2)}`;
+
+test("each pick is ranked three deep: a Runner-up and a Backup with platform, level, AA Index and price", async ({ page }) => {
+  await fulfill(page, RANKED);
+  await openFreeText(page);
+  await ask(page, "Refactor a 3,000-line Python data pipeline into typed modules with tests.");
+  await expect(page.getByRole("heading", { name: "Your three picks, each with a runner-up and a backup" })).toBeVisible();
+  for (const rec of ranked().recommendations) {
+    const ranks = rec.ranks!;
+    const c = card(page, rec.priority);
+    await expect(c.getByTestId("pick-model")).toHaveText(ranks.pick.model);
+    await expect(c.getByTestId("pick-platform")).toHaveText(ranks.pick.platform);
+    await expect(c.getByTestId("pick-level")).toHaveText(levelWord(ranks.pick.level));
+    await expect(c.getByTestId("pick-price")).toHaveText(usd(ranks.pick.price_usd_per_1m));
+    for (const [rank, option] of [["runner_up", ranks.runner_up!], ["backup", ranks.backup!]] as const) {
+      const row = c.getByTestId(`rank-${rank}`);
+      await expect(row).toContainText(rank === "backup" ? "Backup" : "Runner-up");
+      await expect(row).toContainText(option.model);
+      await expect(row.getByTestId(`${rank}-detail`)).toHaveText(`${option.platform} · ${levelWord(option.level)}`);
+      await expect(row.getByTestId("rank-aa-index")).toHaveText(/^≈?\d+(\.\d)?$/);
+      await expect(row.getByTestId("rank-price")).toHaveText(usd(option.price_usd_per_1m));
+    }
+    // Three makers: the three ranks name three models.
+    expect(new Set([ranks.pick.model, ranks.runner_up!.model, ranks.backup!.model]).size).toBe(3);
+  }
+  // The engine's older single backup is not shown beside the ranks.
+  await expect(page.getByTestId("rank-backup")).toHaveCount(3);
+  await expect(page.getByTestId("rank-runner_up")).toHaveCount(3);
+});
+
+test("the result says what the task was read as, and the ladder what it was ranked for", async ({ page }) => {
+  await fulfill(page, RANKED);
+  await openFreeText(page);
+  await ask(page);
+  await expect(page.getByTestId("ladder-task-category")).toHaveText("Coding");
+  await expect(page.getByTestId("ladder-task-complexity")).toHaveText("High complexity");
+  await expect(page.getByTestId("ladder-task-novel")).toHaveCount(0);
+  const note = page.getByTestId("ladder-note");
+  await expect(note).toContainText("Ranked for coding, high complexity.");
+  await expect(note).toContainText("the Pick, a Runner-up with the Pick’s maker left out, and a Backup with both left out");
+  await expect(note).toContainText("≈ marks an estimate");
+  // An answer from before the field says neither.
+  await page.unroute("**/api/recommend");
+  await fulfill(page, FIXTURE);
+  await page.getByRole("button", { name: "Run again" }).click();
+  await expect(card(page, "best").getByTestId("pick-model")).toHaveText("Sonnet 5.5");
+  await expect(page.getByTestId("ladder-task")).toHaveCount(0);
+  await expect(page.getByTestId("ladder-note")).not.toContainText("Ranked for");
+});
+
+test("a novel task is named as one", async ({ page }) => {
+  const answer = ranked();
+  answer.task = { category: "planning", complexity: "high", novel: true };
+  await fulfill(page, JSON.stringify(answer));
+  await openFreeText(page);
+  await ask(page);
+  await expect(page.getByTestId("ladder-task-category")).toHaveText("Planning");
+  await expect(page.getByTestId("ladder-task-novel")).toHaveText("A new kind of problem");
+  await expect(page.getByTestId("ladder-note")).toContainText("Ranked for planning, high complexity, a new kind of problem.");
+});
+
+test("the chart is drawn over the answer's own frontier, and every pick sits on it", async ({ page }) => {
+  await fulfill(page, RANKED);
+  await openFreeText(page);
+  await ask(page);
+  const chart = page.getByTestId("picks-chart");
+  // The settings the answer's ladder weighed, not the page's own reading of the catalog.
+  await expect(chart).toHaveAttribute("data-served", "1");
+  await expect(page.getByTestId("picks-chart-scope")).toContainText(/\d+ effort settings · \d+ on the frontier/);
+  const picks = chart.getByTestId("picks-chart-pick");
+  await expect(picks).toHaveCount(3);
+  for (const priority of ["cheap", "balanced", "best"] as const) {
+    // Read from the line, plotted on the line, and said to be on it.
+    await expect(chart.locator(`[data-testid="picks-chart-pick"][data-pick="${priority}"]`)).toHaveAttribute("data-frontier", "1");
+    await expect(chart.locator(`[data-testid="picks-chart-pick"][data-pick="${priority}"]`)).toHaveAttribute("data-adequate", "1");
+    await expect(card(page, priority).getByTestId("pick-frontier")).toHaveText("On the frontier");
+  }
+  // A setting below the task's bar is hollow, and the key says so.
+  expect(await chart.locator('[data-adequate="0"]').count()).toBeGreaterThan(0);
+  await expect(chart.getByTestId("picks-chart-bar-legend")).toContainText("below this task’s bar");
+  await expectFrontierOnlyLabels(page);
+  // The Cost pick is the cheapest point on the line that meets the bar.
+  const line = await chart.locator('[data-frontier="1"]').evaluateAll((els) =>
+    els.map((e) => ({ x: Number(e.getAttribute("cx")), adequate: e.getAttribute("data-adequate") === "1", pick: e.getAttribute("data-pick") })),
+  );
+  const cheapest = line.filter((p) => p.adequate).sort((a, b) => a.x - b.x)[0];
+  expect(cheapest.pick).toBe("cheap");
+});
+
+test("an estimate is plotted where the recommender counts it, and its card says so", async ({ page }) => {
+  // The Cost pick's AA Index is roadmodel's estimate: the frontier counts it a
+  // margin lower, and the point's card shows both figures.
+  const answer = ranked();
+  const cost = answer.recommendations.find((r) => r.priority === "cheap")!.ranks!.pick;
+  const point = answer.points!.find((p) => p.model_id === cost.model_id && p.effort === cost.effort)!;
+  expect(point.estimated && point.margin > 0).toBe(true);
+  await fulfill(page, RANKED);
+  await openFreeText(page);
+  await ask(page);
+  await page.locator('[data-testid="picks-chart-pick"][data-pick="cheap"]').hover();
+  const shown = page.getByTestId("picks-chart-card");
+  await expect(shown.getByTestId("frontier-point-counted")).toHaveText((point.aa_index - point.margin).toFixed(1));
+  await expect(shown).toContainText(`counts it ${point.margin.toFixed(1)} points lower for its uncertainty`);
+});
+
+test("a rank no other maker fills is the Pick a level lower, and the note says why", async ({ page }) => {
+  // One maker in reach: the Runner-up is the Pick's own model one level
+  // lower (↓), and the Backup has nothing to name.
+  const answer = ranked();
+  for (const rec of answer.recommendations) {
+    const pick = rec.ranks!.pick;
+    rec.ranks!.runner_up = { ...pick, effort: "low", level: "Low", stepped_down: true };
+    rec.ranks!.backup = null;
+  }
+  await fulfill(page, JSON.stringify(answer));
+  await openFreeText(page);
+  await ask(page);
+  const quality = card(page, "best");
+  const runner = quality.getByTestId("rank-runner_up");
+  await expect(runner).toContainText(answer.recommendations.find((r) => r.priority === "best")!.model);
+  await expect(runner.getByTestId("rank-stepped-down")).toHaveText("↓");
+  await expect(quality.getByTestId("rank-backup")).toContainText("No other maker’s model in reach");
+  const note = page.getByTestId("ladder-note-stepped");
+  await expect(note).toContainText("↓ is the Pick’s own model one level lower");
+  await expect(note.getByRole("link", { name: /Add another maker’s plan or API key/ })).toHaveAttribute("href", "/settings");
+  await expect(page.getByTestId("ladder-note")).not.toContainText("a Runner-up with the Pick’s maker left out");
+});
+
+test("selecting a pick shows its reasoning and its cost by platform", async ({ page }) => {
+  await fulfill(page, RANKED);
+  await openFreeText(page);
+  await ask(page);
+  const answer = ranked();
+  const detail = page.getByTestId("pick-detail");
+  // The answer leads with the viewer's default tier.
+  await expect(detail).toHaveAttribute("data-pick", answer.primary);
+  await expect(card(page, answer.primary)).toHaveAttribute("data-selected", "1");
+  for (const rec of answer.recommendations) {
+    await card(page, rec.priority).click();
+    await expect(detail).toHaveAttribute("data-pick", rec.priority);
+    await expect(detail.getByRole("heading", { name: `Why ${rec.model}?` })).toBeVisible();
+    await expect(detail.getByText(rec.rationale_sections!.pick)).toBeVisible();
+    // Its list prices, stated once, then what it costs on each platform.
+    await expect(detail.getByTestId("cost-list-price")).toContainText(`${rec.model} lists at`);
+    await expect(detail.getByRole("columnheader", { name: "Your cost" })).toBeVisible();
+  }
+  // The detail's own tabs switch the pick too.
+  await detail.getByRole("tab", { name: "Cost" }).click();
+  await expect(card(page, "cheap")).toHaveAttribute("data-selected", "1");
+});
+
+test("a ranked answer reopens from this browser with its ranks and its frontier", async ({ page }) => {
+  let calls = 0;
+  await page.route("**/api/recommend", async (route) => {
+    calls += 1;
+    await route.fulfill({ status: 200, contentType: "application/json", body: RANKED });
+  });
+  await openFreeText(page);
+  await ask(page, "a ranked task worth remembering");
+  await expect(page.getByTestId("recommend-result")).toBeVisible();
+  await page.reload();
+  await page.getByTestId("saved-recommendations").getByRole("button", { name: /^a ranked task worth remembering/ }).click();
+  await expect(page.getByTestId("recommend-result")).toBeVisible();
+  // What a saved entry keeps is enough to draw the whole answer again.
+  await expect(page.getByTestId("rank-runner_up")).toHaveCount(3);
+  await expect(page.getByTestId("ladder-task-category")).toHaveText("Coding");
+  await expect(page.getByTestId("picks-chart")).toHaveAttribute("data-served", "1");
+  expect(calls).toBe(1);
 });
 
 test("the engine menu offers the evaluated engines an invited member may use, and remembers the choice", async ({
