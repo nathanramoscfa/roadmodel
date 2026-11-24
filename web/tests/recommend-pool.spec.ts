@@ -159,6 +159,8 @@ test.describe("signed in with saved Settings", () => {
     await expect(chart).toContainText("Your cost/quality frontier");
     await expect(page.getByTestId("picks-chart-scope")).toContainText("models you can use");
     await expect(chart.getByTestId("picks-chart-pick")).toHaveCount(0);
+    // No pick, so no selected pick's line and no key for one.
+    await expect(chart.getByTestId("picks-chart-path-legend")).toHaveCount(0);
     const ids = await chart
       .getByTestId("picks-chart-point")
       .evaluateAll((els) => els.map((e) => e.getAttribute("data-model-id")));

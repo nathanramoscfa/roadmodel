@@ -18,8 +18,8 @@
 //     is set in the accent colour;
 //   - a point below the task's bar is hollow, so Cost reads as what it is:
 //     the cheapest filled point on the line;
-//   - a model's efforts are joined only for the selected pick and for the
-//     point under the pointer.
+//   - a model's efforts are joined only for the selected pick (the blue
+//     line, which the key names) and for the point under the pointer.
 // /models plots each model once, at its headline figures.
 //
 // Hover (mouse), tap (touch) or tab to (keyboard) any dot for the card
@@ -645,6 +645,25 @@ export function PicksChart({
               </LegendSwatch>
               A pick: {PRIORITY_LABEL.cheap.letter} Cost, {PRIORITY_LABEL.balanced.letter} Balanced,{" "}
               {PRIORITY_LABEL.best.letter} Quality
+            </li>
+          )}
+          {/* The blue line, while one is drawn: the selected pick's model at
+              each effort the chart plots it at. */}
+          {selectedPick && selectedPath.length > 1 && (
+            <li className="inline-flex items-center gap-1.5" data-testid="picks-chart-path-legend">
+              <LegendSwatch>
+                <path
+                  d="M 2.5 11.5 L 11 8 L 19.5 2.5"
+                  fill="none"
+                  strokeWidth={1.5}
+                  strokeOpacity={0.6}
+                  className="stroke-brand-accent"
+                />
+                <circle cx={2.5} cy={11.5} r={2} className="fill-brand-slate-400 dark:fill-brand-slate-500" />
+                <circle cx={11} cy={8} r={2} className="fill-brand-slate-400 dark:fill-brand-slate-500" />
+                <circle cx={19.5} cy={2.5} r={2} className="fill-brand-accent" />
+              </LegendSwatch>
+              Selected pick: {selectedPick.point.row.name} at each effort
             </li>
           )}
           <li className="inline-flex items-center gap-1.5">
