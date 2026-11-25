@@ -126,23 +126,10 @@ export function inPool(data: PicksData, row: SlimRow): boolean {
   return data.pool === null || data.pool.includes(row.id);
 }
 
-export function rowForPick(
-  data: PicksData,
-  model: string | null | undefined,
-  settings?: Record<string, unknown> | null,
-): SlimRow | null {
+export function rowForPick(data: PicksData, model: string | null | undefined): SlimRow | null {
   if (!model) return null;
   const id = data.keys[nameKey(model)];
-  const row = id ? (data.rows[id] ?? null) : null;
-  const effort = String(settings?.effort ?? settings?.thinking ?? "").toLowerCase().replace(/[\s_-]/g, "");
-  const ultracode = String(settings?.ultracode ?? "").toLowerCase() === "on" || effort === "ultracode";
-  if (!ultracode) return row?.configuration?.settings.ultracode === "On" ? null : row;
-  const level = effort === "extrahigh" || effort === "ultracode" ? "xhigh" : effort;
-  return Object.values(data.rows).find((r) => {
-    const configuration = r.configuration;
-    return configuration?.settings.ultracode === "On" && configuration.effort === level &&
-      (r.id === id || nameKey(configuration.pickerModel) === nameKey(model));
-  }) ?? null;
+  return id ? (data.rows[id] ?? null) : null;
 }
 
 export function blendedOf(row: Pick<ModelRow, "input_price_per_1m" | "output_price_per_1m">): number {

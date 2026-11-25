@@ -22,7 +22,7 @@
 // narrows what is shown; the Score is the whole-catalog fit throughout.
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 
 import type { ScoreFit } from "@/lib/benchmark-grid";
 import type { ModelRow } from "@/lib/catalog-fields";
@@ -51,7 +51,6 @@ import { ScoreCharts } from "./ScoreCharts";
 
 export function ModelsExplorer({
   models,
-  children,
   generatedAt,
   benchmarksGeneratedAt,
   measuredCount,
@@ -59,7 +58,6 @@ export function ModelsExplorer({
   prefs,
 }: {
   models: ModelRow[];
-  children?: ReactNode;
   generatedAt: string;
   benchmarksGeneratedAt: string;
   measuredCount: number;
@@ -128,7 +126,6 @@ export function ModelsExplorer({
           onGroupChoiceChange={changeGrouping}
           initialView={prefs.view}
         />
-        {children}
         <ScoreCharts rows={shown} pool={pool} fit={scoreFit} filter={chartFilter} grouping={grouping} />
       </div>
     </FrontierScope.Provider>

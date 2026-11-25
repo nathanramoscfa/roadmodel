@@ -38,36 +38,6 @@ import { effortWord, headlinePrice, resolveTokenMultipliers, type EffortTokensDo
 import { isNewer } from "../lib/series";
 import { liveCatalog } from "./fixtures/live-catalog";
 
-test("unscored Orchestrator and Ultracode configurations appear in platform details", async ({ page }) => {
-  await page.goto("/models");
-  await page.getByRole("link", { name: "Platform details", exact: true }).click();
-  await expect(page).toHaveURL(/#platform-details$/);
-  const details = page.getByRole("region", { name: "Platform details" });
-  const catalog = page.getByTestId("model-catalog");
-  const models = getModelRows();
-  for (const planner of ["Neon", "Carbon", "Argon"]) {
-    const name = `Orchestrator (${planner})`;
-    const card = details.getByRole("listitem").filter({ has: page.getByRole("heading", { name, exact: true }) });
-    await expect(card).toContainText("Fixed");
-    await expect(card).toContainText(`Gemini 4 ${planner}`);
-    await expect(card).toContainText("Gemini 4 Hydrogen");
-    await expect(card.locator("dd").last()).toHaveText(
-      planner === "Carbon" ? "Google AI Ultra" : "Google AI Ultra and eligible Google AI Pro accounts",
-    );
-    await expect(catalog.getByRole("row").filter({ hasText: name })).toHaveCount(0);
-    expect(models.some((model) => model.name === name)).toBe(false);
-  }
-  const carbon = details.getByRole("listitem").filter({ hasText: "Orchestrator (Carbon)" });
-  await expect(carbon).toContainText("24% less quota use and 19% faster completion");
-  await expect(carbon.getByRole("link", { name: "Google’s benchmark results" })).toHaveAttribute(
-    "href", "https://antigravity.google/blog/gemini-4-hydrogen-in-google-antigravity/",
-  );
-  const ultracode = details.getByRole("listitem").filter({ hasText: "Opus 5.5 + Ultracode" });
-  await expect(ultracode).toContainText("High · Ultracode On");
-  await expect(catalog.getByRole("row").filter({ hasText: "Opus 5.5 + Ultracode" })).toHaveCount(0);
-  expect(models.some((model) => model.name === "Opus 5.5 + Ultracode")).toBe(false);
-});
-
 // Expected row counts are DERIVED from the catalog the page renders, never
 // hardcoded. The catalog grows whenever the daily refresh cron picks up a new
 // upstream model, and a hardcoded count turns every one of those cron PRs red

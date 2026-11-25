@@ -101,12 +101,6 @@ async function main() {
 
   await mkdir(DEST_DIR, { recursive: true });
   await writeFile(DEST, raw, "utf8");
-  const configurations = await readFile(path.join(repoRoot, "docs", "agent-configurations.json"), "utf8");
-  const configurationDoc = JSON.parse(configurations);
-  if (configurationDoc.schema_version !== 1 || !Array.isArray(configurationDoc.configurations)) {
-    throw new Error("agent-configurations.json has an incompatible schema");
-  }
-  await writeFile(path.join(DEST_DIR, "agent-configurations.json"), configurations, "utf8");
   console.log(
     `[sync-catalog] copied ${parsed.models.length} models → ${path.relative(webRoot, DEST)}`,
   );

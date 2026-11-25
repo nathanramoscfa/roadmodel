@@ -222,10 +222,7 @@ function option(data: PicksData, frontier: Frontier, src: OptionSource): OptionV
   const word = shown.word;
   const effort = src.effort != null ? pickEffort({ effort: src.effort }) : shown.effort;
   const ultracode = src.ultracode === true;
-  const base = rowForPick(data, src.model, {
-    effort: src.effort ?? src.level ?? "",
-    ...(ultracode ? { ultracode: "On" } : {}),
-  });
+  const base = rowForPick(data, src.model);
   const at = base
     ? pickAtEffort(data, base, effort, { index: src.aa, indexEstimated: src.aaEstimated, price: src.price })
     : null;

@@ -9,14 +9,10 @@ import benchmarks from "@/data/benchmarks.json";
 import effortTokens from "@/data/effort-tokens.json";
 import effortRatings from "@/data/effort-ratings.json";
 import indexEstimates from "@/data/index-estimates.json";
-import configurationDoc from "@/data/agent-configurations.json";
 
 import {
   CATEGORY_ORDER,
   modelProvider,
-  platformProvider,
-  RATING_RANK,
-  type AgentConfigurationRow,
   type Category,
   type CostTier,
   type ModelRow,
@@ -231,95 +227,6 @@ function benchRowFor(id: string): BenchRow | null {
   return { aa_slug: raw.aa_slug, aa_name: raw.aa_name, release_date: raw.release_date ?? null, values };
 }
 
-interface RawConfiguration {
-  id: string;
-  name: string;
-  platform_id: string;
-  model_id: string | null;
-  effort: string | null;
-  settings: Record<string, string>;
-  roles: { role: string; model: string }[];
-  source: string;
-  availability: string;
-  description: string;
-  benchmark_note?: AgentConfigurationRow["configuration"]["benchmarkNote"];
-  evidence: {
-    configuration_id: string;
-    source: string;
-    aa_index?: { value: number; kind: "measured" | "estimated"; band?: number };
-    price?: { input_per_1m: number; output_per_1m: number };
-    grades?: Partial<Record<Category, Rating>>;
-  } | null;
-}
-
-function configurationRows(): AgentConfigurationRow[] {
-  return (configurationDoc.configurations as RawConfiguration[]).flatMap((entry) => {
-    const platform = RAW_METHODS.find((method) => method.id === entry.platform_id);
-    if (!platform?.name) return [];
-    const evidence = entry.evidence?.configuration_id === entry.id && entry.evidence.source.startsWith("https://")
-      ? entry.evidence : null;
-    const index = evidence?.aa_index;
-    const validIndex = index && Number.isFinite(index.value) && index.value >= 0 && index.value <= 100 &&
-      (index.kind === "measured" || (index.kind === "estimated" && (index.band ?? 0) > 0 && (index.band ?? 0) <= 100));
-    const price = evidence?.price;
-    const validPrice = price && Number.isFinite(price.input_per_1m) && price.input_per_1m >= 0 &&
-      Number.isFinite(price.output_per_1m) && price.output_per_1m >= 0.000001;
-    const output = validPrice ? price.output_per_1m : null;
-    return [{
-      id: entry.id,
-      name: entry.name,
-      provider: platformProvider(platform.provider ?? "")?.label ?? null,
-      jurisdiction: platform.provider_jurisdiction,
-      open_weights: false,
-      input_price_per_1m: validPrice ? price.input_per_1m : null,
-      output_price_per_1m: output,
-      cache_read_per_1m: null,
-      tier_cost: output === null ? null : output < 10 ? "low" : output < 15 ? "medium" : output < 25 ? "high" : "very-high",
-      tiers: Object.fromEntries(CATEGORY_ORDER.flatMap((cat) => {
-        const grade = evidence?.grades?.[cat];
-        return grade && Object.hasOwn(RATING_RANK, grade) ? [[cat, grade]] : [];
-      })),
-      configuration: {
-        platform: platform.name,
-        pickerModel: entry.model_id ? nameOf(entry.model_id) : entry.name,
-        effort: entry.effort,
-        settings: entry.settings,
-        roles: entry.roles,
-        availability: entry.availability,
-        source: entry.source,
-        evidenceSource: evidence?.source ?? null,
-        benchmarkNote: entry.benchmark_note,
-      },
-      headline_benchmarks: "",
-      pricing_notes: "",
-      best_for: entry.description,
-      aa_index: validIndex ? index.value : null,
-      aa_index_source: validIndex ? (index.kind === "estimated" ? "estimated" : "cited") : null,
-      aa_index_band: validIndex ? index.band ?? null : null,
-      aa_index_effort: entry.effort,
-      bench: null,
-      value_score: null,
-      value_frontier: false,
-      value_beaten_by: null,
-      superseded_by: null,
-      superseded_on: null,
-      retires_on: null,
-      added_on: null,
-      new_until: null,
-    }];
-  });
-}
-
-function fullyRated(row: AgentConfigurationRow): row is AgentConfigurationRow & ModelRow {
-  return row.aa_index !== null && row.input_price_per_1m !== null &&
-    row.output_price_per_1m !== null && row.tier_cost !== null &&
-    CATEGORY_ORDER.every((cat) => row.tiers[cat] !== undefined);
-}
-
-export function getUnscoredConfigurations(): AgentConfigurationRow[] {
-  return configurationRows().filter((row) => !fullyRated(row));
-}
-
 // `now` decides which models carry the "New" tag (lib/benchmark-grid
 // newUntil); the page renders per request, so the tag clears on its own.
 export function getModelRows(now: Date = new Date()): ModelRow[] {
@@ -389,7 +296,7 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
   });
   // The frontier across the whole catalog; the page re-marks it over the
   // models its Provider and Jurisdiction filters keep (lib/catalog-filter).
-  const marked = withFrontier([...rows, ...configurationRows().filter(fullyRated)]);
+  const marked = withFrontier(rows);
   const fit = getScoreFit(marked);
   for (const r of marked) {
     r.value_score = scoreFor(
@@ -408,10 +315,10 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
 // estimated model still gets a Score against that line.
 export function getScoreFit(
   rows: readonly (Pick<ModelRow, "input_price_per_1m" | "output_price_per_1m" | "aa_index"> &
-    Partial<Pick<ModelRow, "aa_index_source" | "aa_index_effort" | "token_multiplier_by_effort" | "configuration">>)[],
+    Partial<Pick<ModelRow, "aa_index_source" | "aa_index_effort" | "token_multiplier_by_effort">>)[],
 ): ScoreFit | null {
   return fitScoreModel(
-    rows.flatMap((r) => r.configuration || r.aa_index_source === "inherited" || r.aa_index_source === "estimated"
+    rows.flatMap((r) => r.aa_index_source === "inherited" || r.aa_index_source === "estimated"
       ? [] : [{ price: headlinePrice(r), index: r.aa_index }]),
   );
 }
