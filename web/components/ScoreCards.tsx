@@ -471,6 +471,13 @@ function IndexEvidenceBlock({ evidence: e }: { evidence: IndexEvidence }) {
   );
 }
 
+// Subscript ten for log₁₀, kept as one unit so it never wraps apart.
+const LOG10 = (
+  <span className="whitespace-nowrap">
+    log<sub className="text-[0.7em]">10</sub>
+  </span>
+);
+
 export function ScoreBreakdownCard({
   model: m,
   fit,
@@ -504,29 +511,60 @@ export function ScoreBreakdownCard({
   if (!b) return null;
   const s = b.shown;
   const sigma = fit.sigma;
-  const adj = Math.abs(s.priceAdjustment);
-  const ratio = b.priceRatio;
+  // How far the market line moves from the catalog average to this model's
+  // price (positive above the midpoint, negative below), matching s.expected
+  // − s.marketMean to the tenth.
+  const delta = -s.priceAdjustment;
+  const absDelta = Math.abs(delta);
+  const perDouble = b.slope * Math.log10(2);
+  const factor = delta >= 0 ? Math.max(1, b.priceRatio) : Math.max(1, 1 / b.priceRatio);
+  const factorText = factor >= 10 ? factor.toFixed(1) : factor.toFixed(2);
+  const rangeText = `${usd(fit.minPrice)}–${usd(fit.maxPrice)}`;
 
-  let priceSentence: string;
-  if (adj === 0) {
-    priceSentence = `${m.name} costs about the market's typical price, so the adjustment is zero.`;
-  } else if (s.priceAdjustment < 0) {
-    priceSentence = `${m.name} costs ${ratio.toFixed(2)}× the typical market price. Pricier models usually score higher, so ${num(adj)} of its points are credited to price and taken off.`;
+  let marketLineSentence: ReactNode;
+  if (absDelta === 0) {
+    marketLineSentence = (
+      <>
+        The {b.marketN} measured models span {rangeText} (geometric midpoint {usd(b.typicalPrice)}).
+        At {usd(b.price)}, right at that midpoint, the market line sits at the {num(s.marketMean)}{" "}
+        average.
+      </>
+    );
+  } else if (delta > 0) {
+    marketLineSentence = (
+      <>
+        The {b.marketN} measured models span {rangeText} (geometric midpoint {usd(b.typicalPrice)}).
+        At {usd(b.price)} ({factorText}× that midpoint), the log-scale line adds{" "}
+        <span className="tabular-nums">
+          {num(b.slope)} × {LOG10}({factorText}) = +{num(absDelta)}
+        </span>{" "}
+        points to the {num(s.marketMean)} average, giving {num(s.expected)}.
+      </>
+    );
   } else {
-    priceSentence = `${m.name} costs ${ratio.toFixed(2)}× the typical market price. Cheaper models usually score lower, so the ${num(adj)} points its price predicts it would lose are added back.`;
+    marketLineSentence = (
+      <>
+        The {b.marketN} measured models span {rangeText} (geometric midpoint {usd(b.typicalPrice)}).
+        At {usd(b.price)} ({factorText}× below that midpoint), the log-scale line subtracts{" "}
+        <span className="tabular-nums">
+          {num(b.slope)} × {LOG10}({factorText}) = {num(absDelta)}
+        </span>{" "}
+        points from the {num(s.marketMean)} average, giving {num(s.expected)}.
+      </>
+    );
   }
 
   const outside = Math.abs(b.score) >= sigma;
   const bandSentence = outside
-    ? `Outside the ±${num(sigma)} tie band, so this is a real ${b.score > 0 ? "lead over" : "shortfall against"} the line, not noise.`
-    : `Inside the ±${num(sigma)} tie band: within the line's normal scatter, so treat it as a tie.`;
+    ? `Outside the ±${num(sigma)} tie band: a clear ${b.score > 0 ? "lead over" : "shortfall against"} the market line.`
+    : `Inside the ±${num(sigma)} tie band: within the line\u2019s normal scatter, so treat it as a tie.`;
 
   return (
     <div className="w-[22rem] max-w-full" data-testid="score-breakdown">
       <CardHeader name={m.name} tier={m.tier_cost} />
       <p className={"mt-1 text-xs leading-[1.125rem] " + MUTED}>
-        Score: AA Index points above (+) or below (−) what this model&rsquo;s effort-adjusted
-        price predicts on the market line.
+        Score: AA Index points above (+) or below (−) what the market line expects at this
+        model&rsquo;s {activeEffort ? "effort-adjusted" : "blended"} price.
       </p>
 
       <div className="mt-3 rounded-md bg-brand-slate-50 px-3 py-2.5 dark:bg-brand-slate-900/70">
@@ -541,19 +579,14 @@ export function ScoreBreakdownCard({
               : num(s.index)
           }
           valueClass={STRONG}
+          testId="score-breakdown-index"
         />
         <Row
-          label={`Market average (${b.marketN} models)`}
-          value={`− ${num(s.marketMean)}`}
+          label={`Expected at ${usd(b.price)} (market line)`}
+          value={`− ${num(s.expected)}`}
           valueClass={STRONG}
+          testId="score-breakdown-expected"
         />
-        <div className={"my-1.5 border-t " + RULE} />
-        <Row
-          label={s.vsAverage >= 0 ? "Above the market average" : "Below the market average"}
-          value={formatScore(s.vsAverage)}
-          valueClass={STRONG}
-        />
-        <Row label="Price adjustment" value={formatScore(s.priceAdjustment)} valueClass={STRONG} />
         <div className={"mt-1.5 border-t-2 border-double pt-1.5 " + RULE}>
           <Row
             label={<span className={"font-semibold " + STRONG}>Score</span>}
@@ -566,32 +599,46 @@ export function ScoreBreakdownCard({
 
       <div className="mt-3">
         <p className={"mb-1 text-[11px] font-semibold uppercase tracking-wide " + MUTED}>
-          The price adjustment
+          {activeEffort ? "Effort-adjusted price" : "Blended price"}
         </p>
         <Row
-          label={activeEffort ? `Price at ${activeEffort.label}` : "Blended price"}
+          label={activeEffort ? `Price at ${activeEffort.label}` : "3 input : 1 output"}
           value={`${usd(b.price)} per 1M tokens`}
           valueClass={STRONG}
         />
-        <p className={"-mt-0.5 mb-1 text-right text-xs tabular-nums " + MUTED}>
+        <p className={"-mt-0.5 text-right text-xs tabular-nums " + MUTED}>
           (3 × {formatUsd(m.input_price_per_1m)} input + {formatUsd(m.output_price_per_1m)} output
           {activeEffort && <> × {activeEffort.tokenShare.toFixed(2)}</>}) ÷ 4
         </p>
         {activeEffort && (
-          <p className={"mb-1 text-xs leading-[1.125rem] " + MUTED} data-testid="score-breakdown-effort">
-            The per-token price is the same at every effort, but the tokens drawn are not: at{" "}
-            {activeEffort.label} the model draws {activeEffort.tokenShare.toFixed(2)}× what a typical model
-            draws at High. Its output is priced at that, its input as listed, so it is priced here
-            at {usd(b.price)} rather than its {usd(listPrice)} list price, as on the chart below.
+          <p className={"mt-1 text-xs leading-[1.125rem] " + MUTED} data-testid="score-breakdown-effort">
+            Blends 3 input + 1 output ({usd(listPrice)} list). At {activeEffort.label} effort, this
+            model writes {activeEffort.tokenShare.toFixed(2)}× the output tokens of a typical model
+            at High, bringing its effective blended price to {usd(b.price)}.
           </p>
         )}
+      </div>
+
+      <div className={"mt-3 border-t pt-2.5 " + RULE}>
+        <p className={"mb-1 text-[11px] font-semibold uppercase tracking-wide " + MUTED}>
+          How the market line predicts {num(s.expected)}
+        </p>
         <Row
-          label="Typical market price"
-          value={`${usd(b.typicalPrice)} per 1M tokens`}
+          label={`Catalog midpoint (${b.marketN} models)`}
+          value={`${num(s.marketMean)} AA at ${usd(b.typicalPrice)}`}
           valueClass={STRONG}
         />
-        <Row label="Price effect" value={`${num(b.slope)} points per 10× price`} valueClass={STRONG} />
-        <p className="mt-1.5 text-xs leading-[1.125rem]">{priceSentence}</p>
+        <Row
+          label="Price slope"
+          value={`${formatScore(perDouble)} pts per 2× price`}
+          valueClass={STRONG}
+        />
+        <p className={"-mt-0.5 text-right text-xs tabular-nums " + MUTED}>
+          ({formatScore(b.slope)} pts per 10×)
+        </p>
+        <p className="mt-1.5 text-xs leading-[1.125rem]" data-testid="score-breakdown-market">
+          {marketLineSentence}
+        </p>
       </div>
 
       <div className={"mt-3 space-y-1.5 border-t pt-2.5 text-xs leading-[1.125rem] " + RULE}>
@@ -674,13 +721,6 @@ export function ModelPointCard({
   );
 }
 
-// Subscript ten for log₁₀, kept as one unit so it never wraps apart.
-const LOG10 = (
-  <span className="whitespace-nowrap">
-    log<sub className="text-[0.7em]">10</sub>
-  </span>
-);
-
 export function PriceLineCard({
   fit,
   atPrice,
@@ -719,7 +759,8 @@ export function PriceLineCard({
         <dd>Intercept: the line&rsquo;s height at p&nbsp;=&nbsp;$1</dd>
         <dt className={"font-semibold tabular-nums " + STRONG}>{num(fit.slope)}</dt>
         <dd>
-          Slope: AA Index points per 10× price, one continuous line across the whole catalog
+          Slope: AA Index points per 10× price ({formatScore(fit.slope * Math.log10(2))} per 2×),
+          one continuous line across the whole catalog
         </dd>
       </dl>
 
