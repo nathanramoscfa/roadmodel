@@ -100,7 +100,6 @@ import {
 } from "@/lib/catalog-fields";
 import { savePrefs, type Grouping, type View } from "@/lib/models-prefs";
 import { INPUT_CLASS, LABEL_CLASS, SEGMENTED_CLASS } from "./CatalogFilterBar";
-import { ConfigurationDetail, ConfigurationEvidence, configurationLevel } from "./ConfigurationDetails";
 import { HoverCard } from "./FloatingCard";
 import { GlossaryTerm } from "./GlossaryTerm";
 import {
@@ -838,7 +837,6 @@ export function ModelCatalog({
                     <tr
                       data-testid="model-row"
                       data-model-id={m.id}
-                      data-agent-configuration={m.configuration ? m.id : undefined}
                       data-tier-cost={m.tier_cost}
                       data-weights={m.open_weights ? "open" : "closed"}
                       className="group/row align-middle hover:bg-brand-slate-50 dark:hover:bg-brand-slate-800/40"
@@ -866,11 +864,7 @@ export function ModelCatalog({
                           STICKY_CELL
                         }
                       >
-                        {m.configuration ? (
-                          <button type="button" aria-expanded={isOpen} onClick={() => toggleExpand(m.id)} className="text-left hover:text-brand-accent">
-                            {m.name}
-                          </button>
-                        ) : provider ? (
+                        {provider ? (
                           <a
                             href={provider.docUrl}
                             target="_blank"
@@ -966,9 +960,7 @@ export function ModelCatalog({
                                 data-testid="aa-index-estimate"
                                 data-source="estimated"
                                 title={
-                                  m.configuration
-                                    ? `Roadmodel estimate for this configuration (±${m.aa_index_band} points)`
-                                    : m.aa_estimate_method === "prior"
+                                  m.aa_estimate_method === "prior"
                                     ? `Estimated by roadmodel from measured catalog peers at ${m.name}'s price and role (±${m.aa_index_band}), until Artificial Analysis measures it`
                                     : m.aa_estimate_method === "predecessor"
                                       ? `Estimated by roadmodel from ${m.aa_estimate_anchors?.[0] ?? m.aa_inherited_from}'s measured AA Index (±${m.aa_index_band}), until Artificial Analysis measures ${m.name}`
@@ -990,9 +982,7 @@ export function ModelCatalog({
                           data-effort={m.aa_index_effort ?? ""}
                           className={"whitespace-nowrap py-2 text-right text-xs text-brand-slate-600 dark:text-brand-slate-300 " + padX}
                         >
-                          {m.configuration ? (
-                            configurationLevel(m.configuration)
-                          ) : m.aa_index_effort ? (
+                          {m.aa_index_effort ? (
                             <HoverCard
                               label={`${m.name}: ${effortWord(m.aa_index_effort)} effort. Show scores and defaults by effort`}
                               card={<EffortCard model={m} />}
@@ -1121,7 +1111,7 @@ export function ModelCatalog({
                               <td key={cat} className="w-[3.25rem] px-1 py-2 text-center">
                                 <HoverCard
                                   label={`${m.name} ${CATEGORY_DEFS[cat].label}: ${r} (${derived ? "measured" : "estimated"})`}
-                                  card={m.configuration ? <ConfigurationEvidence configuration={m.configuration} /> : (
+                                  card={
                                     <RatingCard
                                       model={m}
                                       category={cat}
@@ -1129,7 +1119,7 @@ export function ModelCatalog({
                                       derived={derived}
                                       evidence={ratingEvidence}
                                     />
-                                  )}
+                                  }
                                   triggerTestId="rating-trigger"
                                   cardTestId="rating-card"
                                   className="border-b-0"
@@ -1203,7 +1193,7 @@ export function ModelCatalog({
                       >
                         <td />
                         <td colSpan={colSpan - 1} className="px-3 pb-4 pt-2">
-                          {m.configuration ? <ConfigurationDetail model={{ ...m, configuration: m.configuration }} /> : <ModelDetail model={m} />}
+                          <ModelDetail model={m} />
                         </td>
                       </tr>
                     )}

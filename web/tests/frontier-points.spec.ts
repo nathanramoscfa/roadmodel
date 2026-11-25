@@ -38,7 +38,6 @@ function row(id: string, over: Partial<ModelRow> = {}): ModelRow {
     aa_index_effort: null,
     aa_index_by_effort: undefined,
     token_multiplier_by_effort: undefined,
-    configuration: undefined,
     superseded_by: null,
     ...over,
   };

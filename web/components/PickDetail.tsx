@@ -38,9 +38,7 @@ export function PickDetail({
   const hasWhy = column.why.sections.length > 0 || Boolean(column.why.rationale?.trim());
   const meta = PRIORITY_LABEL[column.priority];
   const row = column.pick.row;
-  // A preset (an agent configuration) has no per-token list price of its own.
-  const listPrice =
-    row && !row.configuration ? { input: row.input_price_per_1m, output: row.output_price_per_1m } : null;
+  const listPrice = row ? { input: row.input_price_per_1m, output: row.output_price_per_1m } : null;
 
   return (
     <section

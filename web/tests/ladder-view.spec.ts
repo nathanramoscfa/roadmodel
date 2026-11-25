@@ -40,7 +40,6 @@ function row(id: string, name: string, over: Partial<ModelRow> = {}): ModelRow {
     aa_index_by_effort: { medium: 45, high: 50 },
     token_multiplier_by_effort: { medium: 0.8, high: 1 },
     tiers_by_effort: undefined,
-    configuration: undefined,
     superseded_by: null,
     ...over,
   };

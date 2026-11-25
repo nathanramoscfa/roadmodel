@@ -184,18 +184,15 @@ is the property the prose rules could not offer.
 
 ## The Cost / Balanced / Quality ladder
 
-The Models page’s Platform details lists selectable agent configurations
-awaiting comparable evidence, including Antigravity’s Orchestrator presets
-and Claude Code with Ultracode enabled. Their entries and any published
-benchmark notes live in [agent-configurations.json](agent-configurations.json).
-A configuration qualifies for the table, plots, and ladder when evidence for
-its exact ID includes an Intelligence Index measurement or a calibrated
-estimate with an uncertainty band, comparable input and output costs
-normalized per million tokens, and all seven category grades. Record the
-source with the evidence. Count the usage of all participating models in the
-normalized cost. The Score compares
-that cost and index to the catalog’s ordinary model fit. The ladder also
-checks which platforms and plans the user can run. It prints `Fixed` for a
+The website's table and charts show single models, each at one effort.
+[agent-configurations.json](agent-configurations.json) records agent
+configurations that run several models together or turn on orchestration
+(Antigravity's Orchestrator, Claude Code with Ultracode). Each entry has
+`evidence: null`, so the ladder ranks none of them. The ladder ranks a
+configuration only when evidence for its exact ID gives an Intelligence Index
+measurement or a calibrated estimate with an uncertainty band, input and
+output costs per million tokens that count every participating model, and all
+seven category grades, with the source recorded. It then prints `Fixed` for a
 vendor preset and shows Ultracode alongside the selected Claude effort.
 
 /recommend's three picks are read off the operator's own cost/quality
