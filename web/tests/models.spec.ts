@@ -1698,16 +1698,18 @@ test("the Score cell opens a breakdown whose parts add up to the printed Score",
     const printed = (await row.getByTestId("value-cell").innerText()).trim();
     await expect(total).toHaveText(printed);
     // The ledger's rows, read back from the card as a person would.
-    const values = await card
-      .locator('[data-testid="score-breakdown"] .tabular-nums')
-      .allInnerTexts();
-    const [index, subtracted, vsAvg, adj, score] = values.slice(0, 5).map(parse);
-    const marketMean = Math.abs(subtracted); // printed "− 36.3": a subtraction, not a sign
-    expect(Math.round((index - marketMean) * 10)).toBe(Math.round(vsAvg * 10));
-    expect(Math.round((vsAvg + adj) * 10)).toBe(Math.round(score * 10));
+    const index = parse(await card.getByTestId("score-breakdown-index").innerText());
+    const expected = Math.abs(
+      parse(await card.getByTestId("score-breakdown-expected").innerText()),
+    ); // printed "− 43.8": a subtraction, not a sign
+    const score = parse(await total.innerText());
+    expect(Math.round((index - expected) * 10)).toBe(Math.round(score * 10));
     expect(formatScore(score)).toBe(
       formatScore(scoreFor(fit, effectivePrice(m), aaIndexFor(m))),
     );
+    const market = card.getByTestId("score-breakdown-market");
+    await expect(market).toContainText(`$${fit.minPrice.toFixed(2)}–$${fit.maxPrice.toFixed(2)}`);
+    await expect(market).toContainText(`$${(10 ** fit.meanLogPrice).toFixed(2)}`);
     const effort = headlineEffortFor(m);
     if (effort) {
       await expect(card.getByTestId("score-breakdown-effort")).toContainText(effortWord(effort));

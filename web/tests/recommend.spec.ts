@@ -131,7 +131,7 @@ test("a pick carries its figures at the level it runs: AA Index, price, Score, r
   // The pick runs at High: its Score prices the tokens it draws there, as the
   // chart places it, not the bare list price.
   await expect(page.getByTestId("score-breakdown-effort")).toContainText(
-    /at High the model draws \d+\.\d\d× what a typical model draws at High/,
+    /At High effort, this model writes \d+\.\d\d× the output tokens of a typical model at High/,
   );
 });
 
