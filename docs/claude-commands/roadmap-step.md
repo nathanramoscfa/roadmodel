@@ -294,7 +294,8 @@ its own isolated git worktree and dedicated conversation:
 - **One conversation, one worktree.** This session owns only its own
   linked worktree (`WORKTREE_PATH`). Never switch branches, pull, commit,
   or edit tracked files in the primary checkout where the chat opened
-  (`PRIMARY_ROOT`), and never touch any sibling step's worktree.
+  (`PRIMARY_ROOT`), beyond Stage 5's refresh, and never touch any
+  sibling step's worktree.
 - **Resolve `<worktree-path>`:** Use `PATH` when `--worktree=PATH` was
   given; otherwise follow the Worktree location recorded in the phase
   roadmap's Worktree rule or parent ROADMAP's Worktree strategy
@@ -344,15 +345,33 @@ its own isolated git worktree and dedicated conversation:
   locally and fails while `main` is checked out elsewhere. If the repo
   does not auto-delete merged remote branches (`delete_branch_on_merge`),
   run `git push origin --delete <branch>` after merge.
-- **Stage 5 (Retire only this worktree and branch):** Run cleanup from
-  outside `<worktree-path>` (e.g. via `git -C <PRIMARY_ROOT>`): `git
-  worktree remove <worktree-path>`, `git worktree prune`, `git fetch
-  --prune origin`, and `git branch -D <branch>`. Fast-forward
-  `PRIMARY_ROOT` (`git -C <PRIMARY_ROOT> pull --ff-only origin main`) ONLY
-  if `PRIMARY_ROOT` is already cleanly on `main` (clean working tree and
-  `HEAD` on `main`); otherwise leave `PRIMARY_ROOT` untouched. Never remove
-  or prune another step's active worktree.
+- **Stage 5 (Retire only this worktree and branch, then refresh the
+  primary tree):** Run cleanup from outside `<worktree-path>` (e.g. via
+  `git -C <PRIMARY_ROOT>`): `git worktree remove <worktree-path>`, `git
+  worktree prune`, `git fetch --prune origin`, and `git branch -D
+  <branch>`. Never remove or prune another step's active worktree.
+  Then bring `PRIMARY_ROOT` up to `origin/main`: the roadmap the
+  operator reads is the one there, and until it moves it still shows
+  this step as not started. Do it ONLY when `PRIMARY_ROOT` has no
+  uncommitted edits to tracked files (`git -C <PRIMARY_ROOT> status
+  --porcelain --untracked-files=no` prints nothing) and is in one of
+  two states (`main` being the repo's default branch, as in Stage 1):
+  - `HEAD` on `main`: `git -C <PRIMARY_ROOT> pull --ff-only origin main`.
+  - `HEAD` detached at a commit `origin/main` already contains (`git -C
+    <PRIMARY_ROOT> merge-base --is-ancestor HEAD origin/main` exits 0),
+    as in a project that keeps its primary tree detached at
+    `origin/main` on purpose: `git -C <PRIMARY_ROOT> checkout --quiet
+    --detach origin/main`.
+
+  Neither loses work: git refuses rather than overwrite an untracked
+  file. In any other state (on another branch, with uncommitted edits,
+  or detached at a commit `origin/main` lacks) leave `PRIMARY_ROOT`
+  untouched; Stage 6 reports it.
 - **Stage 6 (Declare completion):** Dispose of every finding before
   declaring completion, confirm `origin/main` (or the git-excluded
-  roadmap) carries this step's `Complete` line, then end with the final
-  completion line.
+  roadmap) carries this step's `Complete` line, and confirm the roadmap
+  in `PRIMARY_ROOT` shows it too. If Stage 5 left `PRIMARY_ROOT`
+  untouched, say so in the final response, before the completion line:
+  name what kept it (its branch, its uncommitted edits, or a commit
+  `origin/main` lacks), so the operator knows their local roadmap does
+  not show the mark yet. Then end with the final completion line.

@@ -579,9 +579,18 @@ complete all six stages before declaring the step done.
    FIRST — `git worktree remove <worktree-path>`, then `git
    worktree prune` — before deleting `<branch>` (`git branch -D
    <branch>` refuses a branch still checked out in a worktree).
-   Leave any active sibling parallel worktree untouched, and
-   fast-forward the primary checkout only if it is already
-   cleanly on `main`. Once no parallel steps are in flight,
+   Leave any active sibling parallel worktree untouched. Then
+   bring the primary checkout up to `origin/main`, since its
+   roadmap is the one the operator reads, when it has no
+   uncommitted edits to tracked files (`git -C <primary-tree>
+   status --porcelain --untracked-files=no` prints nothing): on
+   `main`, `git -C <primary-tree> pull --ff-only origin main`;
+   detached at a commit `origin/main` contains (`git -C
+   <primary-tree> merge-base --is-ancestor HEAD origin/main`),
+   `git -C <primary-tree> checkout --quiet --detach origin/main`.
+   In any other state leave it untouched, and say so in the
+   final response, before the completion line. Once no parallel
+   steps are in flight,
    `git worktree list` shows only the primary tree.
 
 6. **Dispose of every finding, declare completion, then new
@@ -671,10 +680,13 @@ Rules that apply to every worktree:
    Stage 5 runs `git worktree remove <path>` and `git worktree
    prune` from outside `<path>` BEFORE deleting `<branch>` (`git
    branch -D` refuses a branch still checked out in a worktree).
-   Leave any active sibling parallel worktree untouched, and
-   fast-forward the primary tree only if it is cleanly on
-   `main`. Once no parallel steps are in flight, `git worktree
-   list` shows only the primary tree.
+   Leave any active sibling parallel worktree untouched, then
+   bring the primary tree up to `origin/main` when it has no
+   uncommitted edits and sits on `main` or detached at a commit
+   `origin/main` contains; in any other state leave it alone and
+   say so in the final response, because the roadmap the operator
+   reads there does not show the mark yet. Once no parallel steps
+   are in flight, `git worktree list` shows only the primary tree.
 
 #### Release & tagging
 
