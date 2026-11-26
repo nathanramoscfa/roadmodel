@@ -384,42 +384,171 @@ export function formatQualityBand(lo: number): string {
   return `${lo}–${(lo + QUALITY_BAND_WIDTH - 0.1).toFixed(1)}`;
 }
 
-// Cost-adjusted score over one continuous whole-catalog market line. A quality
-// ÷ price ratio breaks down across two orders of magnitude of price (it crowns
-// the cheapest weak model), and a hand-picked weight is arbitrary, while
-// per-tier intercepts introduce sharp cliffs whenever list output price crosses
-// a tier boundary. So the baseline is ONE continuous least-squares line over
-// every AA-measured model: index = α + slope·log10(price), where price is the
-// effort-adjusted blended price (3 × input + m × output) ÷ 4 at the headline
-// effort. A model's score is its residual — index points above (+) or below (−)
-// what its price predicts on that market line, guaranteeing zero tier-boundary
-// cliffs and strict price/index monotonicity across the catalog. n, R² and
-// residual σ ship with the column so readers know how much a gap means: two
-// models within ~σ of each other are effectively tied.
+// Price-adjusted Value (0–100% market percentile) over a Huber-robust,
+// vintage-controlled market line with heteroskedastic local spread.
+//
+// Why this model over plain 1D OLS:
+//   1. Vintage confounding (Simpson's Paradox): old cheap/open-weight models
+//      linger in the catalog while old expensive flagships retire quickly.
+//      Plain OLS over the pooled catalog tilts the price slope nearly 2× too
+//      steeply (~15 vs ~8.4 AA pts/decade), over-rewarding cheap models and
+//      penalising current mid/high-tier leaders. Fitting AA ~ log10(price) +
+//      age_months with Huber IRLS isolates the true current-generation slope,
+//      then anchors the baseline line at the current generation's vintage
+//      (25th-percentile age behind the newest measured release — wall-clock
+//      independent and deterministic). Every model, old or new, is judged
+//      against today's line rather than given a vintage handicap.
+//   2. Heteroskedasticity: residual dispersion narrows ~4× from low prices to
+//      expensive flagships. A smooth price-varying scale
+//      sigma(x) = sqrt(max(0, g0 + g1·x)^2 + measFloor^2) (with a 3-point AA
+//      measurement-noise floor) replaces the flat global ±σ tie band so high-
+//      price models aren't judged against low-price scatter and tiny 1–2 pt
+//      benchmark jitters never blow up at the top end.
+//   3. Intuitive 0–100% Value scale: standardised residuals
+//      z = (index − expected(p)) / sigma(p) pass through the closed-form
+//      Student-t (df = 5) CDF so 50% sits right on today's market line,
+//      ≥ 75% marks standout value, and ≤ 25% marks poor value — scale-invariant
+//      across AA index revisions and heavier-tailed than Normal so legacy
+//      models remain distinguishable near the bottom.
+export const VALUE_HIGH = 75;
+export const VALUE_LOW = 25;
+export const VALUE_MEAS_FLOOR = 3;
+export const VALUE_T_DF = 5;
+
+const HUBER_K = 1.345;
+const MAD_TO_SIGMA = 0.6744897501960817;
+const ABS_TO_SIGMA = Math.sqrt(Math.PI / 2);
+const DAYS_PER_MONTH = 30.4375;
+
 export interface ScoreFit {
   n: number;
-  intercept: number; // expected AA Index at $1/1M effort-adjusted blended price
-  slope: number; // index points per decade (10×) of price
-  meanIndex: number; // mean AA Index over the n fitted models
-  // Mean of log10(effort-adjusted blended price) — the market line passes through
-  // (meanLogPrice, meanIndex), so 10^meanLogPrice is the typical (geometric-mean)
-  // market price and the natural centre for reading the line.
+  // Expected AA Index at $1/1M effort-adjusted price on today's market line.
+  intercept: number;
+  // AA Index points per decade (10×) of effort-adjusted price.
+  slope: number;
+  // AA Index points per month of model age (negative: newer models score higher).
+  ageSlope: number;
+  // Current-generation anchor age (months behind newest measured release_date).
+  refAgeMonths: number;
+  // True when release dates were available to control for vintage.
+  vintageAdjusted: boolean;
+  // Expected AA Index on today's line at the geometric-mean price (10^meanLogPrice).
+  meanIndex: number;
+  // Mean of log10(effort-adjusted blended price) over the n fitted models.
   meanLogPrice: number;
   minPrice: number;
   maxPrice: number;
   r2: number;
-  sigma: number; // residual standard deviation (dof = n − 2), in index points
+  // Representative local total σ at the geometric-mean price (in AA points).
+  sigma: number;
+  // Linear heteroskedastic market-spread fit: marketSigma(x) = max(0, sigmaIntercept + sigmaSlope * x).
+  sigmaIntercept: number;
+  sigmaSlope: number;
+  // Irreducible AA benchmark measurement-noise floor (in AA points).
+  measFloor: number;
+  // Local total σ range across [minPrice, maxPrice].
+  sigmaMin: number;
+  sigmaMax: number;
+  // Student-t degrees of freedom for the 0–100% Value percentile mapping.
+  df: number;
 }
 
 export function blendedPrice(inputPer1m: number, outputPer1m: number): number {
   return (3 * inputPer1m + outputPer1m) / 4;
 }
 
+function median(vals: readonly number[]): number {
+  const s = [...vals].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 === 1 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+function quantile(vals: readonly number[], q: number): number {
+  const s = [...vals].sort((a, b) => a - b);
+  if (s.length === 1) return s[0];
+  const pos = q * (s.length - 1);
+  const lo = Math.floor(pos);
+  const hi = Math.ceil(pos);
+  if (lo === hi) return s[lo];
+  return s[lo] + (s[hi] - s[lo]) * (pos - lo);
+}
+
+function parseIsoDay(raw: string | null | undefined): number | null {
+  if (!raw) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw.trim());
+  if (!m) return null;
+  const ms = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isFinite(ms) ? ms / 86_400_000 : null;
+}
+
+// Weighted least squares via Gaussian elimination with partial pivoting (p ≤ 3).
+function solveWls(X: readonly (readonly number[])[], y: readonly number[], w: readonly number[]): number[] | null {
+  const n = X.length;
+  const p = X[0].length;
+  const A: number[][] = Array.from({ length: p }, () => new Array<number>(p + 1).fill(0));
+  for (let i = 0; i < n; i += 1) {
+    const wi = w[i];
+    const row = X[i];
+    for (let a = 0; a < p; a += 1) {
+      const wa = wi * row[a];
+      for (let b = 0; b < p; b += 1) A[a][b] += wa * row[b];
+      A[a][p] += wa * y[i];
+    }
+  }
+  for (let col = 0; col < p; col += 1) {
+    let piv = col;
+    for (let r = col + 1; r < p; r += 1) {
+      if (Math.abs(A[r][col]) > Math.abs(A[piv][col])) piv = r;
+    }
+    if (Math.abs(A[piv][col]) < 1e-12) return null;
+    if (piv !== col) [A[col], A[piv]] = [A[piv], A[col]];
+    const diag = A[col][col];
+    for (let c = col; c <= p; c += 1) A[col][c] /= diag;
+    for (let r = 0; r < p; r += 1) {
+      if (r === col) continue;
+      const factor = A[r][col];
+      for (let c = col; c <= p; c += 1) A[r][c] -= factor * A[col][c];
+    }
+  }
+  return A.map((row) => row[p]);
+}
+
+function huberIrls(X: readonly (readonly number[])[], y: readonly number[], maxIter = 40): number[] | null {
+  const n = X.length;
+  let beta = solveWls(X, y, new Array<number>(n).fill(1));
+  if (!beta) return null;
+  for (let iter = 0; iter < maxIter; iter += 1) {
+    const res = y.map((yi, i) => yi - X[i].reduce((acc, v, j) => acc + v * beta![j], 0));
+    const med = median(res);
+    const mad = median(res.map((v) => Math.abs(v - med))) / MAD_TO_SIGMA;
+    if (mad < 1e-6) break;
+    const c = HUBER_K * mad;
+    const w = res.map((v) => {
+      const av = Math.abs(v);
+      return av <= c ? 1 : c / av;
+    });
+    const next = solveWls(X, y, w);
+    if (!next) break;
+    const diff = Math.max(...next.map((v, j) => Math.abs(v - beta![j])));
+    beta = next;
+    if (diff < 1e-9) break;
+  }
+  return beta;
+}
+
+// Exact closed-form Student-t CDF for df = 5.
+export function studentT5Cdf(t: number): number {
+  const u = t / Math.sqrt(VALUE_T_DF);
+  const d = 1 + u * u;
+  const v = 0.5 + (1 / Math.PI) * (Math.atan(u) + u / d + (2 / 3) * (u / (d * d)));
+  return Math.min(1, Math.max(0, v));
+}
+
 export function fitScoreModel(
-  rows: readonly { price: number; index: number | null }[],
+  rows: readonly { price: number; index: number | null; releaseDate?: string | null }[],
 ): ScoreFit | null {
   const pts = rows.filter(
-    (r): r is { price: number; index: number } =>
+    (r): r is { price: number; index: number; releaseDate?: string | null } =>
       r.index !== null && Number.isFinite(r.index) && r.price > 0,
   );
   const n = pts.length;
@@ -427,99 +556,182 @@ export function fitScoreModel(
   const xs = pts.map((p) => Math.log10(p.price));
   const ys = pts.map((p) => p.index);
   const meanLogPrice = xs.reduce((a, b) => a + b, 0) / n;
-  const meanIndex = ys.reduce((a, b) => a + b, 0) / n;
+  const rawMeanIndex = ys.reduce((a, b) => a + b, 0) / n;
   let sxx = 0;
-  let sxy = 0;
   let ssTot = 0;
   for (let i = 0; i < n; i += 1) {
-    const dx = xs[i] - meanLogPrice;
-    const dy = ys[i] - meanIndex;
-    sxx += dx * dx;
-    sxy += dx * dy;
-    ssTot += dy * dy;
+    sxx += (xs[i] - meanLogPrice) ** 2;
+    ssTot += (ys[i] - rawMeanIndex) ** 2;
   }
   if (sxx === 0 || ssTot === 0) return null;
-  const slope = sxy / sxx;
-  const intercept = meanIndex - slope * meanLogPrice;
-  let ssRes = 0;
-  for (let i = 0; i < n; i += 1) {
-    const pred = intercept + slope * xs[i];
-    ssRes += (ys[i] - pred) ** 2;
+
+  const parsedDays = pts.map((p) => parseIsoDay(p.releaseDate));
+  const datedDays = parsedDays.filter((d): d is number => d !== null);
+  const hasVintage =
+    datedDays.length >= 4 && Math.max(...datedDays) - Math.min(...datedDays) > 0;
+
+  let intercept: number;
+  let slope: number;
+  let ageSlope = 0;
+  let refAgeMonths = 0;
+  let vintageAdjusted = false;
+  let residuals: number[];
+
+  if (hasVintage) {
+    const anchorDay = Math.max(...datedDays);
+    const datedAges = datedDays.map((d) => (anchorDay - d) / DAYS_PER_MONTH);
+    const medAge = median(datedAges);
+    const ages = parsedDays.map((d) => (d === null ? medAge : (anchorDay - d) / DAYS_PER_MONTH));
+    const X3 = xs.map((x, i) => [1, x, ages[i]]);
+    const beta = huberIrls(X3, ys, 40);
+    if (!beta) return null;
+    refAgeMonths = quantile(datedAges, 0.25);
+    intercept = beta[0] + beta[2] * refAgeMonths;
+    slope = beta[1];
+    ageSlope = beta[2];
+    vintageAdjusted = true;
+    residuals = ys.map((y, i) => y - (beta[0] + beta[1] * xs[i] + beta[2] * ages[i]));
+  } else {
+    const X2 = xs.map((x) => [1, x]);
+    const beta = huberIrls(X2, ys, 40);
+    if (!beta) return null;
+    intercept = beta[0];
+    slope = beta[1];
+    residuals = ys.map((y, i) => y - (beta[0] + beta[1] * xs[i]));
   }
-  const dof = n - 2;
+
+  const ssRes = residuals.reduce((acc, r) => acc + r * r, 0);
+  const r2 = Math.max(0, 1 - ssRes / ssTot);
+
+  // Price-varying market spread (Huber-robust on |r|·sqrt(pi/2)), combined with
+  // the irreducible AA measurement-noise floor in quadrature.
+  let sigmaIntercept: number;
+  let sigmaSlope = 0;
+  if (n >= 6) {
+    const targets = residuals.map((r) => Math.abs(r) * ABS_TO_SIGMA);
+    const g = huberIrls(
+      xs.map((x) => [1, x]),
+      targets,
+      30,
+    );
+    if (g) {
+      sigmaIntercept = g[0];
+      sigmaSlope = g[1];
+    } else {
+      const medR = median(residuals);
+      sigmaIntercept = median(residuals.map((r) => Math.abs(r - medR))) / MAD_TO_SIGMA;
+    }
+  } else {
+    const medR = median(residuals);
+    sigmaIntercept = median(residuals.map((r) => Math.abs(r - medR))) / MAD_TO_SIGMA;
+  }
+
+  const measFloor = VALUE_MEAS_FLOOR;
+  const localSigma = (lx: number) => {
+    const mkt = Math.max(0, sigmaIntercept + sigmaSlope * lx);
+    return Math.sqrt(mkt * mkt + measFloor * measFloor);
+  };
+  const minPrice = Math.min(...pts.map((p) => p.price));
+  const maxPrice = Math.max(...pts.map((p) => p.price));
+  const sLo = localSigma(Math.log10(minPrice));
+  const sHi = localSigma(Math.log10(maxPrice));
+
   return {
     n,
     intercept,
     slope,
-    meanIndex,
+    ageSlope,
+    refAgeMonths,
+    vintageAdjusted,
+    meanIndex: intercept + slope * meanLogPrice,
     meanLogPrice,
-    minPrice: Math.min(...pts.map((p) => p.price)),
-    maxPrice: Math.max(...pts.map((p) => p.price)),
-    r2: 1 - ssRes / ssTot,
-    sigma: Math.sqrt(ssRes / Math.max(1, dof)),
+    minPrice,
+    maxPrice,
+    r2,
+    sigma: localSigma(meanLogPrice),
+    sigmaIntercept,
+    sigmaSlope,
+    measFloor,
+    sigmaMin: Math.min(sLo, sHi),
+    sigmaMax: Math.max(sLo, sHi),
+    df: VALUE_T_DF,
   };
 }
 
-// The residual for one model, or null when it is unmeasured or the fit failed.
+// The expected index today's continuous market line gives at a blended price.
+export function expectedIndex(fit: ScoreFit, price: number): number | null {
+  if (!(price > 0)) return null;
+  return fit.intercept + fit.slope * Math.log10(price);
+}
+
+// Local total standard deviation (±σ, in AA Index points) at a blended price:
+// market spread at this price combined in quadrature with AA's noise floor.
+export function sigmaAt(fit: ScoreFit, price: number): number | null {
+  if (!(price > 0)) return null;
+  const mkt = Math.max(0, fit.sigmaIntercept + fit.sigmaSlope * Math.log10(price));
+  return Math.sqrt(mkt * mkt + fit.measFloor * fit.measFloor);
+}
+
+// Value percentile (0–100) for one model, or null when unmeasured / fit failed.
 export function scoreFor(
   fit: ScoreFit | null,
   price: number,
   index: number | null,
 ): number | null {
   if (!fit || index === null || !(price > 0)) return null;
-  return index - (fit.intercept + fit.slope * Math.log10(price));
+  const expected = expectedIndex(fit, price);
+  const sigma = sigmaAt(fit, price);
+  if (expected === null || sigma === null || !(sigma > 0)) return null;
+  return studentT5Cdf((index - expected) / sigma) * 100;
 }
 
-// "+9.8" / "−3.4" / "0.0" — one decimal, explicit sign, typographic minus.
+// "89%" / "50%" / "0%" — integer market percentile, or "—" when unmeasured.
 export function formatScore(score: number | null): string {
-  if (score === null) return "—";
-  const rounded = Math.round(score * 10) / 10;
+  if (score === null || !Number.isFinite(score)) return "—";
+  const rounded = Math.min(100, Math.max(0, Math.round(score)));
+  return `${rounded}%`;
+}
+
+// "+7.1" / "−3.2" / "0.0" — signed one-decimal AA points or z-score.
+export function formatSigned(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return "—";
+  const rounded = Math.round(value * 10) / 10;
   if (rounded === 0) return "0.0";
   return (rounded > 0 ? "+" : "−") + Math.abs(rounded).toFixed(1);
 }
 
-// The expected index the continuous market line gives at a blended price.
-export function expectedIndex(fit: ScoreFit, price: number): number | null {
-  if (!(price > 0)) return null;
-  return fit.intercept + fit.slope * Math.log10(price);
-}
-
-// A Score, taken apart into two signed parts that add up to it:
-//
-//   Score = (AA Index − market average)          how far above the whole market
-//         + (−slope × log10(price ÷ typical))    the handicap (or credit) for
-//                                                 costing more (or less) than
-//                                                 the typical measured model
-//
-// which is the fitted line read around the market centre, the point
-// (typical price, market average) that the least-squares line passes through.
-//
-// Every figure a reader sees is rounded to one decimal, and rounded parts do
-// not always sum to a rounded total. So the displayed parts are derived in
-// whole tenths from the displayed total, and the ledger always adds up to
-// the figure printed in the table. The price adjustment absorbs the rounding
-// (it is at most 0.1 from its unrounded value).
+// A model's Value breakdown: actual AA Index vs today's market line at its
+// effort-adjusted price, divided by the local heteroskedastic spread σ(p), and
+// mapped through the Student-t(5) CDF to a 0–100% market percentile.
 export interface ScoreBreakdown {
-  score: number;
+  score: number; // 0–100 Value percentile
   index: number;
-  marketMean: number;
   expected: number;
+  gap: number; // index − expected, in AA Index points
+  sigma: number; // local ±σ(price), in AA Index points
+  z: number; // gap ÷ sigma
+  marketMean: number;
   price: number;
   typicalPrice: number;
   priceRatio: number;
   slope: number;
+  ageSlope: number;
+  refAgeMonths: number;
+  vintageAdjusted: boolean;
   marketN: number;
-  // One-decimal figures that add up exactly:
-  //   vsAverage = index − marketMean
-  //   score     = vsAverage + priceAdjustment
-  //   expected  = index − score = marketMean − priceAdjustment
+  // One-decimal parts that add up exactly in whole tenths:
+  //   gap             = index − expected
+  //   expected        = marketMean − priceAdjustment
+  //   value           = Math.round(score) (exact % printed in the table)
   shown: {
     index: number;
-    marketMean: number;
-    vsAverage: number;
-    priceAdjustment: number;
     expected: number;
-    score: number;
+    gap: number;
+    sigma: number;
+    z: number;
+    marketMean: number;
+    priceAdjustment: number;
+    value: number;
   };
 }
 
@@ -530,30 +742,43 @@ export function scoreBreakdown(
   price: number,
   index: number | null,
 ): ScoreBreakdown | null {
-  const score = scoreFor(fit, price, index);
-  if (score === null || !fit || index === null) return null;
+  if (!fit || index === null || !(price > 0)) return null;
+  const expected = expectedIndex(fit, price);
+  const sigma = sigmaAt(fit, price);
+  if (expected === null || sigma === null || !(sigma > 0)) return null;
+  const gap = index - expected;
+  const z = gap / sigma;
+  const score = studentT5Cdf(z) * 100;
   const typicalPrice = 10 ** fit.meanLogPrice;
   const iT = tenths(index);
+  const eT = tenths(expected);
   const mT = tenths(fit.meanIndex);
-  const sT = tenths(score);
-  const vT = iT - mT;
+  const gT = iT - eT;
   return {
     score,
     index,
+    expected,
+    gap,
+    sigma,
+    z,
     marketMean: fit.meanIndex,
-    expected: index - score,
     price,
     typicalPrice,
     priceRatio: price / typicalPrice,
     slope: fit.slope,
+    ageSlope: fit.ageSlope,
+    refAgeMonths: fit.refAgeMonths,
+    vintageAdjusted: fit.vintageAdjusted,
     marketN: fit.n,
     shown: {
       index: iT / 10,
+      expected: eT / 10,
+      gap: gT / 10,
+      sigma: tenths(sigma) / 10,
+      z: tenths(z) / 10,
       marketMean: mT / 10,
-      vsAverage: vT / 10,
-      priceAdjustment: (sT - vT) / 10,
-      expected: (iT - sT) / 10,
-      score: sT / 10,
+      priceAdjustment: (mT - eT) / 10,
+      value: Math.min(100, Math.max(0, Math.round(score))),
     },
   };
 }

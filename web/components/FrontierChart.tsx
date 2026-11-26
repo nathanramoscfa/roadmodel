@@ -35,6 +35,7 @@ import {
   formatUsd,
   QUALITY_BAND_WIDTH,
   qualityBand,
+  sigmaAt,
   type ScoreFit,
 } from "@/lib/benchmark-grid";
 import { COST_TIER_DEFS, type ModelRow } from "@/lib/catalog-fields";
@@ -79,6 +80,7 @@ interface MarketLine {
   b: number; // … and right end
   ya: number;
   yb: number;
+  fit: ScoreFit;
 }
 
 type Active = { kind: "point"; id: string } | { kind: "step"; x: number } | null;
@@ -376,22 +378,45 @@ function FrontierPlot({
               </g>
             ))}
 
-            {/* The Score's single continuous market price line across the plotted range. */}
-            {marketLine && (
-              <g clipPath="url(#frontier-plot-clip)">
-                <line
-                  x1={sx(marketLine.a)}
-                  y1={sy(marketLine.ya)}
-                  x2={sx(marketLine.b)}
-                  y2={sy(marketLine.yb)}
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  data-testid="frontier-market-line"
-                  className="stroke-brand-slate-400 dark:stroke-brand-slate-500"
-                  pointerEvents="none"
-                />
-              </g>
-            )}
+            {/* Value's continuous market price line and narrowing ±σ local spread ribbon. */}
+            {marketLine && (() => {
+              const steps = 24;
+              const xsRibbon = Array.from(
+                { length: steps + 1 },
+                (_, i) => marketLine.a + ((marketLine.b - marketLine.a) * i) / steps,
+              );
+              const upper = xsRibbon.map((x) => {
+                const y = marketLine.fit.intercept + marketLine.fit.slope * x;
+                const s = sigmaAt(marketLine.fit, 10 ** x) ?? marketLine.fit.sigma;
+                return `${sx(x)},${sy(y + s)}`;
+              });
+              const lower = [...xsRibbon].reverse().map((x) => {
+                const y = marketLine.fit.intercept + marketLine.fit.slope * x;
+                const s = sigmaAt(marketLine.fit, 10 ** x) ?? marketLine.fit.sigma;
+                return `${sx(x)},${sy(y - s)}`;
+              });
+              return (
+                <g clipPath="url(#frontier-plot-clip)">
+                  <polygon
+                    points={[...upper, ...lower].join(" ")}
+                    data-testid="frontier-market-band"
+                    className="fill-brand-slate-900/[0.045] dark:fill-white/[0.055]"
+                    pointerEvents="none"
+                  />
+                  <line
+                    x1={sx(marketLine.a)}
+                    y1={sy(marketLine.ya)}
+                    x2={sx(marketLine.b)}
+                    y2={sy(marketLine.yb)}
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    data-testid="frontier-market-line"
+                    className="stroke-brand-slate-400 dark:stroke-brand-slate-500"
+                    pointerEvents="none"
+                  />
+                </g>
+              );
+            })()}
 
             {/* The frontier line. */}
             <path
@@ -669,7 +694,7 @@ export function FrontierChart({
             a -= 0.03;
             b += 0.03;
           }
-          return { a, b, ya: fit.intercept + fit.slope * a, yb: fit.intercept + fit.slope * b };
+          return { a, b, ya: fit.intercept + fit.slope * a, yb: fit.intercept + fit.slope * b, fit };
         })()
       : null;
 
@@ -755,8 +780,16 @@ export function FrontierChart({
             <LegendSwatch>
               <line x1={1} y1={10} x2={21} y2={5} strokeWidth={2} className="stroke-brand-slate-400 dark:stroke-brand-slate-500" />
             </LegendSwatch>
-            Expected AA Index for the price
+            Today&rsquo;s expected AA Index for the price
           </li>
+          {fit && (
+            <li className="inline-flex items-center gap-1.5">
+              <LegendSwatch>
+                <polygon points="1,2 21,5 21,11 1,14" className="fill-brand-slate-900/[0.09] dark:fill-white/[0.12]" />
+              </LegendSwatch>
+              ±σ local spread (±{fit.sigmaMin.toFixed(1)}–{fit.sigmaMax.toFixed(1)})
+            </li>
+          )}
           {bands && (
             <li className="inline-flex items-center gap-1.5">
               <LegendSwatch>
@@ -778,9 +811,9 @@ export function FrontierChart({
             {scope ? ` ${scope} model` : " model"} at its price or less.
           </strong>{" "}
           The dotted green line joins them from cheapest to priciest and steps up at each one, so
-          its height at any price is the top AA Index that price buys. The grey line is the
-          Score&rsquo;s continuous market price line across every cost tier, drawn for comparison;
-          the charts below zoom into each cost tier along that line.
+          its height at any price is the top AA Index that price buys. The grey line and shaded ribbon show Value&rsquo;s continuous market price line and
+          narrowing ±σ local spread for today&rsquo;s generation across every cost tier; the charts
+          below zoom into each cost tier along that line.
           {bands && (
             <span data-testid="frontier-bands-note">
               {" "}
@@ -799,10 +832,12 @@ export function FrontierChart({
           {fit && (
             <>
               {" "}
-              The grey line is the Score&rsquo;s fit across all {fit.n} AA-measured models: AA Index ={" "}
-              {fit.intercept.toFixed(1)} + {fit.slope.toFixed(1)}&thinsp;×&thinsp;log<sub>10</sub>
-              (effort-adjusted price), a single continuous baseline of {fit.slope.toFixed(1)} index points
-              per 10&times; price across every cost tier.
+              The grey line is Value&rsquo;s Huber-robust{fit.vintageAdjusted ? ", vintage-controlled" : ""} fit
+              across all {fit.n} AA-measured models: AA Index = {fit.intercept.toFixed(1)} +{" "}
+              {fit.slope.toFixed(1)}&thinsp;×&thinsp;log<sub>10</sub>(effort-adjusted price), a
+              continuous baseline of {fit.slope.toFixed(1)} index points per 10&times; price
+              (R&sup2;&nbsp;{fit.r2.toFixed(2)}, local ±σ narrowing from ±{fit.sigmaMax.toFixed(1)} to ±
+              {fit.sigmaMin.toFixed(1)}).
             </>
           )}
         </p>

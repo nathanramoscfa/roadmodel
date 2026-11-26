@@ -308,18 +308,21 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
   return marked;
 }
 
-// The market fit behind the Score column, over the rows given (the page passes
+// The market fit behind the Value column, over the rows given (the page passes
 // the same rows it renders so the header stats match the cells). The fit is
 // drawn through AA's own figures: an inherited index copies another model's
 // point and an estimate is not a measurement, so it leaves both out. An
-// estimated model still gets a Score against that line.
+// estimated model still gets a Value against that line.
 export function getScoreFit(
   rows: readonly (Pick<ModelRow, "input_price_per_1m" | "output_price_per_1m" | "aa_index"> &
-    Partial<Pick<ModelRow, "aa_index_source" | "aa_index_effort" | "token_multiplier_by_effort">>)[],
+    Partial<Pick<ModelRow, "aa_index_source" | "aa_index_effort" | "token_multiplier_by_effort" | "bench">>)[],
 ): ScoreFit | null {
   return fitScoreModel(
-    rows.flatMap((r) => r.aa_index_source === "inherited" || r.aa_index_source === "estimated"
-      ? [] : [{ price: headlinePrice(r), index: r.aa_index }]),
+    rows.flatMap((r) =>
+      r.aa_index_source === "inherited" || r.aa_index_source === "estimated"
+        ? []
+        : [{ price: headlinePrice(r), index: r.aa_index, releaseDate: r.bench?.release_date ?? null }],
+    ),
   );
 }
 

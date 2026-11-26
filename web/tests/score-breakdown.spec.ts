@@ -19,6 +19,7 @@ import {
   expectedIndex,
   fitScoreModel,
   formatScore,
+  formatSigned,
   formatQualityBand,
   frontierLeaders,
   GRID_COLUMNS,
@@ -29,6 +30,7 @@ import {
   qualityBand,
   scoreBreakdown,
   scoreFor,
+  sigmaAt,
   standing,
   type BenchKey,
   type BenchRow,
@@ -47,7 +49,12 @@ interface CatalogModel {
 const catalog = liveCatalog<{ models: CatalogModel[] }>();
 const benchmarks = JSON.parse(
   readFileSync(path.join(process.cwd(), "data", "benchmarks.json"), "utf8"),
-) as { models: Record<string, { aa_effort?: string | null; evaluations: Record<string, number | null> }> };
+) as {
+  models: Record<
+    string,
+    { aa_effort?: string | null; release_date?: string | null; evaluations: Record<string, number | null> }
+  >;
+};
 const effortTokens = JSON.parse(
   readFileSync(path.join(process.cwd(), "data", "effort-tokens.json"), "utf8"),
 ) as EffortTokensDoc;
@@ -73,12 +80,16 @@ function priceOf(m: CatalogModel): number {
     token_multiplier_by_effort: resolveTokenMultipliers(m.id, effortTokens),
   });
 }
+function releaseDateOf(m: CatalogModel): string | null {
+  return benchmarks.models[m.id]?.release_date ?? null;
+}
+
 const fit = fitScoreModel(
-  catalog.models.map((m) => ({ price: priceOf(m), index: aaIndexFor(m) })),
+  catalog.models.map((m) => ({ price: priceOf(m), index: aaIndexFor(m), releaseDate: releaseDateOf(m) })),
 );
 const tenths = (v: number) => Math.round(v * 10);
 
-test("every model's breakdown adds up exactly to the Score the table prints", () => {
+test("every model's Value breakdown adds up exactly to the Value percentage the table prints", () => {
   expect(fit).not.toBeNull();
   let checked = 0;
   for (const m of catalog.models) {
@@ -89,19 +100,19 @@ test("every model's breakdown adds up exactly to the Score the table prints", ()
       continue;
     }
     expect(b).not.toBeNull();
+    expect(score).toBeGreaterThanOrEqual(0);
+    expect(score).toBeLessThanOrEqual(100);
     const s = b!.shown;
-    // The ledger, in whole tenths so floating point cannot blur it.
-    expect(tenths(s.index) - tenths(s.marketMean)).toBe(tenths(s.vsAverage));
-    expect(tenths(s.vsAverage) + tenths(s.priceAdjustment)).toBe(tenths(s.score));
-    expect(tenths(s.index) - tenths(s.score)).toBe(tenths(s.expected));
-    // The total is the figure the table shows.
-    expect(formatScore(s.score)).toBe(formatScore(score));
-    // The displayed price adjustment is the model's real one, give or take
-    // the rounding it absorbs.
-    const trueAdjustment = -b!.slope * Math.log10(b!.priceRatio);
-    expect(Math.abs(s.priceAdjustment - trueAdjustment)).toBeLessThanOrEqual(0.15);
-    // Expected index is the continuous market line at this price.
+    // Exact whole-tenth arithmetic: actual − expected = gap, marketMean − priceAdjustment = expected.
+    expect(tenths(s.index) - tenths(s.expected)).toBe(tenths(s.gap));
+    expect(tenths(s.marketMean) - tenths(s.priceAdjustment)).toBe(tenths(s.expected));
+    // The displayed Value % matches scoreFor exactly.
+    expect(formatScore(s.value)).toBe(formatScore(score));
+    expect(formatSigned(s.gap)).toMatch(/^([+−]\d+\.\d|0\.0)$/);
+    // Expected index and local σ match the model's direct evaluators.
     expect(b!.expected).toBeCloseTo(expectedIndex(fit!, priceOf(m))!, 9);
+    expect(b!.sigma).toBeCloseTo(sigmaAt(fit!, priceOf(m))!, 9);
+    expect(b!.z).toBeCloseTo(b!.gap / b!.sigma, 9);
     checked += 1;
   }
   expect(checked).toBe(fit!.n);
@@ -139,15 +150,47 @@ test("headlinePrice charges reasoning models for extra output tokens at their he
   }
 });
 
-test("the typical market price is where the line meets the market average, with zero global mean residual", () => {
+test("today's line is vintage-controlled, clock-invariant, heteroskedastic, and sits at 50% Value", () => {
+  expect(fit).not.toBeNull();
   const typical = 10 ** fit!.meanLogPrice;
   expect(expectedIndex(fit!, typical)).toBeCloseTo(fit!.meanIndex, 9);
-  const residuals = catalog.models
-    .map((m) => scoreFor(fit, priceOf(m), aaIndexFor(m)))
-    .filter((v): v is number => v !== null);
-  expect(residuals).toHaveLength(fit!.n);
-  const mean = residuals.reduce((a, b) => a + b, 0) / residuals.length;
-  expect(Math.abs(mean)).toBeLessThan(1e-9);
+  // Any point sitting right on today's market line scores exactly 50% Value.
+  expect(scoreFor(fit, typical, fit!.meanIndex)).toBeCloseTo(50, 9);
+  expect(formatScore(scoreFor(fit, typical, fit!.meanIndex))).toBe("50%");
+  // Vintage control removes Simpson's Paradox: older models score lower, R² jumps well above 0.70,
+  // and the true modern price slope sits well below the biased ~15 pts/decade pooled OLS slope.
+  expect(fit!.vintageAdjusted).toBe(true);
+  expect(fit!.ageSlope).toBeLessThan(-1);
+  expect(fit!.r2).toBeGreaterThan(0.7);
+  expect(fit!.slope).toBeGreaterThan(3);
+  expect(fit!.slope).toBeLessThan(12);
+  // Heteroskedastic spread narrows from cheap models to expensive flagships, with a noise floor.
+  const sigLow = sigmaAt(fit!, 0.25)!;
+  const sigHigh = sigmaAt(fit!, 40)!;
+  expect(sigLow).toBeGreaterThan(sigHigh);
+  expect(sigHigh).toBeGreaterThanOrEqual(fit!.measFloor);
+  // Wall-clock invariance: shifting every release date by +30 days produces the identical fit.
+  const shifted = fitScoreModel(
+    catalog.models.map((m) => {
+      const raw = releaseDateOf(m);
+      const nextDate = raw
+        ? new Date(Date.parse(`${raw}T00:00:00Z`) + 30 * 86_400_000).toISOString().slice(0, 10)
+        : null;
+      return { price: priceOf(m), index: aaIndexFor(m), releaseDate: nextDate };
+    }),
+  )!;
+  expect(shifted.intercept).toBeCloseTo(fit!.intercept, 9);
+  expect(shifted.slope).toBeCloseTo(fit!.slope, 9);
+  expect(shifted.sigma).toBeCloseTo(fit!.sigma, 9);
+  // Clean undated fallback for synthetic inputs without releaseDate.
+  const undated = fitScoreModel([
+    { price: 0.5, index: 30 },
+    { price: 5, index: 45 },
+    { price: 50, index: 60 },
+  ]);
+  expect(undated).not.toBeNull();
+  expect(undated!.vintageAdjusted).toBe(false);
+  expect(undated!.slope).toBeCloseTo(15, 6);
 });
 
 test("Score has zero tier-boundary cliffs and preserves Pareto monotonicity across the catalog", () => {
@@ -165,7 +208,7 @@ test("Score has zero tier-boundary cliffs and preserves Pareto monotonicity acro
   // Models with nearly identical price and AA Index stay nearly tied (no artificial 15-pt gap).
   const hydrogenScore = scoreFor(fit, 10.54, 54)!;
   const carbonScore = scoreFor(fit, 11.14, 54)!;
-  expect(Math.abs(hydrogenScore - carbonScore)).toBeLessThan(1);
+  expect(Math.abs(hydrogenScore - carbonScore)).toBeLessThan(3);
   // Strict Pareto monotonicity: cheaper-or-equal and higher-or-equal AA Index => higher-or-equal Score.
   const scoredPts = catalog.models
     .map((m) => ({ price: priceOf(m), index: aaIndexFor(m) }))

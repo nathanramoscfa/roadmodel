@@ -111,7 +111,7 @@ test("a pick carries its figures at the level it runs: AA Index, price, Score, r
   const sonnet = getModelRows().find((m) => m.name === "Sonnet 5.5")!;
   await expect(quality.getByTestId("pick-price")).toHaveText(`$${effortPrice(sonnet, "high").toFixed(2)}`);
   await expect(quality.getByTestId("pick-aa-index")).toHaveText(/^\d+\.\d$/);
-  await expect(quality.getByTestId("pick-score")).toHaveText(/^([+−]\d+\.\d|0\.0)$/);
+  await expect(quality.getByTestId("pick-score")).toHaveText(/^\d{1,3}%$/);
   await expect(page.getByTestId("pick-price")).toHaveCount(3);
   await expect(page.getByTestId("pick-score")).toHaveCount(3);
   // Seven S→D letters per pick, each marked measured or estimated.

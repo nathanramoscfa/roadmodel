@@ -33,6 +33,7 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "r
 import {
   formatScore,
   formatUsd,
+  sigmaAt,
   type ScoreFit,
 } from "@/lib/benchmark-grid";
 import { COST_TIER_DEFS, COST_TIER_DOT, type CostTier, type ModelRow } from "@/lib/catalog-fields";
@@ -146,12 +147,14 @@ function TierChart({
   const x0 = Math.min(...xs) - pad;
   const x1 = Math.max(...xs) + pad;
   const line = useCallback((x: number) => fit.intercept + fit.slope * x, [fit]);
+  const sig0 = sigmaAt(fit, 10 ** x0) ?? fit.sigma;
+  const sig1 = sigmaAt(fit, 10 ** x1) ?? fit.sigma;
   const yVals = [
     ...pts.map((p) => p.index),
-    line(x0) - fit.sigma,
-    line(x0) + fit.sigma,
-    line(x1) - fit.sigma,
-    line(x1) + fit.sigma,
+    line(x0) - sig0,
+    line(x0) + sig0,
+    line(x1) - sig1,
+    line(x1) + sig1,
   ];
   const rawLo = Math.min(...yVals);
   const rawHi = Math.max(...yVals);
@@ -181,7 +184,7 @@ function TierChart({
         cx: sx(p.x),
         cy: sy(p.index),
         text: `${p.row.name} ${formatScore(p.score)}`,
-        priority: Math.abs(p.score) + (p.row.value_frontier ? 100 : 0),
+        priority: Math.abs(p.score - 50) + (p.row.value_frontier ? 100 : 0),
       })),
       { x: M.left + 2, y: M.top + 2, w: plotW - 4, h: plotH - 4 },
       Math.max(3, Math.min(MAX_LABELS, Math.floor(plotW / 60))),
@@ -229,8 +232,15 @@ function TierChart({
 
   const activePoint = active?.kind === "point" ? pts.find((p) => p.row.id === active.id) : undefined;
   const clipId = `plot-${tier}`;
-  const bandTop = `${sx(x0)},${sy(line(x0) + fit.sigma)} ${sx(x1)},${sy(line(x1) + fit.sigma)}`;
-  const bandBottom = `${sx(x1)},${sy(line(x1) - fit.sigma)} ${sx(x0)},${sy(line(x0) - fit.sigma)}`;
+  const bandSteps = 20;
+  const bandXs = Array.from({ length: bandSteps + 1 }, (_, i) => x0 + ((x1 - x0) * i) / bandSteps);
+  const bandTop = bandXs
+    .map((x) => `${sx(x)},${sy(line(x) + (sigmaAt(fit, 10 ** x) ?? fit.sigma))}`)
+    .join(" ");
+  const bandBottom = [...bandXs]
+    .reverse()
+    .map((x) => `${sx(x)},${sy(line(x) - (sigmaAt(fit, 10 ** x) ?? fit.sigma))}`)
+    .join(" ");
 
   return (
     <figure
@@ -267,7 +277,7 @@ function TierChart({
             width={width}
             height={height}
             role="group"
-            aria-label={`${label} cost: ${pts.length} ${pts.length === 1 ? "model" : "models"} plotted by blended price against AA Intelligence Index, with the market price line. Each model's Score is its vertical distance from the line.`}
+            aria-label={`${label} cost: ${pts.length} ${pts.length === 1 ? "model" : "models"} plotted by blended price against AA Intelligence Index, with today's market price line. Each model's Value measures how far it sits above or below the line relative to the local spread.`}
             className="block touch-manipulation select-none text-brand-slate-400 dark:text-brand-slate-500"
             onPointerDown={(e) => {
               if (e.target === e.currentTarget) clear();
@@ -319,9 +329,10 @@ function TierChart({
             ))}
 
             <g clipPath={`url(#${clipId})`}>
-              {/* ±σ tie band */}
+              {/* Price-varying ±σ local spread ribbon */}
               <polygon
                 points={`${bandTop} ${bandBottom}`}
+                data-testid="score-chart-band"
                 className="fill-brand-slate-900/[0.05] dark:fill-white/[0.06]"
               />
               {/* The continuous market price line */}
@@ -377,7 +388,7 @@ function TierChart({
                   y1={sy(p.predicted)}
                   x2={sx(p.x)}
                   y2={sy(p.index)}
-                  stroke={p.score >= 0 ? ABOVE : BELOW}
+                  stroke={p.index >= p.predicted ? ABOVE : BELOW}
                   strokeWidth={activePoint === p ? 2.5 : 1.5}
                   strokeOpacity={dim ? 0.15 : 0.55}
                   pointerEvents="none"
@@ -400,7 +411,7 @@ function TierChart({
                     cx={cx}
                     cy={cy}
                     r={isActive ? DOT_R + 1.5 : DOT_R}
-                    fill={p.score >= 0 ? ABOVE : BELOW}
+                    fill={p.index >= p.predicted ? ABOVE : BELOW}
                     strokeWidth={isActive ? 2.5 : 1.5}
                     className={isActive ? "stroke-brand-slate-900 dark:stroke-white" : "stroke-white dark:stroke-brand-slate-900"}
                   />
@@ -459,7 +470,7 @@ function TierChart({
                 fill="transparent"
                 tabIndex={0}
                 role="button"
-                aria-label={`${p.row.name}: Score ${formatScore(p.score)}, AA Index ${p.index}, input ${formatUsd(p.row.input_price_per_1m)} and output ${formatUsd(p.row.output_price_per_1m)} per 1M tokens`}
+                aria-label={`${p.row.name}: Value ${formatScore(p.score)}, AA Index ${p.index}, input ${formatUsd(p.row.input_price_per_1m)} and output ${formatUsd(p.row.output_price_per_1m)} per 1M tokens`}
                 data-testid="score-chart-point"
                 data-model-id={p.row.id}
                 className="cursor-pointer outline-none"
@@ -575,7 +586,7 @@ export function ScoreCharts({
       data-testid="score-charts"
     >
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-5 py-3 text-sm font-semibold text-brand-slate-800 dark:text-brand-slate-100">
-        What the Score means: AA Index against price, one chart per cost tier
+        What Value means: AA Index against price, one chart per cost tier
         <span className="text-xs font-normal text-brand-slate-500 group-open:hidden dark:text-brand-slate-400">
           show
         </span>
@@ -592,9 +603,10 @@ export function ScoreCharts({
           effort-adjusted blended price (across) and AA Intelligence Index (up), and the line is
           what the market typically scores at each price. Output is scaled by the tokens drawn at
           the model&rsquo;s headline Effort, (3&nbsp;&times;&nbsp;input + m&nbsp;&times;&nbsp;output)&nbsp;&divide;&nbsp;4.{" "}
-          <strong>A model&rsquo;s Score is its vertical distance from the line</strong>, in index
-          points: above it (+) buys more intelligence than the price predicts, below it (&minus;)
-          buys less.
+          <strong>A model&rsquo;s Value (0&ndash;100%)</strong> turns that vertical gap into a
+          price-adjusted market percentile scaled by the local spread ribbon: 50% sits right on
+          today&rsquo;s line, above 50% buys more intelligence than the price predicts, and below
+          50% buys less.
         </p>
 
         {grouping === "quality" && (
@@ -616,7 +628,7 @@ export function ScoreCharts({
             {plotted.length === 0
               ? "No measured model matches, so there is nothing to plot."
               : `${plotted.length} measured ${plotted.length === 1 ? "model" : "models"} in ${tiers.length} ${tiers.length === 1 ? "chart" : "charts"}.`}{" "}
-            The market price line and Scores stay fitted over the whole catalog, so a filter narrows
+            The market price line and Value stay fitted over the whole catalog, so a filter narrows
             the dots shown while keeping the line fixed.
           </FilterNote>
         )}
@@ -626,13 +638,13 @@ export function ScoreCharts({
             <LegendSwatch>
               <circle cx={11} cy={7} r={5} fill={ABOVE} />
             </LegendSwatch>
-            Above the line (+)
+            Above today’s line (&gt;50%)
           </li>
           <li className="inline-flex items-center gap-1.5">
             <LegendSwatch>
               <circle cx={11} cy={7} r={5} fill={BELOW} />
             </LegendSwatch>
-            Below the line (&minus;)
+            Below today’s line (&lt;50%)
           </li>
           <li className="inline-flex items-center gap-1.5">
             <LegendSwatch>
@@ -644,13 +656,13 @@ export function ScoreCharts({
             <LegendSwatch>
               <line x1={1} y1={11} x2={21} y2={3} strokeWidth={2} className="stroke-brand-slate-700 dark:stroke-brand-slate-200" />
             </LegendSwatch>
-            Expected AA Index for the price
+            Today’s expected AA Index for the price
           </li>
           <li className="inline-flex items-center gap-1.5">
             <LegendSwatch>
-              <rect x={1} y={2} width={20} height={10} rx={2} className="fill-brand-slate-900/[0.08] dark:fill-white/[0.1]" />
+              <polygon points="1,2 21,5 21,11 1,14" className="fill-brand-slate-900/[0.08] dark:fill-white/[0.1]" />
             </LegendSwatch>
-            ±{sigma} tie band
+            ±σ local spread (±{fit.sigmaMin.toFixed(1)}–{fit.sigmaMax.toFixed(1)})
           </li>
           <li className="text-brand-slate-500 dark:text-brand-slate-400">
             Hover or tap any dot or line for its numbers.
@@ -666,12 +678,13 @@ export function ScoreCharts({
         )}
 
         <p className="text-xs leading-5 text-brand-slate-500 dark:text-brand-slate-400">
-          One continuous least-squares fit over all {fit.n} AA-measured models: AA Index = α +
-          β&thinsp;×&thinsp;log<sub>10</sub>(effort-adjusted price), with α&nbsp;=&nbsp;
+          One continuous Huber-robust{fit.vintageAdjusted ? ", vintage-controlled" : ""} fit over
+          all {fit.n} AA-measured models: AA Index = α + β&thinsp;×&thinsp;log<sub>10</sub>
+          (effort-adjusted price), anchored at today&rsquo;s generation with α&nbsp;=&nbsp;
           {fit.intercept.toFixed(1)} at $1/1M and slope β&nbsp;=&nbsp;{fit.slope.toFixed(1)} index
-          points per 10&times; price across every cost tier (R&sup2;&nbsp;{fit.r2.toFixed(2)},
-          residual σ&nbsp;{sigma}). A dot inside the shaded band sits level with the line: treat
-          scores that close together as a tie, not a ranking.{" "}
+          points per 10&times; price (R&sup2;&nbsp;{fit.r2.toFixed(2)}, midpoint σ&nbsp;{sigma},
+          local ±σ narrowing from ±{fit.sigmaMax.toFixed(1)} to ±{fit.sigmaMin.toFixed(1)}). A dot
+          inside the shaded ribbon sits close to today&rsquo;s market line.{" "}
           <strong className="text-brand-slate-700 dark:text-brand-slate-200">
             The green ring marks the cost/quality frontier: a model that scores higher than every
             other {scope ? `${scope} model` : "model in the catalog"} at its price or less.

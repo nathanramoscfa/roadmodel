@@ -197,7 +197,7 @@ function PriceFigure({ option: o, className = "" }: { option: OptionView; classN
 
 function ScoreFigure({ option: o, data }: { option: OptionView; data: PicksData }) {
   if (o.score === null || !o.row) return <span className={FAINT}>—</span>;
-  const tone = data.fit ? scoreToneClass(o.score, data.fit.sigma) : STRONG;
+  const tone = data.fit ? scoreToneClass(o.score) : STRONG;
   const text = formatScore(o.score);
   if (!data.fit || !o.inPool) {
     return (
@@ -208,7 +208,7 @@ function ScoreFigure({ option: o, data }: { option: OptionView; data: PicksData 
   }
   return (
     <HoverCard
-      label={`${o.row.name}: Score ${text}. Show how it adds up`}
+      label={`${o.row.name}: Value ${text}. Show how it is computed`}
       card={
         <ScoreBreakdownCard
           model={o.row}
@@ -509,7 +509,7 @@ function PickCard({
         <Stat label="Price" sub="per 1M tokens">
           <PriceFigure option={o} />
         </Stat>
-        <Stat label="Score" sub="vs the price line">
+        <Stat label="Value" sub="vs today’s market">
           <ScoreFigure option={o} data={data} />
         </Stat>
       </dl>
