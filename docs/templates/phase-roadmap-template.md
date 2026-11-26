@@ -304,8 +304,12 @@ first; Stage 4 merges from inside the worktree with `gh pr merge
 <PR_NUMBER> --squash` (omitting `--delete-branch`, which fails trying
 to check out `main`); and Stage 5 removes ONLY this worktree from
 outside it BEFORE deleting its branch, leaving active sibling
-worktrees untouched and fast-forwarding the primary tree only if it is
-cleanly on `main`. (`/roadmap-step <P> <M> --worktree` executes this
+worktrees untouched, then brings the primary tree up to `origin/main`
+when it has no uncommitted edits and sits on `main` or detached at a
+commit `origin/main` contains; in any other state it leaves the tree
+alone and the final response says so, because the roadmap the
+operator reads there does not show the mark yet.
+(`/roadmap-step <P> <M> --worktree` executes this
 flow.) Undeclared parallelism is a lifecycle violation, not a
 shortcut. Worktree location for this project: {{sibling directory
 `../<repo>--<slug>` or git-ignored `.worktrees/<slug>/` — one
@@ -496,8 +500,17 @@ before declaring a step complete.
    <worktree-path>`, then `git worktree prune` — before deleting
    `<branch>`, because `git branch -D` refuses a branch still
    checked out in a worktree. Leave any active sibling parallel
-   worktree untouched, and fast-forward the primary tree only if
-   it is already cleanly on `main`. Confirm with `git branch -vv`
+   worktree untouched. Then bring the primary tree up to
+   `origin/main`, since its roadmap is the one the operator
+   reads, when it has no uncommitted edits to tracked files
+   (`git -C <primary-tree> status --porcelain
+   --untracked-files=no` prints nothing): on `main`, `git -C
+   <primary-tree> pull --ff-only origin main`; detached at a
+   commit `origin/main` contains (`git -C <primary-tree>
+   merge-base --is-ancestor HEAD origin/main`), `git -C
+   <primary-tree> checkout --quiet --detach origin/main`. In any
+   other state leave it untouched, and say so in the final
+   response, before the completion line. Confirm with `git branch -vv`
    that only `main` and intentional active/long-lived branches
    remain locally, and once no parallel steps are in flight,
    `git worktree list` shows only the primary tree.
@@ -1123,9 +1136,17 @@ hygiene").}}
        from outside it FIRST (`git
        worktree remove <path>`),
        leaving sibling worktrees
-       untouched and fast-forwarding
-       the primary tree only when
-       cleanly on `main`.
+       untouched, then bring the
+       primary tree to
+       `origin/main` when it has
+       no uncommitted edits and is
+       on `main` (`pull --ff-only`)
+       or detached at a commit
+       `origin/main` contains
+       (`checkout --quiet --detach
+       origin/main`); otherwise
+       leave it and say so before
+       the completion line.
 
     6. DISPOSE OF EVERY FINDING,
        DECLARE COMPLETION, THEN

@@ -888,7 +888,15 @@ def test_roadmap_step_supports_worktree_mode_for_parallel_steps() -> None:
     assert "gh pr merge <PR_NUMBER> --squash` — omit `--delete-branch`" in flat
     assert "git worktree remove <worktree-path>" in flat
     assert "Never remove or prune another step's active worktree." in flat
-    assert "ONLY if `PRIMARY_ROOT` is already cleanly on `main`" in flat
+    # Stage 5 refreshes the primary tree on `main` or detached behind
+    # origin/main, never with uncommitted edits; Stage 6 reports a skip.
+    assert "status --porcelain --untracked-files=no` prints nothing" in flat
+    assert "git -C <PRIMARY_ROOT> pull --ff-only origin main" in flat
+    assert "merge-base --is-ancestor HEAD origin/main` exits 0" in flat
+    assert "checkout --quiet --detach origin/main" in flat
+    assert "leave `PRIMARY_ROOT` untouched; Stage 6 reports it." in flat
+    assert "confirm the roadmap in `PRIMARY_ROOT` shows it too" in flat
+    assert "cleanly on `main`" not in flat
     # Portability across OpenCode and Gemini CLI.
     for token in ("@", "!`", "!{", "@{", "'''"):
         assert token not in text, token
@@ -896,7 +904,9 @@ def test_roadmap_step_supports_worktree_mode_for_parallel_steps() -> None:
 
 def test_templates_align_worktree_merge_and_cleanup_for_parallel_steps() -> None:
     """Templates must not tell a linked worktree session to switch into the
-    primary tree or pass `--delete-branch`, nor wipe active sibling worktrees."""
+    primary tree or pass `--delete-branch`, nor wipe active sibling worktrees,
+    and must bring a clean primary tree (on `main` or detached behind
+    `origin/main`) up to date, or say in the final response that it did not."""
     for path in (PHASE, PROJECT):
         flat = re.sub(r"\s+", " ", path.read_text())
         assert "Merge from the primary tree" not in flat, path.name
@@ -906,4 +916,7 @@ def test_templates_align_worktree_merge_and_cleanup_for_parallel_steps() -> None
             "active sibling parallel worktree untouched" in flat
             or "active sibling worktrees untouched" in flat
         ), path.name
-        assert "cleanly on `main`" in flat, path.name
+        assert "cleanly on `main`" not in flat, path.name
+        assert "detached at a commit `origin/main` contains" in flat, path.name
+        assert "checkout --quiet --detach origin/main" in flat, path.name
+        assert "say so in the final response" in flat, path.name
