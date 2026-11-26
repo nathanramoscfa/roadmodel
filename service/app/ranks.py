@@ -13,10 +13,8 @@ themselves are read from. With them come the settings that ladder weighed
 Index and price there), so the page's chart draws the frontier the picks were
 read from and not one of its own.
 
-``scoring.ranked_columns`` computes both (roadmodel > 0.2.118). The service
-installs roadmodel from PyPI, so until that release is the floor
-``_ranked_0_2_118`` reads them from the same functions the package uses;
-tests/test_ranks.py holds the two to one answer.
+``scoring.ranked_columns`` computes both; tests/test_ranks.py holds the
+service's read to the package's.
 
 Ranks are an addition to an answer, never a condition of it: every function
 here returns None in place of raising.
@@ -64,94 +62,13 @@ class Read(NamedTuple):
     points: list[dict[str, Any]]
 
 
-def _ranked_0_2_118(task: scoring.Task, text: str, unavailable: list[str]) -> Read | None:
-    """``scoring.ranked_columns`` for roadmodel 0.2.118, which ranks a
-    roadmap's Settings this way (``settings_ladder``) but only with every pool
-    at headroom, and has no ``ladder_points``: the same loop and the same
-    reading of each setting, over the same package functions, on the pools as
-    they stand. Delete with the floor bump past 0.2.118."""
-    cat = scoring._cost._load_catalog()
-    bench = scoring.with_unmeasured(scoring._load_benchmarks(), cat)
-    seen: dict[frozenset[str], Any] = {}
-
-    def read(without: list[str]) -> Any:
-        key = frozenset([*unavailable, *without])
-        if key not in seen:
-            seen[key] = scoring.ladder(
-                task, text, unavailable_models=sorted(key), catalog=cat, benchmarks=bench
-            )
-        return seen[key]
-
-    lad = read([])
-    if lad is None:
-        return None
-    by_maker: dict[str, set[str]] = {}
-    for m in cat.get("models", []):
-        mid = str(m.get("id", ""))
-        maker = scoring._cost.model_provider(mid, cat) or str(m.get("provider", "unknown"))
-        by_maker.setdefault(maker, set()).add(mid)
-
-    # A caller who funds something is ranked their own models only: with
-    # their funded makers off the table the ladder reads the whole catalog,
-    # as it does for a caller who funds nothing.
-    funds = any(c.funding != "unfunded" for c in lad.settings)
-    columns: dict[str, dict[str, Any]] = {}
-    for tier in scoring.LADDER_TIERS:
-        rung = lad.rungs[tier]
-        pick = scoring._option(rung.candidate, rung.level, bench, cat)
-        ranked: list[dict[str, Any] | None] = [pick]
-        makers = [rung.candidate.provider]
-        while len(ranked) < 3:
-            rest = read(sorted(m for maker in makers for m in by_maker.get(maker, ())))
-            nxt = None if rest is None else rest.rungs[tier]
-            if (
-                nxt is None
-                or nxt.candidate.provider in makers
-                or (funds and nxt.candidate.funding == "unfunded")
-            ):
-                break
-            ranked.append(scoring._option(nxt.candidate, nxt.level, bench, cat))
-            makers.append(nxt.candidate.provider)
-        steps = 1
-        while len(ranked) < 3:
-            lower = scoring._step_down(rung.candidate, rung.level, steps, cat)
-            ranked.append(
-                None
-                if lower is None
-                else scoring._option(rung.candidate, lower, bench, cat, stepped_down=True)
-            )
-            steps += 1
-        columns[tier] = {**pick, "runner_up": ranked[1], "backup": ranked[2]}
-    points: list[dict[str, Any]] = []
-    for c in lad.settings:
-        aa = scoring._candidate_aa(c, bench)
-        if aa is None:
-            continue
-        points.append(
-            {
-                "model_id": c.model_id,
-                "platform_id": c.platform_id,
-                "effort": c.evidence_level,
-                "aa_index": round(aa + c.aa_estimate_penalty, 1),
-                "margin": c.aa_estimate_penalty,
-                "price_usd_per_1m": scoring.frontier_price(c),
-                "adequate": c.requirement_penalty == 0,
-                "estimated": c.aa_estimated or c.aa_inherited_from is not None,
-            }
-        )
-    return Read(columns, points)
-
-
 def read(task: scoring.Task, text: str, unavailable_models: list[str] | None = None) -> Read | None:
     """The ranked columns and the weighed settings for ``task`` over the
     user-context ``text`` (the table format the scorer reads). None when the
     context leaves no frontier, or on any failure."""
     unavailable = list(unavailable_models or [])
     try:
-        ranked = getattr(scoring, "ranked_columns", None)
-        if ranked is None:
-            return _ranked_0_2_118(task, text, unavailable)
-        out = ranked(task, text, unavailable_models=unavailable)
+        out = scoring.ranked_columns(task, text, unavailable_models=unavailable)
         return None if out is None else Read(dict(out.columns), list(out.points))
     except Exception:  # noqa: BLE001 - ranks are an addition, never fatal
         logger.warning("ranked ladder read failed (non-fatal)")

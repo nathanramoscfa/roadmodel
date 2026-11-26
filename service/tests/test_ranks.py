@@ -3,10 +3,8 @@
 
 The guarantees under test:
 
-- the ranks and the weighed settings the service reads are the package's:
-  where the installed roadmodel has ``scoring.ranked_columns`` the 0.2.118
-  path gives the same answer, and on 0.2.118 itself it gives the ranks that
-  release ranks a roadmap's Settings with (``settings_ladder``, at headroom);
+- the ranks and the weighed settings the service reads are the package's
+  (``scoring.ranked_columns``);
 - a ladder pick the frontier table placed carries its three ranks, and the
   response says what the task was read as and carries the settings its ladder
   weighed, each pick among them; a pick a guard replaced, a response the
@@ -71,38 +69,15 @@ def _options(column: dict[str, Any]) -> list[dict[str, Any] | None]:
 
 
 @pytest.mark.parametrize("task", _TASKS, ids=lambda t: f"{t.category}/{t.complexity}")
-def test_the_0_2_118_ranks_are_the_packages(task: scoring.Task) -> None:
+def test_the_ranks_are_the_packages(task: scoring.Task) -> None:
     from app import ranks
 
     text = _scoring_text(_CONTEXT)
-    mine = ranks._ranked_0_2_118(task, text, [])
-    assert mine is not None
-    package = getattr(scoring, "ranked_columns", None)
-    if package is not None:
-        out = package(task, text)
-        assert out is not None
-        assert mine == ranks.Read(out.columns, out.points)
-    else:
-        # 0.2.118 ranks a roadmap's Settings with this loop, every pool at
-        # headroom; this context declares no pool, so the two reads agree on
-        # every rank that release fills from a maker the caller funds. (Where
-        # it reads a rank off the unfunded catalog, this one steps the Pick
-        # down, as the package does from the next release.)
-        got = scoring.settings_ladder(task, text)
-        assert got is not None
-        funded = {p["model_id"] for p in mine.points}
-        for tier, theirs in got["columns"].items():
-            ours = mine.columns[tier]
-            assert {k: v for k, v in ours.items() if k not in ("runner_up", "backup")} == {
-                k: v for k, v in theirs.items() if k not in ("runner_up", "backup")
-            }
-            for rank in ("runner_up", "backup"):
-                if theirs[rank] is not None and theirs[rank]["model_id"] in funded:
-                    assert ours[rank] == theirs[rank], (tier, rank)
-                elif ours[rank] is not None:
-                    assert ours[rank]["stepped_down"], (tier, rank)
-    assert ranks.read(task, text) == mine
-    assert ranks.columns(task, text) == mine.columns
+    out = scoring.ranked_columns(task, text)
+    assert out is not None
+    package = ranks.Read(out.columns, out.points)
+    assert ranks.read(task, text) == package
+    assert ranks.columns(task, text) == package.columns
 
 
 def test_each_rank_is_another_maker_at_its_own_level_and_figures() -> None:
@@ -263,8 +238,7 @@ def test_reading_the_ranks_never_raises(monkeypatch: pytest.MonkeyPatch) -> None
     def boom(*_a: Any, **_k: Any) -> Any:
         raise RuntimeError("no ranks today")
 
-    monkeypatch.setattr(ranks, "_ranked_0_2_118", boom)
-    monkeypatch.setattr(scoring, "ranked_columns", boom, raising=False)
+    monkeypatch.setattr(scoring, "ranked_columns", boom)
     assert ranks.read(scoring.Task("coding", "high"), _scoring_text(_CONTEXT)) is None
     assert ranks.columns(scoring.Task("coding", "high"), _scoring_text(_CONTEXT)) is None
     assert ranks.for_pick({"model": "x"}, "x", "y") is None
@@ -549,13 +523,10 @@ def test_quick_picks_rungs_carry_the_same_ranks(client: TestClient) -> None:
 def test_quick_pick_answers_without_its_ranks(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from app import ranks
-
     def boom(*_a: Any, **_k: Any) -> Any:
         raise RuntimeError("no ranks today")
 
-    monkeypatch.setattr(ranks, "_ranked_0_2_118", boom)
-    monkeypatch.setattr(scoring, "ranked_columns", boom, raising=False)
+    monkeypatch.setattr(scoring, "ranked_columns", boom)
     response = client.post("/v1/score", json={"category": "coding", "complexity": "high"})
     assert response.status_code == 200
     rungs = response.json()["rungs"]
