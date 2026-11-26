@@ -1694,7 +1694,10 @@ test("the Score cell opens a breakdown whose parts add up to the printed Score",
     ); // printed "− 48.9": a subtraction, not a sign
     const gap = parse(await card.getByTestId("score-breakdown-gap").innerText());
     expect(Math.round((index - expected) * 10)).toBe(Math.round(gap * 10));
-    await expect(card.getByTestId("score-breakdown-sigma")).toContainText("σ");
+    await expect(card.getByTestId("score-breakdown-sigma")).toHaveText(/^[+−]?\d+\.\d{2}σ$/);
+    await expect(card.getByTestId("score-breakdown-formula")).toContainText("Student-t");
+    await expect(card.getByTestId("score-breakdown-formula")).toContainText("50%");
+    await expect(card.getByTestId("score-breakdown-formula")).toContainText("percentile");
     expect(printed).toBe(
       formatScore(scoreFor(fit, effectivePrice(m), aaIndexFor(m))),
     );
