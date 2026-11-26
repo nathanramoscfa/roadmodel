@@ -104,21 +104,6 @@ function signed2(v: number): string {
   return (r > 0 ? "+" : "−") + Math.abs(r).toFixed(2);
 }
 
-function ordinal(n: number): string {
-  const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
-  switch (n % 10) {
-    case 1:
-      return `${n}st`;
-    case 2:
-      return `${n}nd`;
-    case 3:
-      return `${n}rd`;
-    default:
-      return `${n}th`;
-  }
-}
-
 // A model's index as the cards print it: AA's to one decimal; an estimate, good
 // to about four points, as the whole number the table shows; either marked ≈
 // when AA has not measured it.
@@ -689,8 +674,9 @@ export function ScoreBreakdownCard({
             testId="score-breakdown-total"
           />
           <p className={"mt-1 text-[11px] leading-4 " + MUTED} data-testid="score-breakdown-formula">
-            On a Student-t (df&nbsp;=&nbsp;{fit.df}) distribution centred on today&rsquo;s line
-            (0σ&nbsp;=&nbsp;50%), {signed2(b.z)}σ sits at the {ordinal(s.value)} percentile.
+            On today&rsquo;s market bell curve (0σ&nbsp;=&nbsp;50%), {signed2(b.z)}σ beats{" "}
+            {s.value === 0 ? "under 1%" : s.value === 100 ? "over 99%" : `about ${s.value}%`} of
+            expected {fit.vintageAdjusted ? "current-gen " : ""}models at {usd(b.price)}.
           </p>
         </div>
       </div>
