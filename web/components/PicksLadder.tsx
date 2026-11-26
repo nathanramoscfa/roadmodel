@@ -208,7 +208,7 @@ function ScoreFigure({ option: o, data }: { option: OptionView; data: PicksData 
   }
   return (
     <HoverCard
-      label={`${o.row.name}: Value ${text}. Show how it is computed`}
+      label={`${o.row.name}: Score ${text}. Show how it is computed`}
       card={
         <ScoreBreakdownCard
           model={o.row}
@@ -509,7 +509,7 @@ function PickCard({
         <Stat label="Price" sub="per 1M tokens">
           <PriceFigure option={o} />
         </Stat>
-        <Stat label="Value" sub="vs today’s market">
+        <Stat label="Score" sub="vs today’s market">
           <ScoreFigure option={o} data={data} />
         </Stat>
       </dl>

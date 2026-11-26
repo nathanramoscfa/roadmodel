@@ -277,7 +277,7 @@ function TierChart({
             width={width}
             height={height}
             role="group"
-            aria-label={`${label} cost: ${pts.length} ${pts.length === 1 ? "model" : "models"} plotted by blended price against AA Intelligence Index, with today's market price line. Each model's Value measures how far it sits above or below the line relative to the local spread.`}
+            aria-label={`${label} cost: ${pts.length} ${pts.length === 1 ? "model" : "models"} plotted by blended price against AA Intelligence Index, with today's market price line. Each model's Score measures how far it sits above or below the line relative to the local spread.`}
             className="block touch-manipulation select-none text-brand-slate-400 dark:text-brand-slate-500"
             onPointerDown={(e) => {
               if (e.target === e.currentTarget) clear();
@@ -470,7 +470,7 @@ function TierChart({
                 fill="transparent"
                 tabIndex={0}
                 role="button"
-                aria-label={`${p.row.name}: Value ${formatScore(p.score)}, AA Index ${p.index}, input ${formatUsd(p.row.input_price_per_1m)} and output ${formatUsd(p.row.output_price_per_1m)} per 1M tokens`}
+                aria-label={`${p.row.name}: Score ${formatScore(p.score)}, AA Index ${p.index}, input ${formatUsd(p.row.input_price_per_1m)} and output ${formatUsd(p.row.output_price_per_1m)} per 1M tokens`}
                 data-testid="score-chart-point"
                 data-model-id={p.row.id}
                 className="cursor-pointer outline-none"
@@ -586,7 +586,7 @@ export function ScoreCharts({
       data-testid="score-charts"
     >
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-5 py-3 text-sm font-semibold text-brand-slate-800 dark:text-brand-slate-100">
-        What Value means: AA Index against price, one chart per cost tier
+        What the Score means: AA Index against price, one chart per cost tier
         <span className="text-xs font-normal text-brand-slate-500 group-open:hidden dark:text-brand-slate-400">
           show
         </span>
@@ -603,7 +603,7 @@ export function ScoreCharts({
           effort-adjusted blended price (across) and AA Intelligence Index (up), and the line is
           what the market typically scores at each price. Output is scaled by the tokens drawn at
           the model&rsquo;s headline Effort, (3&nbsp;&times;&nbsp;input + m&nbsp;&times;&nbsp;output)&nbsp;&divide;&nbsp;4.{" "}
-          <strong>A model&rsquo;s Value (0&ndash;100%)</strong> turns that vertical gap into a
+          <strong>A model&rsquo;s Score (0&ndash;100%)</strong> turns that vertical gap into a
           price-adjusted market percentile scaled by the local spread ribbon: 50% sits right on
           today&rsquo;s line, above 50% buys more intelligence than the price predicts, and below
           50% buys less.
@@ -628,7 +628,7 @@ export function ScoreCharts({
             {plotted.length === 0
               ? "No measured model matches, so there is nothing to plot."
               : `${plotted.length} measured ${plotted.length === 1 ? "model" : "models"} in ${tiers.length} ${tiers.length === 1 ? "chart" : "charts"}.`}{" "}
-            The market price line and Value stay fitted over the whole catalog, so a filter narrows
+            The market price line and Scores stay fitted over the whole catalog, so a filter narrows
             the dots shown while keeping the line fixed.
           </FilterNote>
         )}
