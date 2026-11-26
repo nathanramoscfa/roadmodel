@@ -90,11 +90,6 @@ def _ranked_0_2_118(task: scoring.Task, text: str, unavailable: list[str]) -> Re
         mid = str(m.get("id", ""))
         maker = scoring._cost.model_provider(mid, cat) or str(m.get("provider", "unknown"))
         by_maker.setdefault(maker, set()).add(mid)
-    for entry in scoring._configurations.configurations():
-        for method in cat.get("access_methods", []):
-            if method.get("id") == entry["platform_id"]:
-                by_maker.setdefault(str(method["provider"]), set()).add(entry["id"])
-                break
 
     # A caller who funds something is ranked their own models only: with
     # their funded makers off the table the ladder reads the whole catalog,
@@ -271,7 +266,6 @@ def _option(raw: object) -> RankedOption | None:
             bool(raw["price_measured"]) if raw.get("price_measured") is not None else None
         ),
         stepped_down=bool(raw.get("stepped_down")),
-        ultracode=str(raw.get("ultracode") or "").lower() == "on",
     )
 
 

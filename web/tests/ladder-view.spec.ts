@@ -66,7 +66,6 @@ function ranked(model_id: string, model: string, over: Partial<RankedOption> = {
     price_usd_per_1m: 4,
     price_measured: true,
     stepped_down: false,
-    ultracode: false,
     ...over,
   };
 }
@@ -141,7 +140,7 @@ test("a level reads as the dials word it; a surface with no dial shows none and 
     DATA,
     answer([
       rec("cheap", { ranks: { pick: ranked("alpha", "Alpha", { effort: "medium", level: "—", platform: "Cursor", platform_id: "cursor", aa_index: 45, price_usd_per_1m: 3.5 }), runner_up: null, backup: null }, platform: "Cursor" }),
-      rec("balanced", { ranks: { pick: ranked("alpha", "Alpha", { effort: "fixed", level: "Fixed", aa_index: 50, price_usd_per_1m: 4 }), runner_up: null, backup: null } }),
+      rec("balanced", { ranks: { pick: ranked("alpha", "Alpha", { effort: "low", level: "Low", aa_index: 50, price_usd_per_1m: 4 }), runner_up: null, backup: null } }),
       rec("best", { ranks: { pick: ranked("beta", "Beta", { effort: "xhigh", level: "XHigh", aa_index: 55, price_usd_per_1m: 6.5 }), runner_up: null, backup: ranked("beta", "Beta", { effort: "high", level: "High", aa_index: 52, price_usd_per_1m: 5, stepped_down: true }) }, model: "Beta" }),
     ]),
   );
@@ -150,8 +149,8 @@ test("a level reads as the dials word it; a surface with no dial shows none and 
   expect(cost.pick.level).toBeNull();
   expect(cost.pick.effort).toBe("medium");
   expect(cost.pick.row?.name).toBe("Alpha · Medium");
-  expect(balanced.pick.level).toBe("Fixed");
-  expect(balanced.pick.effort).toBeNull();
+  expect(balanced.pick.level).toBe("Low");
+  expect(balanced.pick.effort).toBe("low");
   expect(quality.pick.level).toBe("Extra high");
   // A rank no other maker fills: the Pick's own model a level lower.
   expect(quality.backup).toMatchObject({ model: "Beta", level: "High", steppedDown: true });

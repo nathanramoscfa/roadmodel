@@ -115,7 +115,6 @@ class ScoreBackup(BaseModel):
     platform_id: str
     platform_name: str
     effort: str
-    ultracode: bool = False
 
 
 class ScoreRung(BaseModel):
@@ -125,7 +124,6 @@ class ScoreRung(BaseModel):
     platform_id: str
     platform_name: str
     effort: str
-    ultracode: bool = False
     specialist: bool = False
     backup: ScoreBackup | None = None
     # The rung ranked three deep, as a roadmap's Settings rank it: this pick,
@@ -228,31 +226,26 @@ def _why(c: Any, task: scoring.Task) -> Why:
 def _rung(tier: str, r: Any, task: scoring.Task, column: dict[str, Any] | None = None) -> ScoreRung:
     c = r.candidate
     b = r.backup
-    model_name = getattr(c, "configuration_picker_model", None) or c.model_name
     return ScoreRung(
         priority=tier,
         model_id=c.model_id,
-        model_name=model_name,
+        model_name=c.model_name,
         platform_id=c.platform_id,
         platform_name=c.platform_name,
         effort=r.level,
-        ultracode=getattr(c, "configuration_settings", {}).get("ultracode") == "On",
         specialist=bool(getattr(r, "specialist", False)),
         backup=(
             ScoreBackup(
                 model_id=b.candidate.model_id,
-                model_name=getattr(b.candidate, "configuration_picker_model", None)
-                or b.candidate.model_name,
+                model_name=b.candidate.model_name,
                 platform_id=b.candidate.platform_id,
                 platform_name=b.candidate.platform_name,
                 effort=b.level,
-                ultracode=getattr(b.candidate, "configuration_settings", {}).get("ultracode")
-                == "On",
             )
             if b is not None
             else None
         ),
-        ranks=ranks.for_pick(column, model_name, c.platform_name),
+        ranks=ranks.for_pick(column, c.model_name, c.platform_name),
         terms=Terms(
             quality=c.quality,
             requirement_shortfall=c.requirement_penalty,

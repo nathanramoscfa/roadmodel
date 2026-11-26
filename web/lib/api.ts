@@ -40,7 +40,7 @@ export interface RankedOption {
   model_id: string;
   platform: string;
   platform_id: string;
-  // The scorer's level (low / medium / high / xhigh / max), or "fixed".
+  // The scorer's level (low / medium / high / xhigh / max).
   effort: string;
   // The level as the ladder words it ("XHigh"); "—" where the surface has no
   // reasoning dial.
@@ -56,7 +56,6 @@ export interface RankedOption {
   // The Pick's own model one or two levels lower, where no other maker's
   // model fills the rank.
   stepped_down: boolean;
-  ultracode: boolean;
 }
 
 // A pick ranked three deep, each rank from another maker: the Pick, the

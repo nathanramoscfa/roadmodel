@@ -82,12 +82,12 @@ export interface OptionView {
   rank: Rank;
   model: string;
   platform: string | null;
-  // The level as the dials word it ("Extra high"), "Fixed" for a preset whose
-  // level is not set, or null where the surface names none.
+  // The level as the dials word it ("Extra high"), or null where the surface
+  // names none.
   level: string | null;
   // What the platform calls that dial: Effort, or Intelligence on Codex.
   dial: string;
-  // The same level as the scorer names it; null for a preset or no level.
+  // The same level as the scorer names it; null for no level.
   effort: EffortLevel | null;
   // The Pick's own model one or two levels lower: no other maker's model
   // fills this rank.
@@ -175,7 +175,7 @@ function isShown(value: string): boolean {
 }
 
 // A level as the page words it: the scorer's five as the dials do ("xhigh" and
-// "XHigh" both read "Extra high"), a preset as "Fixed", anything else as given.
+// "XHigh" both read "Extra high"), anything else as given.
 function levelWord(raw: string | null | undefined): { word: string | null; effort: EffortLevel | null } {
   const text = (raw ?? "").trim();
   if (!isShown(text)) return { word: null, effort: null };
@@ -303,7 +303,6 @@ function parseOption(value: unknown): RankedOption | null {
     price_usd_per_1m: isNumberOrNull(v.price_usd_per_1m) ? v.price_usd_per_1m : null,
     price_measured: typeof v.price_measured === "boolean" ? v.price_measured : null,
     stepped_down: v.stepped_down === true,
-    ultracode: v.ultracode === true,
   };
 }
 
@@ -325,7 +324,6 @@ function fromRanked(data: PicksData, frontier: Frontier, rank: Rank, o: RankedOp
     platformId: o.platform_id,
     level: o.level,
     effort: o.effort,
-    ultracode: o.ultracode,
     steppedDown: o.stepped_down,
     aa: o.aa_index,
     aaEstimated: o.aa_estimated,
@@ -489,7 +487,6 @@ function quickColumn(data: PicksData, frontier: Frontier, rung: KeylessRung, cat
         platform: rung.platform_name,
         platformId: rung.platform_id,
         level: rung.effort,
-        ultracode: rung.ultracode === true,
       });
   const legacyBackup = rung.backup
     ? option(data, frontier, {
@@ -498,7 +495,6 @@ function quickColumn(data: PicksData, frontier: Frontier, rung: KeylessRung, cat
         platform: rung.backup.platform_name,
         platformId: rung.backup.platform_id,
         level: rung.backup.effort,
-        ultracode: rung.backup.ultracode === true,
       })
     : null;
   return {
@@ -507,7 +503,7 @@ function quickColumn(data: PicksData, frontier: Frontier, rung: KeylessRung, cat
     runnerUp: ranks?.runner_up ? fromRanked(data, frontier, "runner_up", ranks.runner_up) : null,
     backup: ranks ? (ranks.backup ? fromRanked(data, frontier, "backup", ranks.backup) : null) : legacyBackup,
     ranked: ranks !== null,
-    settings: pick.ultracode ? [{ key: "ultracode", label: "Ultracode", value: "On" }] : [],
+    settings: [],
     cost: null,
     specialist: rung.specialist ? category : null,
     why: { sections: sectionsOf(rung.why, QUICK_SECTIONS), rationale: null },

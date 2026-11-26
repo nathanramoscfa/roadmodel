@@ -170,7 +170,7 @@ jobs:
           # four correct picks for routing it there.
           LIVE="$RUNNER_TEMP/roadmodel-live-data"
           mkdir -p "$LIVE"
-          for name in catalog.json model-selector.txt model-tier-cost-scale.md benchmarks.json context-windows.json effort-tokens.json index-estimates.json agent-configurations.json; do
+          for name in catalog.json model-selector.txt model-tier-cost-scale.md benchmarks.json context-windows.json effort-tokens.json index-estimates.json; do
             cp "docs/$name" "$LIVE/$name"
           done
           echo "ROADMODEL_DATA_DIR=$LIVE" >> "$GITHUB_ENV"

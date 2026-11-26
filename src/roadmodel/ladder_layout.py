@@ -43,16 +43,7 @@ RANKS: Final[tuple[tuple[str, str], ...]] = (
     ("Runner‑up", "runner_up"),
     ("Backup", "backup"),
 )
-FIELDS: Final[tuple[str, ...]] = (
-    "Model",
-    "Platform",
-    "Level",
-    "AA",
-    "Price",
-    "Score",
-    "Task grade",
-    "Ultracode",
-)
+FIELDS: Final[tuple[str, ...]] = ("Model", "Platform", "Level", "AA", "Price")
 RUNS_MARK: Final[str] = "✓"
 STEP_MARK: Final[str] = "↓"
 # A figure estimated from the model's measured levels, not measured at this one.
@@ -62,7 +53,6 @@ NONE: Final[str] = "—"
 _SEP: Final[str] = " · "
 # Level words as a dial names them, by the scorer's level.
 LEVEL_WORDS: Final[dict[str, str]] = {
-    "fixed": "Fixed",
     "minimal": "Minimal",
     "low": "Low",
     "medium": "Medium",
@@ -100,9 +90,6 @@ class Option:
     # The Pick's own model a level or two lower, filling a rank no other
     # maker could (marked ↓).
     stepped_down: bool = False
-    score: str | None = None
-    grade: str | None = None
-    ultracode: str | None = None
 
 
 def level_key(word: str) -> str | None:
@@ -125,9 +112,6 @@ def _cells(option: Option | None) -> list[str]:
         option.level + (f" {STEP_MARK}" if option.stepped_down else ""),
         NONE if option.aa is None else option.aa,
         price_cell(option),
-        option.score or NONE,
-        option.grade or NONE,
-        option.ultracode or NONE,
     ]
 
 
@@ -420,9 +404,6 @@ def _indented_ladder(
                 price=float(price.group(2)) if price else None,
                 price_measured=not (price and (price.group(1) or price.group(3))),
                 stepped_down=level.endswith(f" {STEP_MARK}"),
-                score=fields.get("Score", [NONE] * len(TIERS))[i],
-                grade=fields.get("Task grade", [NONE] * len(TIERS))[i],
-                ultracode=fields.get("Ultracode", [NONE] * len(TIERS))[i],
             )
     end = j
     k = _skip_blank(lines, j)

@@ -64,8 +64,7 @@ class RankedOption(BaseModel):
     model_id: str
     platform: str
     platform_id: str
-    # The scorer's level (low / medium / high / xhigh / max), or `fixed` for a
-    # configuration whose level is not set.
+    # The scorer's level (low / medium / high / xhigh / max).
     effort: str
     # The level as the ladder table words it (`XHigh`); `—` where the surface
     # has no reasoning dial.
@@ -81,7 +80,6 @@ class RankedOption(BaseModel):
     # The Pick's own model one or two levels lower, filling a rank no other
     # maker could.
     stepped_down: bool = False
-    ultracode: bool = False
 
     model_config = ConfigDict(extra="forbid")
 

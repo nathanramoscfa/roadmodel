@@ -32,7 +32,7 @@ const figure = z.number().finite().nullable();
 const rankedOption = z.object({
   model: text, model_id: text, platform: text, platform_id: text, effort: text, level: text,
   aa_index: figure, aa_estimated: z.boolean(), price_usd_per_1m: figure, price_measured: z.boolean().nullable(),
-  stepped_down: z.boolean(), ultracode: z.boolean(),
+  stepped_down: z.boolean(),
 });
 const ranks = z.object({ pick: rankedOption, runner_up: rankedOption.nullable(), backup: rankedOption.nullable() }).nullable().optional();
 const ladderTask = z.object({ category: text, complexity: text, novel: z.boolean() });
@@ -68,11 +68,11 @@ const engineData = z.object({
 const RUNGS = ["quality", "balanced", "cost"] as const;
 const term = z.number().finite();
 const quickBackup = z.object({
-  model_id: text, model_name: text, platform_id: text, platform_name: text, effort: text, ultracode: z.boolean().optional(),
+  model_id: text, model_name: text, platform_id: text, platform_name: text, effort: text,
 });
 const rung = z.object({
   priority: z.enum(RUNGS), model_id: text, model_name: text, platform_id: text, platform_name: text, effort: text,
-  ultracode: z.boolean().optional(), specialist: z.boolean(), backup: quickBackup.nullable(), ranks,
+  specialist: z.boolean(), backup: quickBackup.nullable(), ranks,
   terms: z.object({ quality: term, requirement_shortfall: term, cost: term }),
   why: z.object({ quality: text, requirement_shortfall: text, cost: text }),
 });

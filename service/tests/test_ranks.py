@@ -335,7 +335,6 @@ def test_a_ladder_pick_carries_its_three_ranks_and_the_task_it_was_read_as(
                 "price_usd_per_1m": option["price_usd_per_1m"],
                 "price_measured": option["price_measured"],
                 "stepped_down": option["stepped_down"],
-                "ultracode": False,
             }
         # The Pick's rank is the pick itself.
         assert got["pick"]["model"] == body["picks"][tier]["model"]

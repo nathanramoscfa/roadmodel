@@ -1414,7 +1414,6 @@ def _ladder_tier_guard(picks: dict[str, dict[str, Any]]) -> dict[str, Any]:
 # Effort levels as the selector's output format writes them: the scorer's
 # five and the native words some dials add (scoring.LEVEL_ORDER).
 _EFFORT_WORDS: Final = {
-    "fixed": "Fixed",
     "none": "None",
     "minimal": "Minimal",
     "low": "Low",
@@ -1476,8 +1475,7 @@ def _rung_pick_sentence(row: scoring.Ladder, tier: str) -> str:
     r = row.rungs[tier]
     c = r.candidate
     aa = scoring.aa_text(r.point)
-    basis = "on a comparable usage basis" if c.configuration_index is not None else "at list price"
-    facts = f"AA Index {aa}, ${c.blended_price_usd:.2f} per 1M tokens {basis}"
+    facts = f"AA Index {aa}, ${c.blended_price_usd:.2f} per 1M tokens at list price"
     if r.specialist:
         return (
             f"{c.model_name} is the strongest model you can run for {row.task.category} work: "
@@ -1554,15 +1552,6 @@ def _attach_backup_plans(picks: dict[str, dict[str, Any]], row: scoring.Ladder) 
         if backup is None:
             continue
         b = backup.candidate
-        if b.configuration_index is not None:
-            picks[tier]["backup"] = b.model_name
-            picks[tier]["backup_plan"] = {
-                "configuration_id": b.model_id,
-                "model": b.model_name,
-                "platform": b.platform_name,
-                "settings": _configuration_settings(b),
-            }
-            continue
         if picks[tier].get("backup") != cost.canonical_model_name(b.model_name):
             continue
         picks[tier]["backup_plan"] = {
@@ -1587,12 +1576,6 @@ def _mark_specialist(picks: dict[str, dict[str, Any]], row: scoring.Ladder) -> N
 # Claude Code's Ultracode is a session switch that runs at any effort level: an
 # engine that writes it where the row says max keeps it, at Max.
 _ULTRACODE_PLATFORM: Final = "claude-code"
-
-
-def _configuration_settings(candidate: scoring.Candidate) -> dict[str, str]:
-    if candidate.effort == "fixed":
-        return {}
-    return {"effort": _effort_word(candidate.effort), **candidate.configuration_settings}
 
 
 def _enforce_table_effort(ladder: dict[str, dict[str, str]], row: scoring.Ladder) -> list[str]:
@@ -1651,7 +1634,6 @@ _TABLE_DATA: Final = (
     "benchmarks.json",
     "context-windows.json",
     "effort-tokens.json",
-    "agent-configurations.json",
 )
 
 
@@ -1838,28 +1820,6 @@ def recommend_structured_ladder(
         for tier in _LADDER_TIERS
     }
     if fitted is not None:
-        for tier, rung in fitted.rungs.items():
-            c = rung.candidate
-            if c.configuration_index is None:
-                continue
-            picks[tier]["configuration_id"] = c.model_id
-            picks[tier]["settings"] = _configuration_settings(c)
-            if rung.backup is None:
-                picks[tier].pop("backup", None)
-            run = (
-                f"Select {c.configuration_picker_model} in {c.platform_name}."
-                if c.effort == "fixed"
-                else f"Select {c.configuration_picker_model} in {c.platform_name} at "
-                f"{_effort_word(c.effort)} and turn Ultracode on."
-            )
-            sections = picks[tier].get("rationale_sections") or {}
-            task = (
-                sections.get("task")
-                or f"A {fitted.task.complexity}-complexity {fitted.task.category} task."
-            )
-            pick = _rung_pick_sentence(fitted, tier)
-            picks[tier]["rationale_sections"] = {"task": task, "pick": pick, "effort": run}
-            picks[tier]["rationale"] = f"TASK: {task} PICK: {pick} EFFORT: {run}"
         _attach_backup_plans(picks, fitted)
         _mark_specialist(picks, fitted)
     guard = _ladder_tier_guard(picks)
