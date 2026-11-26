@@ -811,7 +811,7 @@ export function FrontierChart({
             {scope ? ` ${scope} model` : " model"} at its price or less.
           </strong>{" "}
           The dotted green line joins them from cheapest to priciest and steps up at each one, so
-          its height at any price is the top AA Index that price buys. The grey line and shaded ribbon show Value&rsquo;s continuous market price line and
+          its height at any price is the top AA Index that price buys. The grey line and shaded ribbon show the Score&rsquo;s continuous market price line and
           narrowing ±σ local spread for today&rsquo;s generation across every cost tier; the charts
           below zoom into each cost tier along that line.
           {bands && (
@@ -832,7 +832,7 @@ export function FrontierChart({
           {fit && (
             <>
               {" "}
-              The grey line is Value&rsquo;s Huber-robust{fit.vintageAdjusted ? ", vintage-controlled" : ""} fit
+              The grey line is the Score&rsquo;s Huber-robust{fit.vintageAdjusted ? ", vintage-controlled" : ""} fit
               across all {fit.n} AA-measured models: AA Index = {fit.intercept.toFixed(1)} +{" "}
               {fit.slope.toFixed(1)}&thinsp;×&thinsp;log<sub>10</sub>(effort-adjusted price), a
               continuous baseline of {fit.slope.toFixed(1)} index points per 10&times; price

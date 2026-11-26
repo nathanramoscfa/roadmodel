@@ -248,6 +248,8 @@ test("the page leads with the filters and the frontier chart, then the table, th
     "Cost/quality frontier: the top score at every price.",
   );
   await expect(page.getByTestId("table-key")).toContainText("Blended price = (3 × input + 1 × output) ÷ 4.");
+  await expect(page.getByTestId("score-color-key")).toContainText("75%+ top quartile above the line");
+  await expect(page.getByTestId("score-color-key")).toContainText("Independent of the frontier ring.");
 });
 
 // The frontier chart is the page's overview, so its plot opens on the first
@@ -395,7 +397,7 @@ test("unchecking CN takes it out of every chart and redraws the frontier over th
     scorePanel.locator(`[data-testid="score-chart-point"][data-model-id="${some.m.id}"]`),
   ).toHaveAttribute(
     "aria-label",
-    new RegExp(`Value ${formatScore(scoreFor(fit, some.price, some.index))}`),
+    new RegExp(`Score ${formatScore(scoreFor(fit, some.price, some.index))}`),
   );
 
   // The frontier chart: every non-CN measured model, the frontier recomputed
@@ -702,7 +704,7 @@ test("rating cells are letters only; the Score column is the cost-adjusted score
   // The header tooltips carry live statistics, never a typed-in figure: the
   // Score fit it just computed, and the AA snapshot the page just read.
   const scoreInfo = page.getByRole("link", {
-    name: "Value (price-adjusted market percentile) definition",
+    name: "Score (cost-adjusted market percentile) definition",
   });
   await scoreInfo.hover();
   await expect(
@@ -1082,12 +1084,12 @@ test("Group by Quality is the default: AA Index bands, highest Score first in ea
   expect(await actual()).toEqual(order(-1));
   const top = page.locator(`[data-testid="quality-group"][data-band="${bands[0]}"]`);
   await expect(top).toContainText(`AA Index ${bands[0]}–${(bands[0] + 9.9).toFixed(1)}`);
-  await expect(top.getByTestId("quality-group-prices")).toContainText("highest Value first");
-  await expect(page.getByRole("columnheader", { name: /^Value/ })).toHaveAttribute("aria-sort", "descending");
+  await expect(top.getByTestId("quality-group-prices")).toContainText("highest Score first");
+  await expect(page.getByRole("columnheader", { name: /^Score/ })).toHaveAttribute("aria-sort", "descending");
 
   // The Score header flips the order inside each band; the bands stay put.
-  await page.getByRole("button", { name: "Value", exact: true }).click();
-  await expect(top.getByTestId("quality-group-prices")).toContainText("lowest Value first");
+  await page.getByRole("button", { name: "Score", exact: true }).click();
+  await expect(top.getByTestId("quality-group-prices")).toContainText("lowest Score first");
   expect(await actual()).toEqual(order(1));
 
   await page.getByTestId("group-by-tier").click();
@@ -1569,7 +1571,7 @@ test("one Score chart per cost tier in either grouping, every measured model plo
       );
       await expect(
         chart.locator(`[data-testid="score-chart-point"][data-model-id="${m.id}"]`),
-      ).toHaveAttribute("aria-label", new RegExp(`Value ${expected}`));
+      ).toHaveAttribute("aria-label", new RegExp(`Score ${expected}`));
     }
   }
 
@@ -1730,7 +1732,7 @@ test("the Score card opens from the keyboard, and an unmeasured model says why i
       .locator(`[data-testid="model-row"][data-model-id="${WITHOUT_ANY.id}"]`)
       .getByTestId("value-cell");
     await cell.getByRole("button").hover();
-    await expect(page.getByRole("tooltip")).toContainText(`No Value for ${WITHOUT_ANY.name}`);
+    await expect(page.getByRole("tooltip")).toContainText(`No Score for ${WITHOUT_ANY.name}`);
   }
 });
 

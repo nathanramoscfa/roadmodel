@@ -441,7 +441,7 @@ export function ModelCatalog({
   // The benchmark-scores view spends its width on eleven evaluation columns,
   // so its leading columns (model, output, AA Index, Score) pad tighter.
     const padX = "px-2";
-  const scoreOrder = sortDir === "desc" ? "highest Value first" : "lowest Value first";
+  const scoreOrder = sortDir === "desc" ? "highest Score first" : "lowest Score first";
 
   // What each group header says about the rows under it: how many, their
   // prices on both scales the page uses (output, which sets the tier, and
@@ -637,31 +637,45 @@ export function ModelCatalog({
         is below the charts.
       </p>
 
-      {/* The two things the table cannot say for itself. */}
-      <div className="mt-3 grid grid-cols-1 gap-2 text-xs leading-5 md:grid-cols-2" data-testid="table-key">
+      {/* The three things the table cannot say for itself. */}
+      <div className="mt-3 grid grid-cols-1 gap-2 text-xs leading-5 md:grid-cols-3" data-testid="table-key">
         <p className="rounded-lg border border-emerald-500/40 bg-emerald-50/70 px-3 py-2 text-brand-slate-700 dark:bg-emerald-500/10 dark:text-brand-slate-200">
           <span aria-hidden className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full border-2 border-emerald-500 align-middle" />
           <strong className="text-brand-slate-900 dark:text-brand-slate-50">
             Cost/quality frontier: the top score at every price.
           </strong>{" "}
-          A green ring marks a model that scores higher on the AA Index than every other model at
-          its price or less. The ring compares{" "}
+          A green ring beside AA Index marks a model scoring higher than every other{" "}
           {scope ? (
             <>
-              every <span data-testid="frontier-scope">{scope}</span> model, at every price (the
+              <span data-testid="frontier-scope">{scope}</span> model at its price or less (the
               Cost tier filter narrows what you see, not what the ring compares)
             </>
           ) : (
-            "every model in the catalog"
+            "model in the catalog at its price or less"
           )}
-          ; Value measures each model against today’s continuous market price line as a 0–100% percentile. Hover any AA Index for the top score
-          at that price; the frontier chart above draws the whole line.
+          . Hover any AA Index for the leader at that price.
+        </p>
+        <p
+          className="rounded-lg border border-brand-slate-200 bg-brand-slate-50 px-3 py-2 text-brand-slate-700 dark:border-brand-slate-700 dark:bg-brand-slate-800/60 dark:text-brand-slate-200"
+          data-testid="score-color-key"
+        >
+          <strong className="text-brand-slate-900 dark:text-brand-slate-50">
+            Score (0&ndash;100%): vs today&rsquo;s market line.
+          </strong>{" "}
+          <span className="font-semibold text-emerald-700 dark:text-emerald-300">{VALUE_HIGH}%+</span>{" "}
+          top quartile above the line &middot;{" "}
+          <span className="font-medium text-brand-slate-700 dark:text-brand-slate-200">
+            {VALUE_LOW + 1}&ndash;{VALUE_HIGH - 1}%
+          </span>{" "}
+          near the line (50% = on it) &middot;{" "}
+          <span className="text-brand-slate-400 dark:text-brand-slate-500">&le;{VALUE_LOW}%</span>{" "}
+          bottom quartile. Independent of the frontier ring.
         </p>
         <p className="rounded-lg border border-brand-slate-200 bg-brand-slate-50 px-3 py-2 text-brand-slate-700 dark:border-brand-slate-700 dark:bg-brand-slate-800/60 dark:text-brand-slate-200">
           <strong className="text-brand-slate-900 dark:text-brand-slate-50">
             Blended price = (3 &times; input + 1 &times; output) &divide; 4.
           </strong>{" "}
-          Cost tiers go by list output price; Value, the charts, and the frontier scale output
+          Cost tiers go by list output price; the Score, the charts, and the frontier scale output
           by the tokens drawn at each row&rsquo;s headline Effort, (3 &times; input +{" "}
           <em>m</em> &times; output) &divide; 4.
         </p>
@@ -1007,14 +1021,14 @@ export function ModelCatalog({
                       >
                         {m.value_score === null || !scoreFit ? (
                           <HoverCard
-                            label={`${m.name} has no Value`}
+                            label={`${m.name} has no Score`}
                             card={
                               <p className="w-64 max-w-full text-[13px] leading-5">
                                 <span className="font-semibold text-brand-slate-900 dark:text-brand-slate-50">
-                                  No Value for {m.name}.
+                                  No Score for {m.name}.
                                 </span>{" "}
                                 Artificial Analysis has not measured its Intelligence Index, and
-                                Value is that index measured against today’s price line.
+                                The Score is that index measured against today’s price line.
                               </p>
                             }
                             className="text-brand-slate-400 dark:text-brand-slate-500"
@@ -1023,7 +1037,7 @@ export function ModelCatalog({
                           </HoverCard>
                         ) : (
                           <HoverCard
-                            label={`${m.name}: Value ${formatScore(m.value_score)}. Show how it is computed`}
+                            label={`${m.name}: Score ${formatScore(m.value_score)}. Show how it is computed`}
                             card={
                               <ScoreBreakdownCard
                                 model={m}
@@ -1217,13 +1231,13 @@ export function ModelCatalog({
           Artificial Analysis
         </a>{" "}
         (snapshot {benchmarksGeneratedAt}; {measuredCount} of {models.length} models measured) —
-        one lab, one harness, so every column is comparable down the page. Value is each
+        one lab, one harness, so every column is comparable down the page. Score is each
         model&rsquo;s 0&ndash;100% price-adjusted market percentile against today&rsquo;s
         Huber-robust, vintage-controlled market line (50% = on the line), scaled by the local
         price-tier spread. <strong>The green ring beside an AA Index
         marks the cost/quality frontier</strong>: each ringed model scores higher than every other
         {scope ? ` ${scope} model` : " model in the catalog"} at its price or less (blended). A
-        filter changes which models show, never Value: today’s market line is fitted over the whole
+        filter changes which models show, never a Score: today’s market line is fitted over the whole
         catalog. A rating is a class, not a rank within it; sorting a category orders by
         letter, then by the AA Index. Ratings are curated by the project&rsquo;s daily automation;
         see the{" "}
@@ -1374,7 +1388,7 @@ function ModelDetail({ model: m }: { model: ModelRow }) {
               <dd className="text-brand-slate-900 dark:text-brand-slate-50">
                 {formatBlended(headlinePrice(m))}{" "}
                 <span className="text-xs text-brand-slate-500 dark:text-brand-slate-400">
-                  ({headlineTokenShare(m)!.toFixed(2)}&times; output multiplier for Value &amp; frontier)
+                  ({headlineTokenShare(m)!.toFixed(2)}&times; output multiplier for Score &amp; frontier)
                 </span>
               </dd>
             </>

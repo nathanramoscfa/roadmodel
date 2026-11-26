@@ -245,7 +245,7 @@ export const FIELD_DEFS: Record<FieldKey, FieldDef> = {
     label: "Output",
     fullName: "Output price (USD per 1M tokens)",
     definition:
-      "Cost of 1M generated tokens — the dominant cost driver for code, plans, and long answers. The dot beside it is the cost tier: Low < $10, Medium $10–14.99, High $15–24.99, Very High ≥ $25. Value, the charts, and the frontier use an effort-adjusted blended price, (3 × input + m × output) ÷ 4, scaling output by the tokens drawn at the headline Effort.",
+      "Cost of 1M generated tokens — the dominant cost driver for code, plans, and long answers. The dot beside it is the cost tier: Low < $10, Medium $10–14.99, High $15–24.99, Very High ≥ $25. The Score, the charts, and the frontier use an effort-adjusted blended price, (3 × input + m × output) ÷ 4, scaling output by the tokens drawn at the headline Effort.",
   },
   cache_read_per_1m: {
     label: "Cache",
@@ -264,7 +264,7 @@ export const FIELD_DEFS: Record<FieldKey, FieldDef> = {
     label: "AA Index",
     fullName: "Artificial Analysis Intelligence Index",
     definition:
-      "The one published composite number: Artificial Analysis's index over its evaluation suite, independently measured on a 0–100 scale. The closest thing to a single numeric rating — use it to separate models that share a letter. '≈' marks a model AA has not measured yet: roadmodel's day-one estimate, placing the model's launch benchmarks beside those of models AA has measured (corrected for how far that maker's earlier launch tables ran ahead of AA's measurement), or, where its launch table is not available, chained through comparable launch tables, its measured earlier version, or pricing peers — each with a Value from it. AA's own figure replaces the estimate once published. Index versions are not comparable with each other; the snapshot this page carries is named below. A green ring beside the figure marks the cost/quality frontier: a model that scores higher than every other model at its effort-adjusted price or less. Hover a figure for the top score at its price.",
+      "The one published composite number: Artificial Analysis's index over its evaluation suite, independently measured on a 0–100 scale. The closest thing to a single numeric rating — use it to separate models that share a letter. '≈' marks a model AA has not measured yet: roadmodel's day-one estimate, placing the model's launch benchmarks beside those of models AA has measured (corrected for how far that maker's earlier launch tables ran ahead of AA's measurement), or, where its launch table is not available, chained through comparable launch tables, its measured earlier version, or pricing peers — each with a Score from it. AA's own figure replaces the estimate once published. Index versions are not comparable with each other; the snapshot this page carries is named below. A green ring beside the figure marks the cost/quality frontier: a model that scores higher than every other model at its effort-adjusted price or less. Hover a figure for the top score at its price.",
     url: "https://artificialanalysis.ai/",
   },
   effort: {
@@ -275,10 +275,10 @@ export const FIELD_DEFS: Record<FieldKey, FieldDef> = {
     url: "/docs",
   },
   value: {
-    label: "Value",
-    fullName: "Value (price-adjusted market percentile)",
+    label: "Score",
+    fullName: "Score (cost-adjusted market percentile)",
     definition:
-      "How strongly a model punches above or below today's market at its effort-adjusted price, on a 0–100% scale. A Huber-robust regression of AA Intelligence Index on log10(effort-adjusted blended price) and model release age separates the current-generation price slope from legacy models, then scores every model against today's baseline adjusted by the local price-tier spread (narrower at high prices, wider at low prices, with a benchmark noise floor). 50% sits right on today's market line, 75%+ marks standout value for the price, and 25% or below marks poor value or an older generation. Pair with AA Index for raw intelligence. Sorting by Value groups the table the way Group by chooses: by quality band or by cost tier.",
+      "How strongly a model punches above or below today's market at its effort-adjusted price, on a 0–100% scale. A Huber-robust regression of AA Intelligence Index on log10(effort-adjusted blended price) and model release age separates the current-generation price slope from legacy models, then scores every model against today's baseline adjusted by the local price-tier spread (narrower at high prices, wider at low prices, with a benchmark noise floor). 50% sits right on today's market line. Table colours reflect quartiles: 75%+ (green) is the top quartile above today's line, 26–74% (neutral) sits near the line, and 25% or below (muted) is the bottom quartile or an older generation — independent of the green frontier ring beside AA Index. Sorting by Score groups the table the way Group by chooses: by quality band or by cost tier.",
     url: "https://artificialanalysis.ai/",
   },
   benchmarks: {
