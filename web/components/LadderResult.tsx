@@ -207,8 +207,8 @@ export function LadderResult({
                 Analysis Intelligence Index at the level shown.{" "}
                 <b className="text-brand-slate-800 dark:text-brand-slate-100">Price</b> is the list price per 1M
                 tokens at that level&rsquo;s token use.{" "}
-                <b className="text-brand-slate-800 dark:text-brand-slate-100">Score</b> is how many index points the
-                option sits above or below the market&rsquo;s price line. Hover a figure for how it is read.
+                <b className="text-brand-slate-800 dark:text-brand-slate-100">Value</b> is the option&rsquo;s
+                0&ndash;100% price-adjusted market percentile against today&rsquo;s price line (50% = on the line). Hover a figure for how it is read.
                 Leave Thinking on wherever a platform has that switch: every AA Index and price here is read with
                 it on.
               </p>

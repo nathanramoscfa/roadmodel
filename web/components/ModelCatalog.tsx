@@ -67,6 +67,8 @@ import {
   formatQualityBand,
   formatScore,
   GRID_COLUMN_BY_KEY,
+  VALUE_HIGH,
+  VALUE_LOW,
   GRID_COLUMNS,
   indexEvidence,
   QUALITY_BAND_WIDTH,
@@ -259,13 +261,12 @@ function groupKey(m: ModelRow, grouping: Grouping): string {
   return grouping === "tier" ? m.tier_cost : String(qualityBand(m.aa_index) ?? "none");
 }
 
-// Color the score by how far outside the fit's noise band it sits: beyond +σ
-// reads green, beyond −σ reads muted; inside the band is plain — the same
-// "within σ is a tie" rule the header states.
+// Color Value by quartile: top quartile (≥75%) reads green, bottom quartile
+// (≤25%) reads muted, and the middle half stays plain.
 function scoreTone(score: number | null, fit: ScoreFit | null): string {
   if (score === null || !fit) return "";
-  if (score >= fit.sigma) return "font-semibold text-emerald-700 dark:text-emerald-300";
-  if (score <= -fit.sigma) return "text-brand-slate-400 dark:text-brand-slate-500";
+  if (score >= VALUE_HIGH) return "font-semibold text-emerald-700 dark:text-emerald-300";
+  if (score <= VALUE_LOW) return "text-brand-slate-400 dark:text-brand-slate-500";
   return "text-brand-slate-700 dark:text-brand-slate-200";
 }
 
@@ -440,7 +441,7 @@ export function ModelCatalog({
   // The benchmark-scores view spends its width on eleven evaluation columns,
   // so its leading columns (model, output, AA Index, Score) pad tighter.
     const padX = "px-2";
-  const scoreOrder = sortDir === "desc" ? "highest Score first" : "lowest Score first";
+  const scoreOrder = sortDir === "desc" ? "highest Value first" : "lowest Value first";
 
   // What each group header says about the rows under it: how many, their
   // prices on both scales the page uses (output, which sets the tier, and
@@ -653,14 +654,14 @@ export function ModelCatalog({
           ) : (
             "every model in the catalog"
           )}
-          ; the Score measures each model against one continuous market price line across the catalog. Hover any AA Index for the top score
+          ; Value measures each model against today’s continuous market price line as a 0–100% percentile. Hover any AA Index for the top score
           at that price; the frontier chart above draws the whole line.
         </p>
         <p className="rounded-lg border border-brand-slate-200 bg-brand-slate-50 px-3 py-2 text-brand-slate-700 dark:border-brand-slate-700 dark:bg-brand-slate-800/60 dark:text-brand-slate-200">
           <strong className="text-brand-slate-900 dark:text-brand-slate-50">
             Blended price = (3 &times; input + 1 &times; output) &divide; 4.
           </strong>{" "}
-          Cost tiers go by list output price; the Score, the charts, and the frontier scale output
+          Cost tiers go by list output price; Value, the charts, and the frontier scale output
           by the tokens drawn at each row&rsquo;s headline Effort, (3 &times; input +{" "}
           <em>m</em> &times; output) &divide; 4.
         </p>
@@ -746,7 +747,7 @@ export function ModelCatalog({
                 align="right"
                 detail={
                   scoreFit
-                    ? `Fit over ${scoreFit.n} measured models: ${scoreFit.slope.toFixed(1)} index points per 10× price, R² ${scoreFit.r2.toFixed(2)}, residual σ ${scoreFit.sigma.toFixed(1)} — treat gaps under about ${Math.round(scoreFit.sigma)} points as ties.`
+                    ? `Fit over ${scoreFit.n} measured models (Huber-robust${scoreFit.vintageAdjusted ? ', vintage-controlled' : ''}): ${scoreFit.slope.toFixed(1)} index points per 10× price, R² ${scoreFit.r2.toFixed(2)}, local σ ±${scoreFit.sigmaMin.toFixed(1)}–${scoreFit.sigmaMax.toFixed(1)} (midpoint ±${scoreFit.sigma.toFixed(1)}) — 50% sits on today's line.`
                     : "Not enough measured models to fit the market line."
                 }
               />
@@ -1006,14 +1007,14 @@ export function ModelCatalog({
                       >
                         {m.value_score === null || !scoreFit ? (
                           <HoverCard
-                            label={`${m.name} has no Score`}
+                            label={`${m.name} has no Value`}
                             card={
                               <p className="w-64 max-w-full text-[13px] leading-5">
                                 <span className="font-semibold text-brand-slate-900 dark:text-brand-slate-50">
-                                  No Score for {m.name}.
+                                  No Value for {m.name}.
                                 </span>{" "}
                                 Artificial Analysis has not measured its Intelligence Index, and
-                                the Score is that index measured against price.
+                                Value is that index measured against today’s price line.
                               </p>
                             }
                             className="text-brand-slate-400 dark:text-brand-slate-500"
@@ -1022,7 +1023,7 @@ export function ModelCatalog({
                           </HoverCard>
                         ) : (
                           <HoverCard
-                            label={`${m.name}: Score ${formatScore(m.value_score)}. Show how it adds up`}
+                            label={`${m.name}: Value ${formatScore(m.value_score)}. Show how it is computed`}
                             card={
                               <ScoreBreakdownCard
                                 model={m}
@@ -1216,12 +1217,13 @@ export function ModelCatalog({
           Artificial Analysis
         </a>{" "}
         (snapshot {benchmarksGeneratedAt}; {measuredCount} of {models.length} models measured) —
-        one lab, one harness, so every column is comparable down the page. Score is the AA
-        Index minus what the model&rsquo;s effort-adjusted price predicts on one continuous
-        market price line across the catalog, in index points. <strong>The green ring beside an AA Index
+        one lab, one harness, so every column is comparable down the page. Value is each
+        model&rsquo;s 0&ndash;100% price-adjusted market percentile against today&rsquo;s
+        Huber-robust, vintage-controlled market line (50% = on the line), scaled by the local
+        price-tier spread. <strong>The green ring beside an AA Index
         marks the cost/quality frontier</strong>: each ringed model scores higher than every other
         {scope ? ` ${scope} model` : " model in the catalog"} at its price or less (blended). A
-        filter changes which models show, never a Score: the price lines are fitted over the whole
+        filter changes which models show, never Value: today’s market line is fitted over the whole
         catalog. A rating is a class, not a rank within it; sorting a category orders by
         letter, then by the AA Index. Ratings are curated by the project&rsquo;s daily automation;
         see the{" "}
@@ -1372,7 +1374,7 @@ function ModelDetail({ model: m }: { model: ModelRow }) {
               <dd className="text-brand-slate-900 dark:text-brand-slate-50">
                 {formatBlended(headlinePrice(m))}{" "}
                 <span className="text-xs text-brand-slate-500 dark:text-brand-slate-400">
-                  ({headlineTokenShare(m)!.toFixed(2)}&times; output multiplier for Score &amp; frontier)
+                  ({headlineTokenShare(m)!.toFixed(2)}&times; output multiplier for Value &amp; frontier)
                 </span>
               </dd>
             </>

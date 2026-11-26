@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **Robust, vintage-controlled `Value` (`0–100%`) replaces the raw OLS `Score`.** The `/models` catalog, charts, hover cards, and `/recommend` pick cards now display **Value** on a `0–100%` market-percentile scale (`50%` = right on today's market line, `75%+` = standout deal, `≤25%` = poor value or older generation), paired cleanly beside **AA Index** for raw intelligence. Under the hood, `fitScoreModel` replaces pooled 1D OLS with a Huber-robust, vintage-controlled regression (`AA ~ log₁₀(effort-adjusted price) + release age`, anchored at the current generation) and a price-varying heteroskedastic `±σ(p)` spread with a `3`-point benchmark noise floor — removing Simpson's Paradox vintage inflation on the slope, drawing the narrowing `±σ` ribbon on both the frontier chart and per-tier charts, and surfacing a **Best value effort** callout in hover cards when a lower effort (such as `Opus 5.5 · Extra high`) delivers materially stronger Value than headline `Max`.
+
 ## [0.2.119] — 2026-11-25
 
 - **The catalog page shows single models only; Platform details is gone.** The section below the Models table listed Antigravity's Orchestrator presets and Claude Code with Ultracode, which run several models together and so are not measured the way a model at one effort is. The page no longer lists them, and the table and charts no longer have a path for such rows. A /recommend pick with Ultracode on is drawn as its model at its effort again, as before `#1611`.

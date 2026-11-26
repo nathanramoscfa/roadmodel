@@ -28,9 +28,14 @@ import {
   ESTIMATE_CEILING,
   formatBench,
   formatScore,
+  formatSigned,
   formatUsd,
   GRID_COLUMN_BY_KEY,
   scoreBreakdown,
+  scoreFor,
+  sigmaAt,
+  VALUE_HIGH,
+  VALUE_LOW,
   type BenchColumn,
   type EvidenceVerdict,
   type IndexEvidence,
@@ -49,7 +54,7 @@ import {
   type Rating,
 } from "@/lib/catalog-fields";
 import { RATING_SCALE } from "@/lib/glossary";
-import { EFFORT_TOKEN_MULTIPLIER, effortWord, headlinePrice, headlineTokenShare, type EffortLevel } from "@/lib/pick-effort";
+import { EFFORT_TOKEN_MULTIPLIER, effortLabel, effortPrice, effortWord, headlinePrice, headlineTokenShare, type EffortLevel } from "@/lib/pick-effort";
 
 const RATING_MEANING: Record<string, string> = Object.fromEntries(
   RATING_SCALE.map((r) => [r.rating, r.meaning]),
@@ -102,11 +107,11 @@ export function indexText(
   return `${approx(m)}${m.aa_index_source === "estimated" ? String(Math.round(m.aa_index)) : num(m.aa_index)}`;
 }
 
-// The table's colour rule for a Score: clearly above the line reads green,
-// clearly below reads orange, inside the tie band stays neutral.
-export function scoreToneClass(score: number, sigma: number): string {
-  if (score >= sigma) return "text-emerald-700 dark:text-emerald-300";
-  if (score <= -sigma) return "text-orange-700 dark:text-orange-300";
+// Colour rule for a 0–100% Value percentile: top quartile (≥75%) reads green,
+// bottom quartile (≤25%) reads orange, middle half stays neutral.
+export function scoreToneClass(score: number): string {
+  if (score >= VALUE_HIGH) return "text-emerald-700 dark:text-emerald-300";
+  if (score <= VALUE_LOW) return "text-orange-700 dark:text-orange-300";
   return STRONG;
 }
 
@@ -471,6 +476,41 @@ const LOG10 = (
   </span>
 );
 
+interface BestEffortInsight {
+  label: string;
+  price: number;
+  index: number;
+  score: number;
+}
+
+// Check if another AA-measured effort for this model achieves materially higher
+// Value (≥ 5 percentage points above the currently shown effort). Surfaces
+// cases like Opus 5.5 (74% at Max $40.08 vs 88% at Extra high $8.29).
+function bestValueEffort(
+  m: ModelRow,
+  fit: ScoreFit,
+  currentScore: number,
+  currentEffortLabel: string | null,
+): BestEffortInsight | null {
+  const byEffort = m.aa_index_by_effort;
+  if (!byEffort) return null;
+  let best: BestEffortInsight | null = null;
+  for (const [level, aa] of Object.entries(byEffort)) {
+    if (!(level in EFFORT_TOKEN_MULTIPLIER)) continue;
+    const eff = level as EffortLevel;
+    const label = effortLabel(eff);
+    if (currentEffortLabel && label.toLowerCase() === currentEffortLabel.toLowerCase()) continue;
+    const p = effortPrice(m, eff);
+    const sc = scoreFor(fit, p, aa);
+    if (sc === null) continue;
+    if (!best || sc > best.score) {
+      best = { label, price: p, index: aa, score: sc };
+    }
+  }
+  if (!best || best.score < currentScore + 5) return null;
+  return best;
+}
+
 export function ScoreBreakdownCard({
   model: m,
   fit,
@@ -503,66 +543,69 @@ export function ScoreBreakdownCard({
   const b = scoreBreakdown(fit, price, m.aa_index);
   if (!b) return null;
   const s = b.shown;
-  const sigma = fit.sigma;
-  // How far the market line moves from the catalog average to this model's
-  // price (positive above the midpoint, negative below), matching s.expected
-  // − s.marketMean to the tenth.
   const delta = -s.priceAdjustment;
   const absDelta = Math.abs(delta);
   const perDouble = b.slope * Math.log10(2);
   const factor = delta >= 0 ? Math.max(1, b.priceRatio) : Math.max(1, 1 / b.priceRatio);
   const factorText = factor >= 10 ? factor.toFixed(1) : factor.toFixed(2);
   const rangeText = `${usd(fit.minPrice)}–${usd(fit.maxPrice)}`;
+  const bestAlt = bestValueEffort(m, fit, b.score, activeEffort?.label ?? null);
 
   let marketLineSentence: ReactNode;
   if (absDelta === 0) {
     marketLineSentence = (
       <>
         The {b.marketN} measured models span {rangeText} (geometric midpoint {usd(b.typicalPrice)}).
-        At {usd(b.price)}, right at that midpoint, the market line sits at the {num(s.marketMean)}{" "}
-        average.
+        At {usd(b.price)}, right at that midpoint, today&rsquo;s market line sits at {num(s.marketMean)} AA.
       </>
     );
   } else if (delta > 0) {
     marketLineSentence = (
       <>
         The {b.marketN} measured models span {rangeText} (geometric midpoint {usd(b.typicalPrice)}).
-        At {usd(b.price)} ({factorText}× that midpoint), the log-scale line adds{" "}
+        At {usd(b.price)} ({factorText}× that midpoint), today&rsquo;s log-scale line adds{" "}
         <span className="tabular-nums">
           {num(b.slope)} × {LOG10}({factorText}) = +{num(absDelta)}
         </span>{" "}
-        points to the {num(s.marketMean)} average, giving {num(s.expected)}.
+        points to {num(s.marketMean)}, giving {num(s.expected)}.
       </>
     );
   } else {
     marketLineSentence = (
       <>
         The {b.marketN} measured models span {rangeText} (geometric midpoint {usd(b.typicalPrice)}).
-        At {usd(b.price)} ({factorText}× below that midpoint), the log-scale line subtracts{" "}
+        At {usd(b.price)} ({factorText}× below that midpoint), today&rsquo;s log-scale line subtracts{" "}
         <span className="tabular-nums">
           {num(b.slope)} × {LOG10}({factorText}) = {num(absDelta)}
         </span>{" "}
-        points from the {num(s.marketMean)} average, giving {num(s.expected)}.
+        points from {num(s.marketMean)}, giving {num(s.expected)}.
       </>
     );
   }
 
-  const outside = Math.abs(b.score) >= sigma;
-  const bandSentence = outside
-    ? `Outside the ±${num(sigma)} tie band: a clear ${b.score > 0 ? "lead over" : "shortfall against"} the market line.`
-    : `Inside the ±${num(sigma)} tie band: within the line\u2019s normal scatter, so treat it as a tie.`;
+  let bandSentence: string;
+  if (Math.abs(b.z) >= 1) {
+    bandSentence = `Outside the local ±${num(s.sigma)} band (${formatSigned(s.z)}σ): a clear ${b.gap > 0 ? "lead over" : "shortfall against"} today’s market line.`;
+  } else if (b.score >= VALUE_HIGH) {
+    bandSentence = `Top-quartile value (${formatSigned(s.z)}σ above today’s line; local band ±${num(s.sigma)}).`;
+  } else if (b.score <= VALUE_LOW) {
+    bandSentence = `Bottom-quartile value (${formatSigned(s.z)}σ below today’s line; local band ±${num(s.sigma)}).`;
+  } else {
+    bandSentence = `Inside the local ±${num(s.sigma)} band (${formatSigned(s.z)}σ): sits close to today’s market line.`;
+  }
 
   return (
     <div className="w-[22rem] max-w-full" data-testid="score-breakdown">
       <CardHeader name={m.name} tier={m.tier_cost} />
       <p className={"mt-1 text-xs leading-[1.125rem] " + MUTED}>
-        Score: AA Index points above (+) or below (−) what the market line expects at this
-        model&rsquo;s {activeEffort ? "effort-adjusted" : "blended"} price.
+        Value: 0&ndash;100% market percentile &mdash; how far above or below today&rsquo;s market
+        line this model sits at its {activeEffort ? "effort-adjusted" : "blended"} price, scaled by
+        the local spread (50% = on the line).
       </p>
 
       <div className="mt-3 rounded-md bg-brand-slate-50 px-3 py-2.5 dark:bg-brand-slate-900/70">
         <p className={"mb-1.5 text-[11px] font-semibold uppercase tracking-wide " + MUTED}>
-          How the score adds up
+          How Value is computed
         </p>
         <Row
           label="AA Intelligence Index"
@@ -575,20 +618,58 @@ export function ScoreBreakdownCard({
           testId="score-breakdown-index"
         />
         <Row
-          label={`Expected at ${usd(b.price)} (market line)`}
+          label={`Expected at ${usd(b.price)} (today’s line)`}
           value={`− ${num(s.expected)}`}
           valueClass={STRONG}
           testId="score-breakdown-expected"
         />
+        <Row
+          label="Gap vs. today’s line"
+          value={`${formatSigned(s.gap)} pts`}
+          valueClass={STRONG}
+          testId="score-breakdown-gap"
+        />
+        <Row
+          label="Local spread (±σ)"
+          value={`±${num(s.sigma)} pts (${formatSigned(s.z)}σ)`}
+          valueClass={MUTED}
+          testId="score-breakdown-sigma"
+        />
         <div className={"mt-1.5 border-t-2 border-double pt-1.5 " + RULE}>
           <Row
-            label={<span className={"font-semibold " + STRONG}>Score</span>}
-            value={formatScore(s.score)}
-            valueClass={"text-sm font-bold " + scoreToneClass(b.score, sigma)}
+            label={<span className={"font-semibold " + STRONG}>Value</span>}
+            value={formatScore(s.value)}
+            valueClass={"text-sm font-bold " + scoreToneClass(b.score)}
             testId="score-breakdown-total"
           />
         </div>
       </div>
+
+      {bestAlt && (
+        <div
+          className="mt-3 rounded-md border border-brand-accent/30 bg-brand-accent/5 px-3 py-2 text-xs leading-[1.125rem] dark:bg-brand-accent/10"
+          data-testid="score-breakdown-best-effort"
+        >
+          <p className={"mb-1 text-[11px] font-semibold uppercase tracking-wide " + MUTED}>
+            Best value effort
+          </p>
+          <Row
+            label={
+              <span className={"font-semibold " + STRONG}>
+                {bestAlt.label} ({num(bestAlt.index)} AA at {usd(bestAlt.price)})
+              </span>
+            }
+            value={formatScore(bestAlt.score)}
+            valueClass={"font-bold " + scoreToneClass(bestAlt.score)}
+          />
+          {activeEffort && bestAlt.price < b.price && (
+            <p className={"mt-0.5 " + MUTED}>
+              {activeEffort.label} costs {(b.price / bestAlt.price).toFixed(1)}× more for{" "}
+              {formatSigned(b.index - bestAlt.index)} AA points.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="mt-3">
         <p className={"mb-1 text-[11px] font-semibold uppercase tracking-wide " + MUTED}>
@@ -614,41 +695,48 @@ export function ScoreBreakdownCard({
 
       <div className={"mt-3 border-t pt-2.5 " + RULE}>
         <p className={"mb-1 text-[11px] font-semibold uppercase tracking-wide " + MUTED}>
-          How the market line predicts {num(s.expected)}
+          How today&rsquo;s market line predicts {num(s.expected)}
         </p>
         <Row
-          label={`Catalog midpoint (${b.marketN} models)`}
+          label={`Today’s midpoint (${b.marketN} models)`}
           value={`${num(s.marketMean)} AA at ${usd(b.typicalPrice)}`}
           valueClass={STRONG}
         />
         <Row
           label="Price slope"
-          value={`${formatScore(perDouble)} pts per 2× price`}
+          value={`${formatSigned(perDouble)} pts per 2× price`}
           valueClass={STRONG}
         />
         <p className={"-mt-0.5 text-right text-xs tabular-nums " + MUTED}>
-          ({formatScore(b.slope)} pts per 10×)
+          ({formatSigned(b.slope)} pts per 10×)
         </p>
         <p className="mt-1.5 text-xs leading-[1.125rem]" data-testid="score-breakdown-market">
           {marketLineSentence}
+          {b.vintageAdjusted && (
+            <>
+              {" "}
+              Controlling for release age ({formatSigned(b.ageSlope)} pts/month) keeps older models
+              from tilting today&rsquo;s baseline.
+            </>
+          )}
         </p>
       </div>
 
       <div className={"mt-3 space-y-1.5 border-t pt-2.5 text-xs leading-[1.125rem] " + RULE}>
-        <p>{bandSentence}</p>
+        <p data-testid="score-breakdown-band">{bandSentence}</p>
         <p className={MUTED}>
           {m.aa_index_source === "cited"
             ? "AA Index as cited in the catalog; this model is not in the Artificial Analysis data snapshot yet."
             : m.aa_index_level_estimated && m.aa_index_source === "snapshot"
-              ? `Artificial Analysis measured this model at other efforts (snapshot of ${snapshot}); roadmodel estimates its AA Index${m.aa_index_effort ? ` at ${effortWord(m.aa_index_effort)}` : ""} from those, so this Score is an estimate too.`
+              ? `Artificial Analysis measured this model at other efforts (snapshot of ${snapshot}); roadmodel estimates its AA Index${m.aa_index_effort ? ` at ${effortWord(m.aa_index_effort)}` : ""} from those, so this Value is an estimate too.`
             : m.aa_index_source === "inherited"
               ? `AA Index estimated from ${m.aa_inherited_from}'s in the Artificial Analysis snapshot of ${snapshot}.`
               : m.aa_index_source === "estimated"
                 ? m.aa_estimate_method === "prior"
-                  ? `AA Index estimated by roadmodel from measured catalog peers at ${m.name}'s price and role (±${m.aa_index_band}), so this Score is an estimate too.`
+                  ? `AA Index estimated by roadmodel from measured catalog peers at ${m.name}'s price and role (±${m.aa_index_band}), so this Value is an estimate too.`
                   : m.aa_estimate_method === "predecessor"
-                    ? `AA Index estimated by roadmodel from ${m.aa_estimate_anchors?.[0] ?? m.aa_inherited_from}'s measured AA Index (±${m.aa_index_band}), so this Score is an estimate too.`
-                    : `AA Index estimated by roadmodel from ${m.aa_estimate_via ? `the launch benchmarks of ${listNames(m.aa_estimate_via)}` : `${m.name}'s launch benchmarks`} (±${m.aa_index_band}), so this Score is an estimate too.`
+                    ? `AA Index estimated by roadmodel from ${m.aa_estimate_anchors?.[0] ?? m.aa_inherited_from}'s measured AA Index (±${m.aa_index_band}), so this Value is an estimate too.`
+                    : `AA Index estimated by roadmodel from ${m.aa_estimate_via ? `the launch benchmarks of ${listNames(m.aa_estimate_via)}` : `${m.name}'s launch benchmarks`} (±${m.aa_index_band}), so this Value is an estimate too.`
                 : `AA Index from the Artificial Analysis snapshot of ${snapshot}.`}
         </p>
       </div>
@@ -679,16 +767,20 @@ export function ModelPointCard({
       <CardHeader name={m.name} tier={m.tier_cost} />
       <div className="mt-2.5 space-y-0.5">
         <Row
-          label={<span className={"font-semibold " + STRONG}>Score</span>}
-          value={formatScore(b.shown.score)}
-          valueClass={"text-sm font-bold " + scoreToneClass(b.score, fit.sigma)}
+          label={<span className={"font-semibold " + STRONG}>Value</span>}
+          value={formatScore(b.shown.value)}
+          valueClass={"text-sm font-bold " + scoreToneClass(b.score)}
           testId="point-card-score"
         />
         <Row label="AA Index" value={num(b.shown.index)} valueClass={STRONG} />
-        <Row label="Expected at this price" value={num(b.shown.expected)} valueClass={STRONG} />
+        <Row
+          label="Expected at this price"
+          value={`${num(b.shown.expected)} (±${num(b.shown.sigma)})`}
+          valueClass={STRONG}
+        />
       </div>
       <p className={"mt-1 text-xs " + MUTED}>
-        Score = AA Index − expected: {num(b.shown.index)} − {num(b.shown.expected)}
+        {formatSigned(b.shown.gap)} pts ({formatSigned(b.shown.z)}σ) vs today&rsquo;s market line
       </p>
       <div className={"mt-2.5 space-y-0.5 border-t pt-2.5 " + RULE}>
         <Row label="Input" value={`${usd(m.input_price_per_1m)} per 1M tokens`} valueClass={STRONG} />
@@ -719,12 +811,14 @@ export function PriceLineCard({
 }) {
   const typical = 10 ** fit.meanLogPrice;
   const expected = fit.intercept + fit.slope * Math.log10(atPrice);
+  const localSigma = sigmaAt(fit, atPrice) ?? fit.sigma;
   const sign = (v: number) => (v < 0 ? "−" : "+");
   return (
     <div className="w-[23rem] max-w-full" data-testid="line-card">
-      <p className={"text-sm font-semibold " + STRONG}>Market price line</p>
+      <p className={"text-sm font-semibold " + STRONG}>Today&rsquo;s market price line</p>
       <p className={"mt-0.5 text-xs " + MUTED}>
-        What the market is expected to score at each effort-adjusted price, across every cost tier.
+        What a current-generation model is expected to score at each effort-adjusted price, across
+        every cost tier.
       </p>
 
       <div
@@ -744,11 +838,11 @@ export function PriceLineCard({
           <span className={"block " + MUTED}>= (3 × input + m × output) ÷ 4</span>
         </dd>
         <dt className={"font-semibold tabular-nums " + STRONG}>{num(fit.intercept)}</dt>
-        <dd>Intercept: the line&rsquo;s height at p&nbsp;=&nbsp;$1</dd>
+        <dd>Intercept: today&rsquo;s expected AA Index at p&nbsp;=&nbsp;$1</dd>
         <dt className={"font-semibold tabular-nums " + STRONG}>{num(fit.slope)}</dt>
         <dd>
-          Slope: AA Index points per 10× price ({formatScore(fit.slope * Math.log10(2))} per 2×),
-          one continuous line across the whole catalog
+          Slope: AA Index points per 10× price ({formatSigned(fit.slope * Math.log10(2))} per 2×),
+          controlling for release age
         </dd>
       </dl>
 
@@ -759,8 +853,8 @@ export function PriceLineCard({
           {usd(typical)})
         </p>
         <p className="mt-0.5">
-          {num(fit.meanIndex)} is the average AA Index across all {fit.n} measured models, and{" "}
-          {usd(typical)} their typical (geometric-mean) blended price.
+          {num(fit.meanIndex)} is today&rsquo;s expected AA Index at {usd(typical)}, the geometric-mean
+          blended price across all {fit.n} measured models.
         </p>
       </div>
 
@@ -769,14 +863,18 @@ export function PriceLineCard({
         data-testid="line-readout"
       >
         <span>At {usd(atPrice)} per 1M tokens</span>
-        <span className={"font-semibold " + STRONG}>expected {num(expected)}</span>
+        <span className={"font-semibold " + STRONG}>
+          expected {num(expected)} (±{num(localSigma)})
+        </span>
       </div>
 
       <p className={"mt-2.5 border-t pt-2 text-xs leading-[1.125rem] " + RULE + " " + MUTED}>
-        Least squares over {fit.n} AA-measured models. R² {fit.r2.toFixed(2)}: effort-adjusted
-        price explains {Math.round(fit.r2 * 100)}% of the spread in AA Index. Residual σ{" "}
-        {num(fit.sigma)} is the shaded band. A model&rsquo;s Score is its height above (+) or
-        below (−) this line.
+        Huber-robust {fit.vintageAdjusted ? "vintage-controlled " : ""}fit over {fit.n} AA-measured
+        models (R² {fit.r2.toFixed(2)}
+        {fit.vintageAdjusted ? `, age trend ${formatSigned(fit.ageSlope)} pts/month` : ""}). The
+        shaded ribbon is the local ±σ band (±{num(fit.sigmaMin)}–{num(fit.sigmaMax)}, narrowing as
+        price rises). Value maps each model&rsquo;s gap ÷ local σ to a 0–100% market percentile
+        (50% = on this line).
       </p>
     </div>
   );

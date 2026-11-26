@@ -149,6 +149,7 @@ interface Measured {
   m: ScoredModel;
   price: number;
   index: number;
+  releaseDate: string | null;
 }
 function headlineEffortFor(m: ScoredModel): string | null {
   const b = benchmarks.models[m.id];
@@ -167,7 +168,12 @@ function effectivePrice(m: ScoredModel): number {
 }
 
 const MEASURED: Measured[] = scored
-  .map((m) => ({ m, price: effectivePrice(m), index: shownIndexFor(m) }))
+  .map((m) => ({
+    m,
+    price: effectivePrice(m),
+    index: shownIndexFor(m),
+    releaseDate: benchmarks.models[m.id]?.release_date ?? null,
+  }))
   .filter((r): r is Measured => r.index !== null);
 // The rows the Score fit and the Score charts read: AA's own figures.
 const FITTED = MEASURED.filter((r) => aaIndexFor(r.m) !== null);
@@ -379,7 +385,7 @@ test("unchecking CN takes it out of every chart and redraws the frontier over th
 
   // The Score charts: every non-CN measured model, no CN dot, and each dot
   // keeps its whole-catalog Score.
-  const fit = fitScoreModel(FITTED.map((r) => ({ price: r.price, index: r.index })))!;
+  const fit = fitScoreModel(FITTED.map((r) => ({ price: r.price, index: r.index, releaseDate: r.releaseDate })))!;
   const charted = pool.filter((r) => aaIndexFor(r.m) !== null);
   const scorePanel = page.getByTestId("score-charts");
   await expect(scorePanel.getByTestId("score-charts-filter")).toContainText("Jurisdiction: US + EU");
@@ -389,7 +395,7 @@ test("unchecking CN takes it out of every chart and redraws the frontier over th
     scorePanel.locator(`[data-testid="score-chart-point"][data-model-id="${some.m.id}"]`),
   ).toHaveAttribute(
     "aria-label",
-    new RegExp(`Score ${formatScore(scoreFor(fit, some.price, some.index)).replace("+", "\\+")}`),
+    new RegExp(`Value ${formatScore(scoreFor(fit, some.price, some.index))}`),
   );
 
   // The frontier chart: every non-CN measured model, the frontier recomputed
@@ -459,6 +465,7 @@ test("a Cost tier narrows the charts to its models; the frontier still spans eve
     );
   }
   await expect(panel.getByTestId("frontier-market-line")).toHaveCount(1);
+  await expect(panel.getByTestId("frontier-market-band")).toHaveCount(1);
   await expect(panel.getByTestId("frontier-tier-label")).toHaveCount(0);
   const ids = ((await panel.getByTestId("frontier-line").getAttribute("data-frontier-ids")) ?? "").split(",").filter(Boolean);
   expect(ids.length).toBeGreaterThan(0);
@@ -663,6 +670,7 @@ test("rating cells are letters only; the Score column is the cost-adjusted score
   const fitInputs = scored.map((m) => ({
     price: effectivePrice(m),
     index: aaIndexFor(m),
+    releaseDate: benchmarks.models[m.id]?.release_date ?? null,
   }));
   const fit = fitScoreModel(fitInputs);
   expect(fit).not.toBeNull();
@@ -677,20 +685,24 @@ test("rating cells are letters only; the Score column is the cost-adjusted score
     const sc = scoreOf(m);
     await expect(row.getByTestId("value-cell")).toContainText(sc === null ? "—" : formatScore(sc));
   }
-  // Least-squares residuals sum to ~0 across all fitted AA-measured models.
-  // An estimated model is scored against the line, not part of fitting it.
-  const residuals = scored
+  // Every fitted AA-measured model maps onto a 0–100% Value percentile against
+  // today's Huber-robust, vintage-controlled market line.
+  const values = scored
     .filter((m) => aaIndexFor(m) !== null)
     .map(scoreOf)
     .filter((v): v is number => v !== null);
-  expect(residuals.length).toBe(fit!.n);
-  const mean = residuals.reduce((a, b) => a + b, 0) / residuals.length;
-  expect(Math.abs(mean)).toBeLessThan(1e-6);
+  expect(values.length).toBe(fit!.n);
+  expect(fit!.vintageAdjusted).toBe(true);
+  expect(fit!.r2).toBeGreaterThan(0.7);
+  for (const v of values) {
+    expect(v).toBeGreaterThanOrEqual(0);
+    expect(v).toBeLessThanOrEqual(100);
+  }
 
   // The header tooltips carry live statistics, never a typed-in figure: the
   // Score fit it just computed, and the AA snapshot the page just read.
   const scoreInfo = page.getByRole("link", {
-    name: "Score (cost-adjusted intelligence) definition",
+    name: "Value (price-adjusted market percentile) definition",
   });
   await scoreInfo.hover();
   await expect(
@@ -1000,7 +1012,7 @@ test("every model off the frontier names the model that beats it, from any cost 
   // The case that reads as a contradiction without this: the best Score in the
   // table that has no dot. Its AA Index card and its Score card both name the
   // model that beats it; a frontier model's cards say it is on the frontier.
-  const fit = fitScoreModel(FITTED.map((o) => ({ price: o.price, index: o.index })));
+  const fit = fitScoreModel(FITTED.map((o) => ({ price: o.price, index: o.index, releaseDate: o.releaseDate })));
   const scoreOf = (o: (typeof measured)[number]) =>
     (scoreIndexFor(o.m) === null ? null : scoreFor(fit, o.price, o.index)) ?? -Infinity;
   const beaten = measured.filter((r) => leaderOf(r) !== r).sort((a, b) => scoreOf(b) - scoreOf(a))[0];
@@ -1046,6 +1058,7 @@ test("Group by Quality is the default: AA Index bands, highest Score first in ea
     scored.map((m) => ({
       price: effectivePrice(m),
       index: aaIndexFor(m),
+      releaseDate: benchmarks.models[m.id]?.release_date ?? null,
     })),
   );
   const bandOf = (v: number | null) => (v === null ? null : Math.floor(v / 10) * 10);
@@ -1069,12 +1082,12 @@ test("Group by Quality is the default: AA Index bands, highest Score first in ea
   expect(await actual()).toEqual(order(-1));
   const top = page.locator(`[data-testid="quality-group"][data-band="${bands[0]}"]`);
   await expect(top).toContainText(`AA Index ${bands[0]}–${(bands[0] + 9.9).toFixed(1)}`);
-  await expect(top.getByTestId("quality-group-prices")).toContainText("highest Score first");
-  await expect(page.getByRole("columnheader", { name: /^Score/ })).toHaveAttribute("aria-sort", "descending");
+  await expect(top.getByTestId("quality-group-prices")).toContainText("highest Value first");
+  await expect(page.getByRole("columnheader", { name: /^Value/ })).toHaveAttribute("aria-sort", "descending");
 
   // The Score header flips the order inside each band; the bands stay put.
-  await page.getByRole("button", { name: "Score", exact: true }).click();
-  await expect(top.getByTestId("quality-group-prices")).toContainText("lowest Score first");
+  await page.getByRole("button", { name: "Value", exact: true }).click();
+  await expect(top.getByTestId("quality-group-prices")).toContainText("lowest Value first");
   expect(await actual()).toEqual(order(1));
 
   await page.getByTestId("group-by-tier").click();
@@ -1162,6 +1175,7 @@ test("the frontier chart plots every measured model and joins the frontier with 
 
   // One continuous grey Score line across the plotted price range, no tier labels.
   await expect(panel.getByTestId("frontier-market-line")).toHaveCount(1);
+  await expect(panel.getByTestId("frontier-market-band")).toHaveCount(1);
   await expect(panel.getByTestId("frontier-tier-label")).toHaveCount(0);
   await expect(panel).toContainText(`That keeps ${onFrontier.length} of the ${MEASURED.length} models plotted.`);
 
@@ -1528,6 +1542,7 @@ test("one Score chart per cost tier in either grouping, every measured model plo
     scored.map((m) => ({
       price: effectivePrice(m),
       index: aaIndexFor(m),
+      releaseDate: benchmarks.models[m.id]?.release_date ?? null,
     })),
   );
   expect(fit).not.toBeNull();
@@ -1554,7 +1569,7 @@ test("one Score chart per cost tier in either grouping, every measured model plo
       );
       await expect(
         chart.locator(`[data-testid="score-chart-point"][data-model-id="${m.id}"]`),
-      ).toHaveAttribute("aria-label", new RegExp(`Score ${expected.replace("+", "\\+")}`));
+      ).toHaveAttribute("aria-label", new RegExp(`Value ${expected}`));
     }
   }
 
@@ -1565,7 +1580,8 @@ test("one Score chart per cost tier in either grouping, every measured model plo
   expect(await charted()).toEqual(byQuality);
 
   // The footnote carries the live fit, not typed figures.
-  await expect(panel).toContainText(`One continuous least-squares fit over all ${fit!.n} AA-measured models`);
+  await expect(panel).toContainText(`One continuous Huber-robust, vintage-controlled fit over all ${fit!.n} AA-measured models`);
+  await expect(panel.getByTestId("score-chart-band")).toHaveCount(tiers.length);
   await expect(panel).toContainText(`β = ${fit!.slope.toFixed(1)}`);
 });
 
@@ -1576,6 +1592,7 @@ test("hovering a chart dot shows its model, Score, AA Index and prices; the line
     scored.map((m) => ({
       price: effectivePrice(m),
       index: aaIndexFor(m),
+      releaseDate: benchmarks.models[m.id]?.release_date ?? null,
     })),
   )!;
   // The charts draw once they have measured their width (after hydration).
@@ -1653,6 +1670,7 @@ test("the Score cell opens a breakdown whose parts add up to the printed Score",
     scored.map((m) => ({
       price: effectivePrice(m),
       index: aaIndexFor(m),
+      releaseDate: benchmarks.models[m.id]?.release_date ?? null,
     })),
   )!;
   const parse = (t: string) => Number(t.replace("−", "-").replace("+", "").replace(/[^\d.-]/g, ""));
@@ -1671,12 +1689,16 @@ test("the Score cell opens a breakdown whose parts add up to the printed Score",
     const index = parse(await card.getByTestId("score-breakdown-index").innerText());
     const expected = Math.abs(
       parse(await card.getByTestId("score-breakdown-expected").innerText()),
-    ); // printed "− 43.8": a subtraction, not a sign
-    const score = parse(await total.innerText());
-    expect(Math.round((index - expected) * 10)).toBe(Math.round(score * 10));
-    expect(formatScore(score)).toBe(
+    ); // printed "− 48.9": a subtraction, not a sign
+    const gap = parse(await card.getByTestId("score-breakdown-gap").innerText());
+    expect(Math.round((index - expected) * 10)).toBe(Math.round(gap * 10));
+    await expect(card.getByTestId("score-breakdown-sigma")).toContainText("σ");
+    expect(printed).toBe(
       formatScore(scoreFor(fit, effectivePrice(m), aaIndexFor(m))),
     );
+    if (m.id === "claude-opus-5-5") {
+      await expect(card.getByTestId("score-breakdown-best-effort")).toContainText("Extra high");
+    }
     const market = card.getByTestId("score-breakdown-market");
     await expect(market).toContainText(`$${fit.minPrice.toFixed(2)}–$${fit.maxPrice.toFixed(2)}`);
     await expect(market).toContainText(`$${(10 ** fit.meanLogPrice).toFixed(2)}`);
@@ -1708,7 +1730,7 @@ test("the Score card opens from the keyboard, and an unmeasured model says why i
       .locator(`[data-testid="model-row"][data-model-id="${WITHOUT_ANY.id}"]`)
       .getByTestId("value-cell");
     await cell.getByRole("button").hover();
-    await expect(page.getByRole("tooltip")).toContainText(`No Score for ${WITHOUT_ANY.name}`);
+    await expect(page.getByRole("tooltip")).toContainText(`No Value for ${WITHOUT_ANY.name}`);
   }
 });
 

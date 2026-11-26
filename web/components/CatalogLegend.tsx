@@ -99,8 +99,8 @@ export function CatalogLegend({ id }: { id?: string }) {
               A green ring marks a model that <strong>scores higher on the AA Index than every
               other model at its price or less</strong> (blended price). Lined up from cheapest to
               priciest, the ringed models trace the frontier: the top score each budget buys,
-              drawn as a line in the frontier chart. The ring compares every model outright; the Score
-              measures vertical distance above or below the continuous market price line. Hover any
+              drawn as a line in the frontier chart. The ring compares every model outright; Value
+              measures where each model sits against today’s continuous market price line (0–100%). Hover any
               AA Index for the top score at its price.
             </p>
           </div>
@@ -114,7 +114,7 @@ export function CatalogLegend({ id }: { id?: string }) {
             <p className="mt-1">
               <strong>One price per model</strong>: what 1M tokens cost when three of every four
               are input, the standard mix Artificial Analysis prices with ($5 input and $25 output
-              blend to $10). Cost tiers are set by list output price; the Score, the charts, and
+              blend to $10). Cost tiers are set by list output price; Value, the charts, and
               the frontier scale output by the model&rsquo;s token multiplier at its headline
               Effort, (3 &times; input + <em>m</em> &times; output) &divide; 4.
             </p>
@@ -157,16 +157,18 @@ export function CatalogLegend({ id }: { id?: string }) {
             ranked in this catalog, with a check that they bear the index out;{" "}
             <strong>Effort</strong> shows the headline reasoning setting (hover for scores and
             token multipliers by level).{" "}
-            <strong>Score</strong> is the cost-adjusted figure: the AA Index minus what a
-            model&rsquo;s effort-adjusted price predicts on one continuous market price line fitted
-            over every measured model (index against log&nbsp;price), in index points &mdash;
-            positive means more intelligence than the market usually delivers at that price. It is
-            the <strong>default sort</strong> inside every group, highest first. The table opens
-            grouped by <strong>Quality</strong>: {QUALITY_BAND_WIDTH}-point AA Index bands, best
-            first: the best buy at each level. <strong>Group by &rarr; Cost tier</strong> regroups
-            it by list-output price band, priciest first, so you can compare models in each
-            budget tier. The header shows the fit&rsquo;s n, R&sup2; and residual σ; gaps smaller
-            than σ are ties. The frontier ring (above) marks every model scoring higher than all
+            <strong>Value</strong> is the cost-adjusted figure on a 0&ndash;100% scale: a
+            Huber-robust, vintage-controlled fit of AA Index on log&nbsp;price and release age sets
+            today&rsquo;s continuous market line, then scales each model&rsquo;s gap by the local
+            price-tier spread (±σ, narrower at high prices) into a market percentile &mdash; 50%
+            sits right on today&rsquo;s line, 75%+ marks standout value, and 25% or below marks poor
+            value or an older generation. Pair with <strong>AA Index</strong> for raw intelligence.
+            It is the <strong>default sort</strong> inside every group, highest first. The table
+            opens grouped by <strong>Quality</strong>: {QUALITY_BAND_WIDTH}-point AA Index bands,
+            best first: the best buy at each level. <strong>Group by &rarr; Cost tier</strong>{" "}
+            regroups it by list-output price band, priciest first, so you can compare models in each
+            budget tier. The header shows the fit&rsquo;s n, R&sup2;, price slope, and local ±σ
+            range. The frontier ring (above) marks every model scoring higher than all
             models at its effort-adjusted price or less.
           </p>
         </div>
@@ -209,7 +211,7 @@ export function CatalogLegend({ id }: { id?: string }) {
           </dl>
           <p className="mt-3 text-xs text-brand-slate-500 dark:text-brand-slate-400">
             The dot beside each output price is its tier. A tier&rsquo;s header row also gives
-            its blended range; the Score, charts, and frontier scale output at each model&rsquo;s
+            its blended range; Value, charts, and frontier scale output at each model&rsquo;s
             headline Effort. Cache-read and blended prices and the
             provider&rsquo;s pricing notes are in the expanded row.
           </p>
