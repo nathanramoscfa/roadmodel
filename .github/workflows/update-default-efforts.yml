@@ -48,7 +48,7 @@ jobs:
           permission-pull-requests: write
           permission-issues: write
 
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5; zizmor: ignore[artipacked] credentials needed for the PR push
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5; zizmor: ignore[artipacked] credentials needed for the PR push
         with:
           persist-credentials: true
           # The roadmodel cron GitHub App, so its PRs trigger the required
