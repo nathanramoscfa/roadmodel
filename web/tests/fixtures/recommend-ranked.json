@@ -37,8 +37,7 @@
           "aa_estimated": true,
           "price_usd_per_1m": 2.3375,
           "price_measured": true,
-          "stepped_down": false,
-          "ultracode": false
+          "stepped_down": false
         },
         "runner_up": {
           "model": "GPT-6.2 Sol",
@@ -51,8 +50,7 @@
           "aa_estimated": true,
           "price_usd_per_1m": 2.6875,
           "price_measured": true,
-          "stepped_down": false,
-          "ultracode": false
+          "stepped_down": false
         },
         "backup": {
           "model": "Sonnet 5.5",
@@ -65,8 +63,7 @@
           "aa_estimated": false,
           "price_usd_per_1m": 3.7225,
           "price_measured": true,
-          "stepped_down": false,
-          "ultracode": false
+          "stepped_down": false
         }
       },
       "session_cost_estimate": {
@@ -176,8 +173,7 @@
           "aa_estimated": false,
           "price_usd_per_1m": 6.135,
           "price_measured": true,
-          "stepped_down": false,
-          "ultracode": false
+          "stepped_down": false
         },
         "runner_up": {
           "model": "Opus 5.5",
@@ -190,8 +186,7 @@
           "aa_estimated": false,
           "price_usd_per_1m": 6.765,
           "price_measured": true,
-          "stepped_down": false,
-          "ultracode": false
+          "stepped_down": false
         },
         "backup": {
           "model": "GPT-6.2 Sol",
@@ -204,8 +199,7 @@
           "aa_estimated": true,
           "price_usd_per_1m": 2.6875,
           "price_measured": true,
-          "stepped_down": false,
-          "ultracode": false
+          "stepped_down": false
         }
       },
       "session_cost_estimate": {
@@ -315,8 +309,7 @@
           "aa_estimated": false,
           "price_usd_per_1m": 8.29,
           "price_measured": true,
-          "stepped_down": false,
-          "ultracode": false
+          "stepped_down": false
         },
         "runner_up": {
           "model": "Gemini 4 Argon",
@@ -329,8 +322,7 @@
           "aa_estimated": false,
           "price_usd_per_1m": 6.135,
           "price_measured": true,
-          "stepped_down": false,
-          "ultracode": false
+          "stepped_down": false
         },
         "backup": {
           "model": "GPT-6.2 Sol",
@@ -343,8 +335,7 @@
           "aa_estimated": true,
           "price_usd_per_1m": 3.225,
           "price_measured": true,
-          "stepped_down": false,
-          "ultracode": false
+          "stepped_down": false
         }
       },
       "session_cost_estimate": {

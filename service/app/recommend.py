@@ -448,8 +448,6 @@ def _build_backup(result: dict[str, Any], access_guard: AccessGuard | None) -> B
     # backup is still the one it planned (the guard may have replaced it) and
     # the user can reach the model at all.
     plan = result.get("backup_plan")
-    if isinstance(plan, dict) and plan.get("configuration_id") and plan.get("model") == name:
-        return BackupPick(model=name, platform=plan["platform"], settings=plan["settings"])
     if (
         isinstance(plan, dict)
         and canonical_model_name(plan.get("model")) == name
@@ -506,16 +504,8 @@ def _pick_response(
     # settings / funding are derived, so every downstream field describes the
     # model actually returned. Mutates `result` in place; no-op when unset.
     planned_model = canonical_model_name(result.get("model"))
-    # Configuration metadata is attached only by the deterministic ladder after
-    # it has checked platform, plan, jurisdiction and evidence for this request.
-    configuration = result.get("configuration_id")
-    plan = result.get("backup_plan")
-    configuration_backup = isinstance(plan, dict) and bool(plan.get("configuration_id"))
-    if access_guard is not None and not configuration:
-        backup = result.pop("backup", None) if configuration_backup else None
+    if access_guard is not None:
         access_guard.enforce(result, priority)
-        if configuration_backup and result.get("model") == planned_model:
-            result["backup"] = backup
     # Normalize an ACCEPTED pick to its catalog display name ("Claude Fable 5" ->
     # "Fable 5"): when the guard substitutes it's already canonical, but when it
     # accepts the engine's pick the raw maker-prefixed name would otherwise leak
@@ -528,7 +518,7 @@ def _pick_response(
     settings = _normalize_settings_contract(result["platform"], result["settings"])
     session_cost_estimate, comparison_table = (
         (None, [])
-        if configuration or str(settings.get("ultracode", "")).lower() == "on"
+        if str(settings.get("ultracode", "")).lower() == "on"
         else _session_cost(result["model"], result["platform"], task_description)
     )
     rationale = result.get("rationale") or None

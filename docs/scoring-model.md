@@ -184,16 +184,8 @@ is the property the prose rules could not offer.
 
 ## The Cost / Balanced / Quality ladder
 
-The website's table and charts show single models, each at one effort.
-[agent-configurations.json](agent-configurations.json) records agent
-configurations that run several models together or turn on orchestration
-(Antigravity's Orchestrator, Claude Code with Ultracode). Each entry has
-`evidence: null`, so the ladder ranks none of them. The ladder ranks a
-configuration only when evidence for its exact ID gives an Intelligence Index
-measurement or a calibrated estimate with an uncertainty band, input and
-output costs per million tokens that count every participating model, and all
-seven category grades, with the source recorded. It then prints `Fixed` for a
-vendor preset and shows Ultracode alongside the selected Claude effort.
+The ladder ranks single models, each at one effort, the same points the
+website's table and charts show.
 
 /recommend's three picks are read off the operator's own cost/quality
 frontier, in code (`scoring.ladder`):

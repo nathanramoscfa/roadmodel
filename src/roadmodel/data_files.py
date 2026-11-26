@@ -50,7 +50,6 @@ FILE_SCHEMAS: Final[dict[str, frozenset[int]]] = {
     "benchmarks.json": frozenset({2}),  # update/fetch_aa_benchmarks.py
     "effort-tokens.json": frozenset({1}),  # update/measure_effort_tokens.py
     "index-estimates.json": frozenset({1}),  # update/build_index_estimates.py
-    "agent-configurations.json": frozenset({1}),
 }
 # Every JSON file the set check parses: one that fails to parse would read as
 # empty data downstream (scoring's loaders return {}), which is worse than the
@@ -61,7 +60,6 @@ _CHECKED: Final[tuple[str, ...]] = (
     "context-windows.json",
     "effort-tokens.json",
     "index-estimates.json",
-    "agent-configurations.json",
 )
 
 # How long one look at the directory stands before the next read looks again.

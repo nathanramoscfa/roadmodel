@@ -76,7 +76,6 @@ export interface KeylessRung {
   platform_id: string;
   platform_name: string;
   effort: string;
-  ultracode?: boolean;
   specialist: boolean;
   backup: {
     model_id: string;
@@ -84,7 +83,6 @@ export interface KeylessRung {
     platform_id: string;
     platform_name: string;
     effort: string;
-    ultracode?: boolean;
   } | null;
   // The rung with its Runner-up and Backup, as a roadmap's Settings rank it
   // (absent on an answer from before the field).

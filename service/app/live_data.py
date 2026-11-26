@@ -55,7 +55,6 @@ FILES: dict[str, tuple[int, int]] = {
     # roadmodel's AA Index estimates for models AA has not measured
     # (update/build_index_estimates.py), which the scorer ranks them on.
     "index-estimates.json": (20, 1_000_000),
-    "agent-configurations.json": (40, 1_000_000),
 }
 # The JSON files and the top-level member each must hold as an object.
 _MODELS_OBJECT = ("benchmarks.json", "context-windows.json", "index-estimates.json")
@@ -137,11 +136,6 @@ def validate(files: dict[str, bytes]) -> None:
         if not isinstance(_json_object(name, files[name]).get("models"), dict):
             raise ValueError(f"{name}: no models object")
     _json_object("effort-tokens.json", files["effort-tokens.json"])
-    configurations = _json_object("agent-configurations.json", files["agent-configurations.json"])
-    if configurations.get("schema_version") != 1 or not isinstance(
-        configurations.get("configurations"), list
-    ):
-        raise ValueError("agent-configurations.json: incompatible schema")
     if b"<model-options>" not in files["model-selector.txt"]:
         raise ValueError("model-selector.txt: no <model-options>")
     recorded = catalog.get("source_doc_sha256")
