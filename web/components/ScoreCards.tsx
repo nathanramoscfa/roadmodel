@@ -97,6 +97,28 @@ function num(v: number): string {
   return (r < 0 ? "−" : "") + Math.abs(r).toFixed(1);
 }
 
+// Signed two-decimal figure for standardised gaps ("+1.37", "−0.86", "0.00").
+function signed2(v: number): string {
+  const r = Math.round(v * 100) / 100;
+  if (r === 0) return "0.00";
+  return (r > 0 ? "+" : "−") + Math.abs(r).toFixed(2);
+}
+
+function ordinal(n: number): string {
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1:
+      return `${n}st`;
+    case 2:
+      return `${n}nd`;
+    case 3:
+      return `${n}rd`;
+    default:
+      return `${n}th`;
+  }
+}
+
 // A model's index as the cards print it: AA's to one decimal; an estimate, good
 // to about four points, as the whole number the table shows; either marked ≈
 // when AA has not measured it.
@@ -587,15 +609,15 @@ export function ScoreBreakdownCard({
   if (b.score >= VALUE_HIGH) {
     bandSentence =
       b.z >= 1
-        ? `Top quartile (${VALUE_HIGH}%+, green in table): outside the local ±${num(s.sigma)} band (${formatSigned(s.z)}σ) — a clear lead over today\u2019s market line.`
-        : `Top quartile (${VALUE_HIGH}%+, green in table): ${formatSigned(s.z)}σ above today\u2019s line (local band ±${num(s.sigma)}).`;
+        ? `Top quartile (${VALUE_HIGH}%+, green in table): outside the local ±${num(s.sigma)} band (${signed2(b.z)}σ) — a clear lead over today\u2019s market line.`
+        : `Top quartile (${VALUE_HIGH}%+, green in table): ${signed2(b.z)}σ above today\u2019s line (local band ±${num(s.sigma)}).`;
   } else if (b.score <= VALUE_LOW) {
     bandSentence =
       b.z <= -1
-        ? `Bottom quartile (≤${VALUE_LOW}%, muted in table): outside the local ±${num(s.sigma)} band (${formatSigned(s.z)}σ) — well below today\u2019s market line.`
-        : `Bottom quartile (≤${VALUE_LOW}%, muted in table): ${formatSigned(s.z)}σ below today\u2019s line (local band ±${num(s.sigma)}).`;
+        ? `Bottom quartile (≤${VALUE_LOW}%, muted in table): outside the local ±${num(s.sigma)} band (${signed2(b.z)}σ) — well below today\u2019s market line.`
+        : `Bottom quartile (≤${VALUE_LOW}%, muted in table): ${signed2(b.z)}σ vs. today\u2019s line (local band ±${num(s.sigma)}).`;
   } else {
-    bandSentence = `Middle half (${VALUE_LOW + 1}–${VALUE_HIGH - 1}%, neutral in table): inside the local ±${num(s.sigma)} band (${formatSigned(s.z)}σ), close to today\u2019s market line.`;
+    bandSentence = `Middle half (${VALUE_LOW + 1}–${VALUE_HIGH - 1}%, neutral in table): inside the local ±${num(s.sigma)} band (${signed2(b.z)}σ), close to today\u2019s market line.`;
   }
 
   return (
@@ -627,25 +649,49 @@ export function ScoreBreakdownCard({
           valueClass={STRONG}
           testId="score-breakdown-expected"
         />
-        <Row
-          label="Gap vs. today’s line"
-          value={`${formatSigned(s.gap)} pts`}
-          valueClass={STRONG}
-          testId="score-breakdown-gap"
-        />
-        <Row
-          label="Local spread (±σ)"
-          value={`±${num(s.sigma)} pts (${formatSigned(s.z)}σ)`}
-          valueClass={MUTED}
-          testId="score-breakdown-sigma"
-        />
+        <div className={"mt-1 border-t pt-1 " + RULE}>
+          <Row
+            label="Gap vs. today’s line"
+            value={`${formatSigned(s.gap)} pts`}
+            valueClass={"font-medium " + STRONG}
+            testId="score-breakdown-gap"
+          />
+        </div>
+        <div className={"mt-1.5 space-y-0.5 border-t pt-1.5 " + RULE}>
+          <Row
+            label={`Local spread (σ at ${usd(b.price)})`}
+            value={`${num(s.sigma)} pts`}
+            valueClass={MUTED}
+          />
+          <Row
+            label={
+              <span className="tabular-nums">
+                Standardised gap (z = {formatSigned(s.gap)} ÷ {num(s.sigma)})
+              </span>
+            }
+            value={`${signed2(b.z)}σ`}
+            valueClass={"font-medium " + STRONG}
+            testId="score-breakdown-sigma"
+          />
+        </div>
         <div className={"mt-1.5 border-t-2 border-double pt-1.5 " + RULE}>
           <Row
-            label={<span className={"font-semibold " + STRONG}>Score</span>}
+            label={
+              <span>
+                <span className={"font-semibold " + STRONG}>Score</span>{" "}
+                <span className={"text-xs tabular-nums " + MUTED}>
+                  = Student-t<sub className="text-[0.7em]">{fit.df}</sub> CDF({signed2(b.z)}σ)
+                </span>
+              </span>
+            }
             value={formatScore(s.value)}
             valueClass={"text-sm font-bold " + scoreToneClass(b.score)}
             testId="score-breakdown-total"
           />
+          <p className={"mt-1 text-[11px] leading-4 " + MUTED} data-testid="score-breakdown-formula">
+            On a Student-t (df&nbsp;=&nbsp;{fit.df}) distribution centred on today&rsquo;s line
+            (0σ&nbsp;=&nbsp;50%), {signed2(b.z)}σ sits at the {ordinal(s.value)} percentile.
+          </p>
         </div>
       </div>
 
@@ -783,8 +829,9 @@ export function ModelPointCard({
           valueClass={STRONG}
         />
       </div>
-      <p className={"mt-1 text-xs " + MUTED}>
-        {formatSigned(b.shown.gap)} pts ({formatSigned(b.shown.z)}σ) vs today&rsquo;s market line
+      <p className={"mt-1 text-xs tabular-nums " + MUTED}>
+        z = {formatSigned(b.shown.gap)} ÷ {num(b.shown.sigma)} = {signed2(b.z)}σ &rarr;{" "}
+        {formatScore(b.shown.value)} (Student-t<sub className="text-[0.7em]">{fit.df}</sub> CDF)
       </p>
       <div className={"mt-2.5 space-y-0.5 border-t pt-2.5 " + RULE}>
         <Row label="Input" value={`${usd(m.input_price_per_1m)} per 1M tokens`} valueClass={STRONG} />
@@ -877,8 +924,8 @@ export function PriceLineCard({
         models (R² {fit.r2.toFixed(2)}
         {fit.vintageAdjusted ? `, age trend ${formatSigned(fit.ageSlope)} pts/month` : ""}). The
         shaded ribbon is the local ±σ band (±{num(fit.sigmaMin)}–{num(fit.sigmaMax)}, narrowing as
-        price rises). Score maps each model&rsquo;s gap ÷ local σ to a 0–100% market percentile
-        (50% = on this line).
+        price rises). Score maps z = (AA − expected) ÷ local σ through the Student-t (df&nbsp;=&nbsp;{fit.df})
+        CDF to a 0–100% market percentile (0σ = 50%).
       </p>
     </div>
   );
